@@ -1,0 +1,24 @@
+POST http://localhost:3001/users
+Content-Type: application/json
+
+{
+  "telefone": "(88) 999383058",
+  "nome": "Cláudia",
+  "email": "claudia@teste.com",
+  "matricula": 12342345,
+  "senha": "123456",
+  "permAtendimento": true,
+  "permCadastro": false,
+  "permAdmin": false
+}
+
+###
+
+POST http://localhost:3001/users/login
+Content-Type: application/json
+
+{
+  "email": "claudia@teste.com",
+  "senha": "123456"
+}
+
