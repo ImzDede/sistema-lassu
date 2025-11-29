@@ -6,6 +6,8 @@ import Input from '@/components/Inputs';
 import Button from '@/components/Button';
 import Image from 'next/image';
 import { Eye, EyeOff } from 'lucide-react';
+import axios from 'axios';
+import { setCookie } from 'nookies';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -25,19 +27,29 @@ export default function Login() {
     setLoading(true);
 
     try {
-      console.log("Enviando dados:", { email, senha });
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const response = await axios.post('http://localhost:3001/users/login', {
+        email: email,
+        senha: senha 
+      });
 
-      // Simulando verificação (Apenas para teste)
-      if (email === 'admin@teste.com' && senha === 'admin') {
-        router.push('/home');
-      } else {
-        throw new Error('Matrícula ou senha incorretos.');
-      }
+      const { token } = response.data;
 
-    } catch (err) {
-      setError('Falha ao entrar. Verifique seus dados.');
+      console.log("Login realizado com sucesso!", token);
+
+      setCookie(undefined, 'lassuauth.token', token, {
+        maxAge: 60 * 60 * 24 * 30, // 30 dias
+        path: '/',
+      });
+
+      router.push('/home');
+
+    } catch (err: any) {
       console.error(err);
+      if (err.response) {
+        setError(err.response.data.message || 'Erro ao realizar login.');
+      } else {
+        setError('Erro de conexão. Verifique se o backend na porta 3001 está rodando.');
+      }
     } finally {
       setLoading(false);
     }
