@@ -1,15 +1,11 @@
 POST http://localhost:3001/users
 Content-Type: application/json
-
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjAyZTZiMDU4LWE0MjctNGQwNy1hMzllLWM4NDk0MjRhN2YzMSIsIm5vbWUiOiJOb2N0YSIsInBlcm1BdGVuZGltZW50byI6dHJ1ZSwicGVybUNhZGFzdHJvIjp0cnVlLCJwZXJtQWRtaW4iOnRydWUsImlhdCI6MTc2NDQ2Mjc1NiwiZXhwIjoxNzY0NTQ5MTU2fQ.NFQ4wmsHd6Z5VJcN8khxOoq9j6aN6VBL3dKN0HCWcxw
+  
 {
-  "telefone": "(88) 999383058",
-  "nome": "Cláudia",
-  "email": "claudia@teste.com",
-  "matricula": 12342345,
-  "senha": "123456",
-  "permAtendimento": true,
-  "permCadastro": false,
-  "permAdmin": false
+  "nome": "Leticia",
+  "email": "leticia@gmail.com",
+  "matricula": 2965451
 }
 
 ###
@@ -18,7 +14,31 @@ POST http://localhost:3001/users/login
 Content-Type: application/json
 
 {
-  "email": "claudia@teste.com",
-  "senha": "123456"
+  "email": "leticia@gmail.com",
+  "senha": "L296545129"
 }
 
+###
+
+PUT http://localhost:3001/users/4e9a999c-e1af-4156-a3cc-b06cff83dc14
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjRlOWE5OTljLWUxYWYtNDE1Ni1hM2NjLWIwNmNmZjgzZGMxNCIsIm5vbWUiOiJDbMOhdWRpYSBFZGl0YWRhIiwicGVybUF0ZW5kaW1lbnRvIjp0cnVlLCJwZXJtQ2FkYXN0cm8iOmZhbHNlLCJwZXJtQWRtaW4iOmZhbHNlLCJpYXQiOjE3NjQ0NzAxNjMsImV4cCI6MTc2NDU1NjU2M30.ccPNXwxv2Y6OI06kwxrqgVG2sTMOw5HFittlSCquBvs
+
+{
+  "nome": "Cláudia",
+  "telefone": "1",
+  "fotoUrl": "teste",
+  "email": "claudia@gmail.com",
+  "senha": "claudia123"
+}
+
+###
+PATCH  http://localhost:3001/users/primeiro-acesso
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjQxMmFkZjgyLWQ2YTItNDkzZC04OTczLTUzOGM5ZGU2ODE3YSIsIm5vbWUiOiJMZXRpY2lhIiwicGVybUF0ZW5kaW1lbnRvIjp0cnVlLCJwZXJtQ2FkYXN0cm8iOmZhbHNlLCJwZXJtQWRtaW4iOmZhbHNlLCJpYXQiOjE3NjQ0ODA2MjEsImV4cCI6MTc2NDU2NzAyMX0.EJJ5CxQ7IV9GT3FL4SSp7BKX51QxpMXayR0ZBsM76CY
+
+{
+  "telefone": "2",
+  "fotoUrl": "teste2",
+  "senha": "L2965451"
+}
