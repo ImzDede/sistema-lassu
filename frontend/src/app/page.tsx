@@ -1,65 +1,149 @@
-import Image from "next/image";
+"use client"
 
-export default function Home() {
+import React, { useState, FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
+import Input from '@/components/Inputs';
+import Button from '@/components/Button';
+import Image from 'next/image';
+import { Eye, EyeOff } from 'lucide-react';
+import axios from 'axios';
+import { setCookie } from 'nookies';
+
+export default function Login() {
+  const [email, setEmail] = useState('');
+  const [senha, setSenha] = useState('');
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const [lookPassword, setLookPassword] = useState(false);
+
+  const router = useRouter();
+
+  // 2. FUNÇÃO DE LOGIN
+  async function handleLogin(event: FormEvent) {
+    event.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const response = await axios.post('http://localhost:3001/users/login', {
+        email: email,
+        senha: senha 
+      });
+
+      const { token } = response.data;
+
+      console.log("Login realizado com sucesso!", token);
+
+      setCookie(undefined, 'lassuauth.token', token, {
+        maxAge: 60 * 60 * 24 * 30, // 30 dias
+        path: '/',
+      });
+
+      router.push('/home');
+
+    } catch (err: any) {
+      console.error(err);
+      if (err.response) {
+        setError(err.response.data.message || 'Erro ao realizar login.');
+      } else {
+        setError('Erro de conexão. Verifique se o backend na porta 3001 está rodando.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const togglePasswordVisibility = () => {
+    setLookPassword(!lookPassword);
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="min-h-screen flex flex-col justify-center md:flex-row md:justify-normal bg-white">
+
+      {/* LADO ESQUERDO (Mantido igual) */}
+      <div className="w-full md:w-1/2 bg-white md:bg-gray-200 flex flex-col items-center justify-center p-6 md:p-10 md:min-h-screen">
+        <div className="mb-4 md:mb-8"> 
+           <Image 
+              src="/logo.svg"
+              alt="Logo LSSSU"
+              width={300}
+              height={300} 
+              priority
+              className="w-40 md:w-56 lg:w-64 h-auto" 
+           />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+      </div>
+
+      {/* LADO DIREITO (Formulário) */}
+      <div className="w-full md:w-1/2 bg-white flex items-center justify-center p-8">
+        <div className="w-full max-w-md flex flex-col gap-6">
+          
+          <h2 className="text-3xl md:text-4xl text-center mb-4 md:mb-8 text-black font-normal uppercase tracking-widest">Login</h2>
+
+          <form onSubmit={handleLogin} className="flex flex-col gap-4">
+            
+            <Input 
+              type="email" 
+              placeholder="EMAIL"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            
+            <div className="relative w-full">
+              <Input 
+                type={lookPassword ? "text" : "password"} 
+                placeholder="SENHA" 
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+                required
+              />
+
+              <button
+                type="button"
+                onClick={togglePasswordVisibility}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-black transition-colors"
+              >
+                {lookPassword ? (
+                  <EyeOff size={24} />
+                ) : (
+                  <Eye size={24} />
+                )}
+              </button>
+            </div>
+
+            {error && (
+              <p className="text-red-500 text-sm text-center font-bold">{error}</p>
+            )}
+
+            <div className="flex items-center gap-2 mt-2">
+              <input 
+                type="checkbox" 
+                id="keep-connected" 
+                className="w-5 h-5 border-2 border-gray-600 rounded-none accent-black cursor-pointer"
+              />
+              <label htmlFor="keep-connected" className="text-sm text-black cursor-pointer">
+                manter conectado?
+              </label>
+            </div>
+
+            <div className="mt-6">
+               <Button type="submit" disabled={loading}>
+                 {loading ? 'CARREGANDO...' : 'ENTRAR'}
+               </Button>
+            </div>
+          </form>
+
+          <div className="text-center">
+            <a href="#" className="text-sm text-black hover:underline">
+              esqueceu sua senha?
+            </a>
+          </div>
+
         </div>
-      </main>
-    </div>
+      </div>
+    </main>
   );
 }
