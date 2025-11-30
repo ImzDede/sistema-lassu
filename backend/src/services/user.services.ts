@@ -103,16 +103,17 @@ export class UserService {
         const query = `
             UPDATE usuario
             SET 
-                email = COALESCE($1, email),
-                telefone = COALESCE($2, telefone),
-                foto_url = COALESCE($3, foto_url),
-                senha_hash = COALESCE($4, senha_hash),
-                primeiro_acesso = false
-            WHERE id = $5
+                nome = COALESCE($1, nome),
+                email = COALESCE($2, email),
+                telefone = COALESCE($3, telefone),
+                foto_url = COALESCE($4, foto_url),
+                senha_hash = COALESCE($5, senha_hash)
+                WHERE id = $6
             RETURNING id, nome, email, telefone, foto_url;
         `;
 
         const values = [
+            dados.nome || null,
             dados.email || null,
             dados.telefone || null,
             dados.fotoUrl || null,
