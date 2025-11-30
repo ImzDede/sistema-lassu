@@ -5,7 +5,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjAyZTZiMDU4L
 {
   "nome": "Leticia",
   "email": "leticia@gmail.com",
-  "matricula": 2965451
+  "matricula": 2929292
 }
 
 ###
@@ -15,30 +15,30 @@ Content-Type: application/json
 
 {
   "email": "leticia@gmail.com",
-  "senha": "L296545129"
+  "senha": "leticia123"
 }
 
 ###
 
-PUT http://localhost:3001/users/4e9a999c-e1af-4156-a3cc-b06cff83dc14
+PUT http://localhost:3001/users/b7c5e4bd-9ac2-4d58-a0b9-4c7bbc908a31
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjRlOWE5OTljLWUxYWYtNDE1Ni1hM2NjLWIwNmNmZjgzZGMxNCIsIm5vbWUiOiJDbMOhdWRpYSBFZGl0YWRhIiwicGVybUF0ZW5kaW1lbnRvIjp0cnVlLCJwZXJtQ2FkYXN0cm8iOmZhbHNlLCJwZXJtQWRtaW4iOmZhbHNlLCJpYXQiOjE3NjQ0NzAxNjMsImV4cCI6MTc2NDU1NjU2M30.ccPNXwxv2Y6OI06kwxrqgVG2sTMOw5HFittlSCquBvs
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImI3YzVlNGJkLTlhYzItNGQ1OC1hMGI5LTRjN2JiYzkwOGEzMSIsIm5vbWUiOiJMZXRpY2lhIiwicGVybUF0ZW5kaW1lbnRvIjp0cnVlLCJwZXJtQ2FkYXN0cm8iOmZhbHNlLCJwZXJtQWRtaW4iOmZhbHNlLCJpYXQiOjE3NjQ1MTIyMDcsImV4cCI6MTc2NDU5ODYwN30.Bnm-G3MUT8T1vkf2KVctXL_uhYj4em_tx_NGFsP_o_M
 
 {
-  "nome": "Cláudia",
+  "nome": "Letícia",
   "telefone": "1",
   "fotoUrl": "teste",
-  "email": "claudia@gmail.com",
-  "senha": "claudia123"
+  "email": "leticia@gmail.com",
+  "senha": "leticia1234"
 }
 
 ###
 PATCH  http://localhost:3001/users/primeiro-acesso
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjQxMmFkZjgyLWQ2YTItNDkzZC04OTczLTUzOGM5ZGU2ODE3YSIsIm5vbWUiOiJMZXRpY2lhIiwicGVybUF0ZW5kaW1lbnRvIjp0cnVlLCJwZXJtQ2FkYXN0cm8iOmZhbHNlLCJwZXJtQWRtaW4iOmZhbHNlLCJpYXQiOjE3NjQ0ODA2MjEsImV4cCI6MTc2NDU2NzAyMX0.EJJ5CxQ7IV9GT3FL4SSp7BKX51QxpMXayR0ZBsM76CY
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImI3YzVlNGJkLTlhYzItNGQ1OC1hMGI5LTRjN2JiYzkwOGEzMSIsIm5vbWUiOiJMZXRpY2lhIiwicGVybUF0ZW5kaW1lbnRvIjp0cnVlLCJwZXJtQ2FkYXN0cm8iOmZhbHNlLCJwZXJtQWRtaW4iOmZhbHNlLCJpYXQiOjE3NjQ1MTE5NTIsImV4cCI6MTc2NDU5ODM1Mn0.RPRCoU_PAYe0CPtzYmy-HUNbVJbAEDYUO98SbMUK738
 
 {
   "telefone": "2",
   "fotoUrl": "teste2",
-  "senha": "L2965451"
+  "senha": "leticia123"
 }

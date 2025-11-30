@@ -21,3 +21,11 @@ CREATE TABLE usuario (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     primeiro_acesso BOOLEAN DEFAULT TRUE;
 );
+
+CREATE TABLE disponibilidade (
+    id SERIAL PRIMARY KEY,
+    usuario_id UUID NOT NULL REFERENCES usuario(id) ON DELETE CASCADE,
+    dia_semana INTEGER NOT NULL,
+    hora_inicio TIME NOT NULL,
+    hora_fim TIME NOT NULL
+);
