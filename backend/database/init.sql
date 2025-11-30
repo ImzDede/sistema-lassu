@@ -19,5 +19,5 @@ CREATE TABLE usuario (
     -- Controle
     ativo BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    primeiro_acesso BOOLEAN DEFAULT TRUE;
 );
-
