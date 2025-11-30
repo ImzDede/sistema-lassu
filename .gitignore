@@ -1,0 +1,9 @@
+# Ignora node_modules em qualquer lugar (raiz, front ou back)
+**/node_modules/
+
+# Ignora .env em qualquer lugar
+**/.env
+
+# Outros arquivos de sistema e build
+dist/
+.DS_Store
