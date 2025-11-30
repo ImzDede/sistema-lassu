@@ -10,5 +10,6 @@ export interface User {
     permCadastro: boolean;
     permAdmin: boolean;
     ativo: boolean;
+    primeiroAcesso?: boolean;
     created_at: Date;
 }

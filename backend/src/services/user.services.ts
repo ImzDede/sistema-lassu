@@ -89,4 +89,89 @@ export class UserService {
             token: token
         };
     }
+
+    async updateProfile(id: string, dados: Partial<User>) {
+        let senhaCriptografada = undefined;
+        
+        if (dados.senha) {
+            senhaCriptografada = await bcrypt.hash(dados.senha, 10);
+        }
+
+        const query = `
+            UPDATE usuario
+            SET 
+                email = COALESCE($1, email),
+                telefone = COALESCE($2, telefone),
+                foto_url = COALESCE($3, foto_url),
+                senha_hash = COALESCE($4, senha_hash)
+            WHERE id = $5
+            RETURNING id, nome, email, telefone, foto_url;
+        `;
+
+        const values = [
+            dados.email || null,
+            dados.telefone || null,
+            dados.fotoUrl || null,
+            senhaCriptografada || null,
+            id
+        ];
+
+        const result = await pool.query(query, values);
+
+        if (result.rows.length === 0) {
+            throw new Error('Usuário não encontrado para edição.');
+        }
+
+        return result.rows[0];
+    }
+
+    async update(id: string, dados: Partial<User>) {
+        let senhaCriptografada = undefined;
+        
+        if (dados.senha) {
+            senhaCriptografada = await bcrypt.hash(dados.senha, 10);
+        }
+
+        const query = `
+            UPDATE usuario
+            SET 
+                nome = COALESCE($1, nome),
+                email = COALESCE($2, email),
+                telefone = COALESCE($3, telefone),
+                foto_url = COALESCE($4, foto_url),
+                senha_hash = COALESCE($5, senha_hash),
+                
+                -- Campos sensíveis liberados aqui:
+                matricula = COALESCE($6, matricula),
+                perm_atendimento = COALESCE($7, perm_atendimento),
+                perm_cadastro = COALESCE($8, perm_cadastro),
+                perm_admin = COALESCE($9, perm_admin),
+                ativo = COALESCE($10, ativo)
+                
+            WHERE id = $11
+            RETURNING id, nome, email, matricula, perm_admin, ativo;
+        `;
+
+        const values = [
+            dados.nome || null,
+            dados.email || null,
+            dados.telefone || null,
+            dados.fotoUrl || null,
+            senhaCriptografada || null,
+            dados.matricula || null,
+            dados.permAtendimento ?? null,
+            dados.permCadastro ?? null,
+            dados.permAdmin ?? null,
+            dados.ativo ?? null,
+            id
+        ];
+
+        const result = await pool.query(query, values);
+
+        if (result.rows.length === 0) {
+            throw new Error('Usuário não encontrado para edição.');
+        }
+
+        return result.rows[0];
+    }
 }
