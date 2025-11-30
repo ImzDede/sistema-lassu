@@ -66,4 +66,25 @@ export class UserController {
             return res.status(500).json({ error: "Erro interno do servidor" });
         }
     }
+
+    async primeiroAcesso(req: Request, res: Response) {
+        try {
+            const idDoToken = req.userId;
+            const { senha, telefone, fotoUrl } = req.body;
+
+            if (!idDoToken) {
+                return res.status(401).json({ error: "Não autenticado." });
+            }
+
+            const usuarioAtualizado = await userService.primeiroAcesso(idDoToken, { senha, telefone, fotoUrl })
+
+            return res.status(200).json(usuarioAtualizado);
+
+        } catch (error) {
+            if (error instanceof Error) {
+                return res.status(400).json({ error: error.message });
+            }
+            return res.status(500).json({ error: "Erro interno." });
+        }
+    }
 }

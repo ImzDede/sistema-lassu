@@ -3,14 +3,9 @@ Content-Type: application/json
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjAyZTZiMDU4LWE0MjctNGQwNy1hMzllLWM4NDk0MjRhN2YzMSIsIm5vbWUiOiJOb2N0YSIsInBlcm1BdGVuZGltZW50byI6dHJ1ZSwicGVybUNhZGFzdHJvIjp0cnVlLCJwZXJtQWRtaW4iOnRydWUsImlhdCI6MTc2NDQ2Mjc1NiwiZXhwIjoxNzY0NTQ5MTU2fQ.NFQ4wmsHd6Z5VJcN8khxOoq9j6aN6VBL3dKN0HCWcxw
   
 {
-  "telefone": "",
-  "nome": "Ana",
-  "email": "ana@gmail.com",
-  "matricula": 1234560,
-  "senha": "ana123",
-  "permAtendimento": true,
-  "permCadastro": false,
-  "permAdmin": false
+  "nome": "Leticia",
+  "email": "leticia@gmail.com",
+  "matricula": 2965451
 }
 
 ###
@@ -19,8 +14,8 @@ POST http://localhost:3001/users/login
 Content-Type: application/json
 
 {
-  "email": "claudia@gmail.com",
-  "senha": "123456"
+  "email": "leticia@gmail.com",
+  "senha": "L296545129"
 }
 
 ###
@@ -35,4 +30,15 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjRlOWE5OTljL
   "fotoUrl": "teste",
   "email": "claudia@gmail.com",
   "senha": "claudia123"
+}
+
+###
+PATCH  http://localhost:3001/users/primeiro-acesso
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjQxMmFkZjgyLWQ2YTItNDkzZC04OTczLTUzOGM5ZGU2ODE3YSIsIm5vbWUiOiJMZXRpY2lhIiwicGVybUF0ZW5kaW1lbnRvIjp0cnVlLCJwZXJtQ2FkYXN0cm8iOmZhbHNlLCJwZXJtQWRtaW4iOmZhbHNlLCJpYXQiOjE3NjQ0ODA2MjEsImV4cCI6MTc2NDU2NzAyMX0.EJJ5CxQ7IV9GT3FL4SSp7BKX51QxpMXayR0ZBsM76CY
+
+{
+  "telefone": "2",
+  "fotoUrl": "teste2",
+  "senha": "L2965451"
 }
