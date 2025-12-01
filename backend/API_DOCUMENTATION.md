@@ -191,3 +191,26 @@ O sistema utiliza **JWT (JSON Web Token)** para segurança.
 • 404 Not Found: Usuário não encontrado.
 
 • 403 Unauthorized: Você não tem permissão para editar outros usuários.
+
+### 6. Renovar Token
+**Rota:** POST /users/refresh
+
+**Acesso:** Requer um token válido
+
+**Descrição:** Gera um novo Token JWT contendo os dados mais recentes do banco de dados (permissões atualizadas, nome, etc). O Frontend deve chamar esta rota automaticamente se perceber (ao comparar com /profile) que o cargo do usuário mudou, atualizando o token sem deslogar a pessoa.
+
+**Corpo da requisição (JSON):** (Vazio - O servidor identifica o usuário pelo Token atual enviado no Header)
+
+**Resposta Sucesso (200 OK):**
+````json 
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI..."
+}
+````
+**Erros Comuns:**
+
+• 401 Unauthorized: Token inválido ou expirado.
+
+• 401 Unauthorized: Conta desativada (O sistema nega a renovação).
+
+• 404 Not Found: Usuário não encontrado no banco.
