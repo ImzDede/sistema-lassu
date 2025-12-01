@@ -4,4 +4,6 @@ export interface TokenPayload {
   permAtendimento: boolean;
   permCadastro: boolean;
   permAdmin: boolean;
+  iat?: number; // Data de criação
+  exp?: number; // Data de expiração
 }

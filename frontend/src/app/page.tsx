@@ -12,11 +12,10 @@ import { setCookie } from "nookies";
 export default function Login() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
   const [lookPassword, setLookPassword] = useState(false);
+  const [manterConectado, setManterConectado] = useState(false);
 
   const router = useRouter();
 
@@ -36,11 +35,16 @@ export default function Login() {
 
       console.log("Login realizado com sucesso!", token);
 
-      setCookie(undefined, "lassuauth.token", token, {
-        maxAge: 60 * 60 * 24 * 30, // 30 dias
+      const cookieOptions: any = {
         path: "/",
-      });
+      };
 
+      if (manterConectado) {
+        cookieOptions.maxAge = 60 * 60 * 24 * 7 // 7 dias
+      }
+
+      setCookie(undefined, "lassuauth.token", token, cookieOptions);
+      
       router.push("/home");
     } catch (err: any) {
       console.error(err);
@@ -120,6 +124,8 @@ export default function Login() {
                 type="checkbox"
                 id="keep-connected"
                 className="w-5 h-5 border-2 border-gray-600 rounded-none accent-black cursor-pointer"
+                checked={manterConectado}
+                onChange={(e) => setManterConectado(e.target.checked)}
               />
               <label
                 htmlFor="keep-connected"
