@@ -13,5 +13,6 @@ router.post('/', userController.create);
 router.put('/:id', userController.update);
 router.patch('/primeiro-acesso', userController.primeiroAcesso)
 router.get('/profile', userController.getProfile);
+router.post('/refresh', userController.refreshToken);
 
 export default router;

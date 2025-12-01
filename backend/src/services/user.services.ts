@@ -253,6 +253,19 @@ export class UserService {
         return usuario;
     }
 
+    async refreshToken(id: string) {
+        const usuario = await this.findById(id);
+
+        if (!usuario) {
+            throw new Error("Usuário não encontrado.");
+        }
+
+        const novoToken = this.generateToken(usuario)
+
+        return {token: novoToken}
+
+    }
+
     private generateToken(usuario: any) {
         const secret = process.env.JWT_SECRET;
 

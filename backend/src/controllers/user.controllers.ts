@@ -112,4 +112,25 @@ export class UserController {
         }
     }
 
+    async refreshToken(req: Request, res: Response) {
+        try {
+            const id = req.userId;
+
+            if (!id) {
+                return res.status(401).json({ error: "Token inválido ou não fornecido." });
+            }
+
+            const token = await userService.refreshToken(id);
+
+            return res.status(200).json(token)
+
+        } catch (error) { 
+            if (error instanceof Error) {
+                if (error.message.includes("não encontrado")) return res.status(404).json({ error: error.message })
+                return res.status(401).json({ error: error.message });
+            }
+            return res.status(500).json({ error: "Erro ao buscar perfil." });
+        }
+    }
+
 }
