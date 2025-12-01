@@ -1,28 +1,29 @@
 "use client";
 
-import React, { useState } from "react";
-import axios from "axios";
-import { parseCookies } from "nookies";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import Image from "next/image";
-import Input from "@/components/Inputs";
-import Button from "@/components/Button";
+import React, { useState } from 'react';
+import axios from 'axios';
+import { parseCookies } from 'nookies';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import Image from 'next/image';
+import Input from '@/components/Inputs';
+import Button from '@/components/Button';
+import { ArrowLeft } from 'lucide-react';
 
 export default function NovoExtensionista() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
-    nome: "",
-    email: "",
-    matricula: "",
-    telefone: "",
+    nome: '',
+    email: '',
+    matricula: '',
+    telefone: ''
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   async function handleSalvar(e: React.FormEvent) {
@@ -30,12 +31,12 @@ export default function NovoExtensionista() {
     setLoading(true);
 
     try {
-      const { "lassuauth.token": token } = parseCookies();
+      const { 'lassuauth.token': token } = parseCookies();
 
       const permissoesFixas = {
         perm_atendimento: true,
         perm_cadastro: false,
-        perm_admin: false,
+        perm_admin: false
       };
 
       const dadosParaEnviar = {
@@ -43,26 +44,27 @@ export default function NovoExtensionista() {
         email: formData.email,
         matricula: Number(formData.matricula),
         telefone: formData.telefone,
-        ...permissoesFixas,
+        ...permissoesFixas
       };
 
-      await axios.post("http://localhost:3001/users", dadosParaEnviar, {
+      await axios.post('http://localhost:3001/users', dadosParaEnviar, {
         headers: {
-          Authorization: `Bearer ${token}`,
-        },
+          'Authorization': `Bearer ${token}`
+        }
       });
 
-      alert("Extensionista de Atendimento cadastrada com sucesso!");
-
+      alert('Extensionista de Atendimento cadastrada com sucesso!');
+      
       setFormData({
-        nome: "",
-        email: "",
-        matricula: "",
-        telefone: "",
+        nome: '',
+        email: '',
+        matricula: '',
+        telefone: ''
       });
+
     } catch (error: any) {
       console.error(error);
-      const msg = error.response?.data?.message || "Erro ao cadastrar.";
+      const msg = error.response?.data?.message || 'Erro ao cadastrar.';
       alert(msg);
     } finally {
       setLoading(false);
@@ -71,42 +73,50 @@ export default function NovoExtensionista() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center py-10 px-4">
-      <div className="mb-8 cursor-pointer hover:opacity-80 transition-opacity">
-        <Link href="/home">
-          <Image
-            src="/logoVertical.svg"
-            alt="LASSU Logo"
-            width={150}
-            height={150}
-            className="hidden md:block w-64 h-auto"
-          />
-          <Image
-            src="/logoLassu.svg"
-            alt="LASSU Logo"
-            width={150}
-            height={150}
-            className="md:hidden w-24 h-auto md:w-32"
-          />
+      
+      {/* === CABEÇALHO DA PÁGINA === */}
+      <div className="w-full max-w-3xl flex justify-between items-center mb-8">
+        
+        <Link href="/home" className="hover:opacity-80 transition-opacity">
+           <Image 
+             src="/logoLassu.svg" 
+             alt="LASSU Logo" 
+             width={150} 
+             height={150} 
+             className="w-14 h-auto" 
+           />
         </Link>
+
+        <button 
+          onClick={() => router.back()}
+          className="flex items-center gap-2 group"
+          title="voltar"
+        >
+          <ArrowLeft className="w-8 h-8 text-black rotate-180" />
+        </button>
+
       </div>
 
+      {/* === FORMULÁRIO === */}
       <div className="w-full max-w-3xl bg-white p-6 md:p-10 rounded-lg shadow-md border border-gray-200">
+        
         <h1 className="text-2xl font-bold uppercase text-black mb-8 text-center md:text-left">
           Nova Extensionista
         </h1>
 
         <form onSubmit={handleSalvar} className="flex flex-col gap-6">
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              label="Nome Completo"
+            <Input 
+              label="Nome Completo" 
               name="nome"
               placeholder="Ex: Ana Souza"
               value={formData.nome}
               onChange={handleChange}
               required
             />
-            <Input
-              label="E-mail"
+            <Input 
+              label="E-mail" 
               type="email"
               name="email"
               placeholder="Ex: ana@lassu.com"
@@ -117,8 +127,8 @@ export default function NovoExtensionista() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              label="Matrícula"
+            <Input 
+              label="Matrícula" 
               type="number"
               name="matricula"
               placeholder="Ex: 2024001"
@@ -126,8 +136,8 @@ export default function NovoExtensionista() {
               onChange={handleChange}
               required
             />
-            <Input
-              label="Telefone"
+            <Input 
+              label="Telefone" 
               name="telefone"
               placeholder="(85) 99999-9999"
               value={formData.telefone}
@@ -138,10 +148,11 @@ export default function NovoExtensionista() {
           <div className="border-t border-gray-300 my-2"></div>
 
           <div className="flex flex-col-reverse md:flex-row gap-4 mt-2">
+            
             <div className="w-full md:w-1/2">
-              <Button
-                type="button"
-                variant="outline"
+              <Button 
+                type="button" 
+                variant="outline" 
                 onClick={() => router.back()}
               >
                 CANCELAR
@@ -150,10 +161,12 @@ export default function NovoExtensionista() {
 
             <div className="w-full md:w-1/2">
               <Button type="submit" disabled={loading}>
-                {loading ? "SALVANDO..." : "CADASTRAR EXTENSIONISTA"}
+                {loading ? 'SALVANDO...' : 'CADASTRAR EXTENSIONISTA'}
               </Button>
             </div>
+            
           </div>
+
         </form>
       </div>
     </div>
