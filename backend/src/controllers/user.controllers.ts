@@ -7,13 +7,13 @@ export class UserController {
     async create(req: Request, res: Response) {
         try {
             if (!req.userPerms) {
-                return res.status(403).json({ error: "Você não tem permissão!" });
+                return res.status(403).json({ error: "Você não tem permissão" });
             }
 
             const { cadastro, admin } = req.userPerms;
 
             if (!(cadastro || admin)) {
-                return res.status(403).json({ error: "Você não tem permissão de cadastro!" });
+                return res.status(403).json({ error: "Usuário logado não tem permissão para cadastrar." });
             }
 
             const user = await userService.create(req.body)
