@@ -9,6 +9,7 @@ declare global {
                 cadastro: boolean;
                 admin: boolean;
             };
+            isFirstAcess: boolean;
         }
     }
 }
