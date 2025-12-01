@@ -7,6 +7,7 @@ interface TokenPayload {
     permAtendimento: boolean;
     permCadastro: boolean;
     permAdmin: boolean;
+    primeiroAcesso: boolean;
     iat: number;
     exp: number;
 }
@@ -39,7 +40,7 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
 
         const decoded = jwt.verify(token, secret);
 
-        const { id, permAtendimento, permCadastro, permAdmin } = decoded as TokenPayload;
+        const { id, permAtendimento, permCadastro, permAdmin, primeiroAcesso } = decoded as TokenPayload;
 
         req.userId = id;
         req.userPerms = {
@@ -47,6 +48,7 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
             cadastro: permCadastro,
             admin: permAdmin
         };
+        req.isFirstAcess = primeiroAcesso;
 
         return next()
 

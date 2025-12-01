@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { v4 } from "uuid";
 import { User } from "../types/User";
 import jwt from 'jsonwebtoken';
+import { UUID } from "crypto";
 
 export class UserService {
     async create(dados: User) {
@@ -51,6 +52,7 @@ export class UserService {
     }
 
     async login(email: string, senha: string) {
+        
         const pesquisa = await pool.query('SELECT * FROM usuario WHERE email = $1', [email])
 
         if (pesquisa.rows.length == 0) {
@@ -65,24 +67,7 @@ export class UserService {
             throw new Error('Email ou senha inválidos')
         }
 
-        const secret = process.env.JWT_SECRET;
-
-        if (!secret) {
-            throw new Error('Erro de configuração: JWT_SECRET não encontrado.');
-        }
-
-        const token = jwt.sign(
-            {
-                id: usuario.id,
-                nome: usuario.nome,
-                permAtendimento: usuario.perm_atendimento,
-                permCadastro: usuario.perm_cadastro,
-                permAdmin: usuario.perm_admin
-                
-            },
-            secret,
-            { expiresIn: '7d' }
-        );
+        const token = this.generateToken(usuario);
 
         return {
             user: {
@@ -229,13 +214,18 @@ export class UserService {
             id
         ];
 
-        const result = await pool.query(query, values);
+        const userNovo = await pool.query(query, values);
 
-        if (result.rows.length == 0) {
+        if (userNovo.rows.length == 0) {
             throw new Error('Usuário não encontrado.');
         }
 
-        return result.rows[0];
+        const novoToken = this.generateToken(userNovo)
+
+        return {
+            user: userNovo.rows[0],
+            token: novoToken
+        }
     }
 
     async findById(id: string) {
@@ -262,4 +252,28 @@ export class UserService {
 
         return usuario;
     }
+
+    private generateToken(usuario: any) {
+        const secret = process.env.JWT_SECRET;
+
+        if (!secret) {
+            throw new Error('Erro de configuração: JWT_SECRET não encontrado.');
+        }
+
+        const token = jwt.sign(
+            {
+                id: usuario.id,
+                nome: usuario.nome,
+                permAtendimento: usuario.perm_atendimento,
+                permCadastro: usuario.perm_cadastro,
+                permAdmin: usuario.perm_admin,
+                primeiroAcesso: usuario.primeiro_acesso
+            },
+            secret,
+            { expiresIn: '7d' }
+        );
+
+        return token;
+    }
+
 }
