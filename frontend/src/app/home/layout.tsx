@@ -81,7 +81,7 @@ export default function HomeLayout({
               alt="Logo"
               width={150}
               height={50}
-              className="w-auto h-16"
+              className="w-40 h-auto"
             />
           </Link>
         </div>
