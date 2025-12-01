@@ -12,5 +12,6 @@ router.use(authMiddleware);
 router.post('/', userController.create);
 router.put('/:id', userController.update);
 router.patch('/primeiro-acesso', userController.primeiroAcesso)
+router.get('/profile', userController.getProfile);
 
 export default router;

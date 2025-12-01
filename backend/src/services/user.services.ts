@@ -22,10 +22,10 @@ export class UserService {
 
         const query = `
         INSERT INTO usuario (
-                id, matricula, nome, email, senha_hash, perm_atendimento, perm_cadastro, perm_admin
+                id, matricula, nome, email, telefone, senha_hash, perm_atendimento, perm_cadastro, perm_admin
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            RETURNING id, nome, email, matricula;
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            RETURNING id, nome, email, telefone, matricula;
         `;
 
         const values = [
@@ -33,6 +33,7 @@ export class UserService {
             dados.matricula,
             dados.nome,
             dados.email,
+            dados.telefone,
             senhaHash,
             true,
             false,
@@ -76,7 +77,7 @@ export class UserService {
                 
             },
             secret,
-            { expiresIn: '1d' }
+            { expiresIn: '7d' }
         );
 
         return {
@@ -180,7 +181,7 @@ export class UserService {
         return result.rows[0];
     }
 
-    async primeiroAcesso(id :string, dados: { senha?: string, telefone?: string, fotoUrl?: string }) {
+    async primeiroAcesso(id :string, dados: { senha?: string, fotoUrl?: string }) {
 
         if (!dados.senha) {
             throw new Error("É obrigatório definir uma nova senha");
@@ -211,16 +212,14 @@ export class UserService {
         const query = `
             UPDATE usuario
             SET 
-                telefone = COALESCE($1, telefone),
-                foto_url = $2,
-                senha_hash = $3,
+                foto_url = $1,
+                senha_hash = $2,
                 primeiro_acesso = false
-            WHERE id = $4
+            WHERE id = $3
             RETURNING id, nome, email, primeiro_acesso;
         `;
 
         const values = [
-            dados.telefone || null,
             dados.fotoUrl || null,
             senhaHash,
             id
@@ -233,5 +232,30 @@ export class UserService {
         }
 
         return result.rows[0];
+    }
+
+    async findById(id: string) {
+        const query = `
+            SELECT 
+                id, matricula, nome, email, telefone, foto_url, 
+                perm_atendimento, perm_cadastro, perm_admin, 
+                ativo, primeiro_acesso 
+            FROM usuario 
+            WHERE id = $1
+        `;
+
+        const result = await pool.query(query, [id]);
+
+        if (result.rows.length === 0) {
+            return null;
+        }
+
+        const usuario = result.rows[0];
+
+        if (!usuario.ativo) {
+            throw new Error("Conta desativada.");
+        }
+
+        return usuario;
     }
 }

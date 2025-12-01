@@ -76,7 +76,7 @@ export class UserController {
                 return res.status(401).json({ error: "Não autenticado." });
             }
 
-            const usuarioAtualizado = await userService.primeiroAcesso(idDoToken, { senha, telefone, fotoUrl })
+            const usuarioAtualizado = await userService.primeiroAcesso(idDoToken, { senha, fotoUrl })
 
             return res.status(200).json(usuarioAtualizado);
 
@@ -87,4 +87,29 @@ export class UserController {
             return res.status(500).json({ error: "Erro interno." });
         }
     }
+
+    async getProfile(req: Request, res: Response) {
+        try {
+            const id = req.userId;
+
+            if (!id) {
+                return res.status(401).json({ error: "Token inválido ou não fornecido." });
+            }
+
+            const user = await userService.findById(id);
+
+            if (!user) {
+                return res.status(404).json({ error: "Usuário não encontrado." });
+            }
+
+            return res.status(200).json(user);
+
+        } catch (error) {
+            if (error instanceof Error) {
+                return res.status(401).json({ error: error.message });
+            }
+            return res.status(500).json({ error: "Erro ao buscar perfil." });
+        }
+    }
+
 }
