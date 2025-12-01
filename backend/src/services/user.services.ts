@@ -9,6 +9,10 @@ export class UserService {
 
         const novoId = v4();
 
+        if (!dados.email || !dados.nome || !dados.matricula) {
+            throw new Error('Dados inválidos ou faltando')
+        }
+
         const usuarioIgual = await pool.query('SELECT id FROM usuario WHERE email = $1 OR matricula = $2', [dados.email, dados.matricula])
 
         if (usuarioIgual.rows.length > 0) {
@@ -216,7 +220,7 @@ export class UserService {
                 senha_hash = $2,
                 primeiro_acesso = false
             WHERE id = $3
-            RETURNING id, nome, email, primeiro_acesso;
+            RETURNING id, primeiro_acesso;
         `;
 
         const values = [
