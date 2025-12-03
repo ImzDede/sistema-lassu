@@ -3,7 +3,6 @@ import bcrypt from 'bcryptjs';
 import { v4 } from "uuid";
 import { User } from "../types/User";
 import jwt from 'jsonwebtoken';
-import { UUID } from "crypto";
 
 export class UserService {
     async create(dados: User) {

@@ -22,10 +22,12 @@ CREATE TABLE usuario (
     primeiro_acesso BOOLEAN DEFAULT TRUE;
 );
 
-CREATE TABLE disponibilidade (
+CREATE TABLE disponibilidades (
     id SERIAL PRIMARY KEY,
-    usuario_id UUID NOT NULL REFERENCES usuario(id) ON DELETE CASCADE,
-    dia_semana INTEGER NOT NULL,
-    hora_inicio TIME NOT NULL,
-    hora_fim TIME NOT NULL
+    usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    --Dia da semana em inteiro
+    dia_semana INTEGER NOT NULL,  -- Ex: 1 (Segunda)
+    --Horários em minutos
+    hora_inicio INTEGER NOT NULL, -- Ex: 840 (14:00)
+    hora_fim INTEGER NOT NULL     -- Ex: 1080 (18:00)
 );

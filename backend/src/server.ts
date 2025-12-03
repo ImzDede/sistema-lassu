@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from 'dotenv';
 import pool from "./config/db";
 import userRoutes from './routes/user.routes';
+import disponibilidadeRoutes from './routes/disponibilidade.routes';
 
 dotenv.config();
 
@@ -12,6 +13,7 @@ app.use(cors())
 app.use(express.json())
 
 app.use('/users', userRoutes)
+app.use('/availability', disponibilidadeRoutes);
 
 app.get('/', (req: Request, res: Response) => {
     res.send('API Online')

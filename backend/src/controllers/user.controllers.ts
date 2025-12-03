@@ -70,7 +70,7 @@ export class UserController {
     async primeiroAcesso(req: Request, res: Response) {
         try {
             const idDoToken = req.userId;
-            const { senha, telefone, fotoUrl } = req.body;
+            const { senha, fotoUrl } = req.body;
 
             if (!idDoToken) {
                 return res.status(401).json({ error: "Não autenticado." });
