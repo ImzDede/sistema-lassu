@@ -4,6 +4,7 @@ import React, { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Input from "@/components/Inputs";
 import Button from "@/components/Button";
+import { Checkbox, Typography } from "@material-tailwind/react";
 import Image from "next/image";
 import { Eye, EyeOff } from "lucide-react";
 import axios from "axios";
@@ -19,7 +20,6 @@ export default function Login() {
 
   const router = useRouter();
 
-  // 2. FUNÇÃO DE LOGIN
   async function handleLogin(event: FormEvent) {
     event.preventDefault();
     setError("");
@@ -32,119 +32,103 @@ export default function Login() {
       });
 
       const { token } = response.data;
-
-      console.log("Login realizado com sucesso!", token);
-
-      const cookieOptions: any = {
-        path: "/",
-      };
-
-      if (manterConectado) {
-        cookieOptions.maxAge = 60 * 60 * 24 * 7 // 7 dias
-      }
-
+      const cookieOptions: any = { path: "/" };
+      if (manterConectado) cookieOptions.maxAge = 60 * 60 * 24 * 7;
       setCookie(undefined, "lassuauth.token", token, cookieOptions);
-      
       router.push("/home");
     } catch (err: any) {
       console.error(err);
-      if (err.response) {
-        setError(err.response.data.message || "Erro ao realizar login.");
-      } else {
-        setError("Erro de conexão.");
-      }
+      setError(err.response?.data?.message || "Erro de conexão.");
     } finally {
       setLoading(false);
       setSenha("");
     }
   }
 
-  const togglePasswordVisibility = () => {
-    setLookPassword(!lookPassword);
-  };
-
   return (
     <main className="min-h-screen flex flex-col justify-center md:flex-row md:justify-normal bg-white">
-      {/* LADO ESQUERDO (Mantido igual) */}
-      <div className="w-full md:w-1/2 bg-white md:bg-gray-200 flex flex-col items-center justify-center p-6 md:p-10 md:min-h-screen">
-        <div className="mb-4 md:mb-8">
+      {/* LADO ESQUERDO */}
+      <div className="w-full md:w-1/2 md:bg-gradient-to-br md:from-deep-purple-900 md:to-deep-purple-500 flex flex-col items-center justify-center p-6 md:p-10 md:min-h-screen relative overflow-hidden">
+
+        <div className="mb-4 md:mb-8 z-10">
           <Image
             src="/logo.svg"
             alt="Logo LSSSU"
             width={300}
             height={300}
             priority
-            className="w-40 md:w-56 lg:w-64 h-auto"
+            className="w-40 md:w-56 lg:w-64 h-auto md:brightness-0 md:invert"
           />
         </div>
       </div>
 
-      {/* LADO DIREITO (Formulário) */}
+      {/* LADO DIREITO */}
       <div className="w-full md:w-1/2 bg-white flex items-center justify-center p-8">
         <div className="w-full max-w-md flex flex-col gap-6">
-          <h2 className="text-3xl md:text-4xl text-center mb-4 md:mb-8 text-black font-normal uppercase tracking-widest">
-            Login
-          </h2>
+          <Typography
+            variant="h2"
+            color="blue-gray"
+            className="text-center mb-4 uppercase tracking-widest font-normal"
+          >
+            Bem-vindo
+          </Typography>
 
-          <form onSubmit={handleLogin} className="flex flex-col gap-4">
+          <form onSubmit={handleLogin} className="flex flex-col gap-6">
             <Input
               type="email"
-              placeholder="EMAIL"
+              label="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
             />
-
-            <div className="relative w-full">
-              <Input
-                type={lookPassword ? "text" : "password"}
-                placeholder="SENHA"
-                value={senha}
-                onChange={(e) => setSenha(e.target.value)}
-                required
-              />
-
-              <button
-                type="button"
-                onClick={togglePasswordVisibility}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-black transition-colors"
-              >
-                {lookPassword ? <EyeOff size={24} /> : <Eye size={24} />}
-              </button>
-            </div>
+            <Input
+              type={lookPassword ? "text" : "password"}
+              label="Senha"
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              required
+              icon={
+                <i
+                  onClick={() => setLookPassword(!lookPassword)}
+                  className="cursor-pointer hover:text-deep-purple-500 transition-colors"
+                >
+                  {lookPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </i>
+              }
+            />
 
             {error && (
-              <p className="text-red-500 text-sm text-center font-bold">
+              <Typography
+                variant="small"
+                color="red"
+                className="text-center font-bold bg-red-50 p-2 rounded-md"
+              >
                 {error}
-              </p>
+              </Typography>
             )}
 
-            <div className="flex items-center gap-2 mt-2">
-              <input
-                type="checkbox"
-                id="keep-connected"
-                className="w-5 h-5 border-2 border-gray-600 rounded-none accent-black cursor-pointer"
+            <div className="-ml-2.5">
+              <Checkbox
+                label="Manter conectado?"
+                color="deep-purple"
                 checked={manterConectado}
                 onChange={(e) => setManterConectado(e.target.checked)}
               />
-              <label
-                htmlFor="keep-connected"
-                className="text-sm text-black cursor-pointer"
-              >
-                manter conectado?
-              </label>
             </div>
 
-            <div className="mt-6">
-              <Button type="submit" disabled={loading}>
-                {loading ? "CARREGANDO..." : "ENTRAR"}
+            <div className="mt-2">
+              <Button type="submit" fullWidth loading={loading}>
+                {loading ? "ENTRANDO..." : "ACESSAR SISTEMA"}
               </Button>
             </div>
           </form>
 
-          <div className="text-center">
-            <a href="#" className="text-sm text-black hover:underline">
-              esqueceu sua senha?
+          <div className="text-center mt-4">
+            <a
+              href="#"
+              className="text-sm text-gray-500 hover:text-deep-purple-500 hover:underline transition-colors font-medium"
+            >
+              Esqueceu sua senha?
             </a>
           </div>
         </div>
