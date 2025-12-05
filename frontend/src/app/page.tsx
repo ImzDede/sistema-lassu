@@ -4,9 +4,9 @@ import React, { useState, FormEvent, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import Input from "@/components/Inputs";
 import Button from "@/components/Button";
-import { Checkbox, Typography } from "@material-tailwind/react";
+import { Checkbox, Typography, Alert } from "@material-tailwind/react";
+import { Eye, EyeOff, CheckCircle, AlertTriangle } from "lucide-react";
 import Image from "next/image";
-import { Eye, EyeOff } from "lucide-react";
 import axios from "axios";
 import { setCookie } from "nookies";
 
@@ -14,15 +14,27 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [lookPassword, setLookPassword] = useState(false);
   const [manterConectado, setManterConectado] = useState(false);
 
+  const [feedback, setFeedback] = useState({
+    open: false,
+    color: "green" as "green" | "red",
+    message: "",
+  });
+
   const router = useRouter();
+
+  const showAlert = (color: "green" | "red", message: string) => {
+    setFeedback({ open: true, color, message });
+    if (color === "red") {
+      setTimeout(() => setFeedback((prev) => ({ ...prev, open: false })), 4000);
+    }
+  };
 
   async function handleLogin(event: FormEvent) {
     event.preventDefault();
-    setError("");
+    setFeedback((prev) => ({ ...prev, open: false }));
     setLoading(true);
 
     try {
@@ -32,24 +44,64 @@ export default function Login() {
       });
 
       const { token } = response.data;
+
+      showAlert("green", "Login realizado com sucesso!");
+
       const cookieOptions: any = { path: "/" };
       if (manterConectado) cookieOptions.maxAge = 60 * 60 * 24 * 7;
       setCookie(undefined, "lassuauth.token", token, cookieOptions);
-      router.push("/home");
+
+      setTimeout(() => {
+        router.push("/home");
+      }, 500);
     } catch (err: any) {
       console.error(err);
-      setError(err.response?.data?.message || "Erro de conexão.");
-    } finally {
+      const msg =
+        err.response?.data?.message ||
+        "Erro de conexão ou credenciais inválidas.";
+
+      showAlert("red", msg);
       setLoading(false);
-      setSenha("");
+    } finally {
+      if (feedback.color === "red") {
+        setSenha("");
+      }
     }
   }
 
   return (
-    <main className="min-h-screen flex flex-col justify-center md:flex-row md:justify-normal bg-white">
+    <main className="min-h-screen flex flex-col justify-center md:flex-row md:justify-normal bg-white relative">
+      {/* === ALERTA FLUTUANTE === */}
+      <div className="fixed top-10 right-4 z-50 w-full max-w-sm">
+        <Alert
+          open={feedback.open}
+          color={feedback.color}
+          className="flex items-center gap-3 shadow-xl border border-white/20"
+          onClose={() => setFeedback((prev) => ({ ...prev, open: false }))}
+          animate={{ mount: { y: 0 }, unmount: { y: -100 } }}
+          icon={
+            feedback.color === "green" ? <CheckCircle /> : <AlertTriangle />
+          }
+        >
+          <Typography
+            variant="small"
+            className="font-bold"
+            placeholder={undefined}
+          >
+            {feedback.color === "green" ? "Sucesso" : "Erro"}
+          </Typography>
+          <Typography
+            variant="small"
+            className="font-normal opacity-90"
+            placeholder={undefined}
+          >
+            {feedback.message}
+          </Typography>
+        </Alert>
+      </div>
+
       {/* LADO ESQUERDO */}
       <div className="w-full md:w-1/2 md:bg-gradient-to-br md:from-deep-purple-900 md:to-deep-purple-500 flex flex-col items-center justify-center p-6 md:p-10 md:min-h-screen relative overflow-hidden">
-
         <div className="mb-4 md:mb-8 z-10">
           <Image
             src="/logo.svg"
@@ -78,41 +130,38 @@ export default function Login() {
               type="email"
               label="Email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                setEmail(e.target.value)
+              }
               required
             />
             <Input
               type={lookPassword ? "text" : "password"}
               label="Senha"
               value={senha}
-              onChange={(e) => setSenha(e.target.value)}
+              onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                setSenha(e.target.value)
+              }
               required
               icon={
-                <i
+                <button
+                  type="button"
                   onClick={() => setLookPassword(!lookPassword)}
-                  className="cursor-pointer hover:text-deep-purple-500 transition-colors"
+                  className="focus:outline-none hover:text-deep-purple-500 transition-colors cursor-pointer"
                 >
                   {lookPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </i>
+                </button>
               }
             />
-
-            {error && (
-              <Typography
-                variant="small"
-                color="red"
-                className="text-center font-bold bg-red-50 p-2 rounded-md"
-              >
-                {error}
-              </Typography>
-            )}
 
             <div className="-ml-2.5">
               <Checkbox
                 label="Manter conectado?"
                 color="deep-purple"
                 checked={manterConectado}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setManterConectado(e.target.checked)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  setManterConectado(e.target.checked)
+                }
               />
             </div>
 
