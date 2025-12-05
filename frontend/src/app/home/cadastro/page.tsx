@@ -5,9 +5,12 @@ import { parseCookies } from "nookies";
 import { jwtDecode } from "jwt-decode";
 import { TokenPayload } from "@/types/usuarios";
 import CardCadastro from "@/components/CardCadastro";
-import { Typography } from "@material-tailwind/react";
+import { Typography, Spinner } from "@material-tailwind/react";
+import { useRouter } from "next/navigation";
 
 export default function Cadastro() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
   const [perms, setPerms] = useState({
     admin: false,
     cadastro: false,
@@ -16,19 +19,27 @@ export default function Cadastro() {
 
   useEffect(() => {
     const { "lassuauth.token": token } = parseCookies();
+
     if (token) {
       try {
         const decoded = jwtDecode<TokenPayload>(token);
+
         setPerms({
           admin: decoded.permAdmin,
           cadastro: decoded.permCadastro,
           atendimento: decoded.permAtendimento,
         });
+        
+        setLoading(false);
+
       } catch (error) {
         console.error("Erro ao ler permissões", error);
+        router.push('/');
       }
+    } else {
+        router.push('/');
     }
-  }, []);
+  }, [router]);
 
   const menuItemsGeral = [
     { label: "CONSULTAS", href: "/home/cadastro/consulta" },
@@ -39,15 +50,24 @@ export default function Cadastro() {
 
   const menuItemsEsp = [
     { label: "PACIENTES", href: "/home/cadastro/paciente" },
-    { label: "EXTENSIONISTAS", href: "/home/cadastroExtensionista" },
+    { label: "EXTENSIONISTAS", href: "/home/cadastroExtensionista" }, 
   ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center w-full h-[80vh]">
+        <Spinner className="h-12 w-12 text-deep-purple-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full w-full">
       <Typography
         variant="h3"
-        color="black"
+        color="blue-gray"
         className="font-bold uppercase mb-6 text-center md:text-left mt-4 md:mt-0"
+        placeholder={undefined}
       >
         CADASTRO
       </Typography>

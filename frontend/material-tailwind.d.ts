@@ -19,4 +19,6 @@ declare module "@material-tailwind/react" {
   export const Navbar: any;
   export const Avatar: any;
   export const Badge: any;
+  export const Spinner: any;
+  export const Alert: any;
 }
