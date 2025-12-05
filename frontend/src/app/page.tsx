@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, FormEvent } from "react";
+import React, { useState, FormEvent, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import Input from "@/components/Inputs";
 import Button from "@/components/Button";
@@ -112,7 +112,7 @@ export default function Login() {
                 label="Manter conectado?"
                 color="deep-purple"
                 checked={manterConectado}
-                onChange={(e) => setManterConectado(e.target.checked)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setManterConectado(e.target.checked)}
               />
             </div>
 
