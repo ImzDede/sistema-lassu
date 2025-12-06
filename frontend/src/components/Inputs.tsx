@@ -1,17 +1,24 @@
-import React, { InputHTMLAttributes } from "react";
+"use client";
 
-interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+import React from "react";
+import { Input as MTInput } from "@material-tailwind/react";
+
+interface InputProps
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> {
   label?: string;
+  icon?: React.ReactNode;
 }
 
-const Input = ({ label, ...props }: InputProps) => {
+const Input = ({ label, icon, ...props }: InputProps) => {
   return (
-    <div className="flex flex-col w-full gap-1">
-      {label && (
-        <label className="text-sm font-bold text-gray-700">{label}</label>
-      )}
-      <input
-        className="w-full bg-gray-300 border-2 border-gray-600 p-3 text-gray-900 placeholder-gray-600 focus:outline-none focus:border-black transition-colors"
+    <div className="w-full">
+      <MTInput
+        label={label}
+        icon={icon}
+        size="lg"
+        color="deep-purple"
+        className="bg-transparent font-medium"
+        containerProps={{ className: "min-w-[100px]" }}
         {...props}
       />
     </div>
