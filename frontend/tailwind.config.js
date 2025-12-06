@@ -7,7 +7,12 @@ module.exports = withMT({
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        sans: ["var(--font-open-sans)", "sans-serif"],
+        heading: ["var(--font-outfit)", "sans-serif"],
+      },
+    },
   },
   plugins: [],
 });

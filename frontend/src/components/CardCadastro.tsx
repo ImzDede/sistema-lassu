@@ -12,15 +12,22 @@ interface CardCadastroProps {
 const CardCadastro = ({ label, href }: CardCadastroProps) => {
   return (
     <Link href={href} className="block group">
-      <Card className="h-28 w-full cursor-pointer transition-all duration-300 active:scale-95 hover:shadow-xl hover:shadow-deep-purple-100 border border-gray-200 group-hover:border-deep-purple-200">
-        <CardBody className="flex flex-col items-center justify-center h-full gap-3 p-0">
-          <div className="p-3 bg-gray-50 rounded-full group-hover:bg-deep-purple-50 transition-colors duration-300">
-            <PlusCircle className="w-6 h-6 text-gray-600 group-hover:text-deep-purple-500" />
+      <Card
+        className="h-28 w-full cursor-pointer transition-all duration-300 active:scale-95 hover:shadow-xl hover:shadow-[#D9A3B6]/20 border border-gray-100 hover:border-[#D9A3B6]"
+        placeholder={undefined}
+      >
+        <CardBody
+          className="flex flex-col items-center justify-center h-full gap-3 p-0"
+          placeholder={undefined}
+        >
+          <div className="p-3 bg-gray-50 rounded-full group-hover:bg-[#A78FBF]/10 transition-colors duration-300">
+            <PlusCircle className="w-6 h-6 text-gray-400 group-hover:text-[#A78FBF]" />
           </div>
           <Typography
             variant="small"
             color="blue-gray"
-            className="font-bold uppercase text-center group-hover:text-deep-purple-700 transition-colors"
+            className="font-bold uppercase text-center text-gray-600 group-hover:text-[#A78FBF] transition-colors"
+            placeholder={undefined}
           >
             {label}
           </Typography>
