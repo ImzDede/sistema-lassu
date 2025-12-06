@@ -1,28 +1,17 @@
 import { Request, Response } from "express";
 import { UserService } from "../services/user.services";
+import { HTTP_ERRORS } from "../constants/messages";
+import { handleError } from "../errors/handleError";
 
 const userService = new UserService();
 
 export class UserController {
     async create(req: Request, res: Response) {
         try {
-            if (!req.userPerms) {
-                return res.status(403).json({ error: "Você não tem permissão" });
-            }
-
-            const { cadastro, admin } = req.userPerms;
-
-            if (!(cadastro || admin)) {
-                return res.status(403).json({ error: "Usuário logado não tem permissão para cadastrar." });
-            }
-
-            const user = await userService.create(req.body)
-            res.status(201).json(user);
+            const newUser = await userService.create(req.body)
+            res.status(201).json(newUser);
         } catch (error) {
-            if (error instanceof Error) {
-                return res.status(400).json({ error: error.message });
-            }
-            return res.status(500).json({ error: "Erro interno do servidor" });
+            return handleError(res, error)
         }
     }
 
@@ -32,83 +21,66 @@ export class UserController {
             const user = await userService.login(email, senha)
             res.status(200).json(user);
         } catch (error) {
-            if (error instanceof Error) {
-                return res.status(401).json({ error: error.message });
-            }
-            return res.status(500).json({ error: "Erro interno do servidor" });
-        }
-    }
-
-    async update(req: Request, res: Response) {
-        try {
-            const { id } = req.params;
-            const idDoToken = req.userId;
-
-            if (!req.userPerms) {
-                return res.status(403).json({ error: "Você não tem permissão!" });
-            }
-
-            const { admin } = req.userPerms;
-            let userAtualizado;
-
-            if (admin) {
-                userAtualizado = await userService.update(id, req.body)
-            } else if (id == idDoToken) {
-                userAtualizado = await userService.updateProfile(id, req.body)
-            } else return res.status(403).json({ error: "Você não tem permissão para editar outros usuários." });
-
-            res.status(200).json(userAtualizado);
-
-        } catch (error) {
-            if (error instanceof Error) {
-                return res.status(404).json({ error: error.message });
-            }
-            return res.status(500).json({ error: "Erro interno do servidor" });
-        }
-    }
-
-    async primeiroAcesso(req: Request, res: Response) {
-        try {
-            const idDoToken = req.userId;
-            const { senha, fotoUrl } = req.body;
-
-            if (!idDoToken) {
-                return res.status(401).json({ error: "Não autenticado." });
-            }
-
-            const usuarioAtualizado = await userService.primeiroAcesso(idDoToken, { senha, fotoUrl })
-
-            return res.status(200).json(usuarioAtualizado);
-
-        } catch (error) {
-            if (error instanceof Error) {
-                return res.status(400).json({ error: error.message });
-            }
-            return res.status(500).json({ error: "Erro interno." });
+            return handleError(res, error)
         }
     }
 
     async getProfile(req: Request, res: Response) {
         try {
-            const id = req.userId;
-
-            if (!id) {
-                return res.status(401).json({ error: "Token inválido ou não fornecido." });
-            }
-
-            const user = await userService.findById(id);
-
-            if (!user) {
-                return res.status(404).json({ error: "Usuário não encontrado." });
-            }
-
+            const userId = req.userId as string;
+            const user = await userService.getProfile(userId);
             return res.status(200).json(user);
-
         } catch (error) {
-            if (error instanceof Error) {
-                return res.status(401).json({ error: error.message });
-            }
-            return res.status(500).json({ error: "Erro ao buscar perfil." });
+            return handleError(res, error)
+        }
+    }
+
+    async completeFirstAcess(req: Request, res: Response) {
+        try {
+            const userId = req.userId as string;
+            const updatedUser = await userService.completeFirstAcess(userId, req.body)
+            return res.status(200).json(updatedUser);
+        } catch (error) {
+            return handleError(res, error)
+        }
+    }
+
+    async updateProfile(req: Request, res: Response) {
+        try {
+            const userId = req.userId as string;
+            const userUpdated = await userService.updateProfile(userId, req.body)
+            res.status(200).json(userUpdated);
+        } catch (error) {
+            return handleError(res, error)
+        }
+    }
+
+    async update(req: Request, res: Response) {
+        try {
+            const { targetId } = req.params;
+            const userUpdated = await userService.update(targetId, req.body)
+            return res.status(200).json(userUpdated);
+        } catch (error) {
+            return handleError(res, error)
+        }
+    }
+
+    async get(req: Request, res: Response) {
+        try {
+            const users = await userService.listAll();
+            return res.status(200).json(users);
+        } catch (error) {
+            return handleError(res, error)
+        }
+    }
+
+    async getById(req: Request, res: Response) {
+        try {
+            const { targetId } = req.params;
+            const user = await userService.getById(targetId);
+            return res.status(200).json(user);
+        } catch (error) {
+            return handleError(res, error)
         }
     }
 
@@ -117,19 +89,18 @@ export class UserController {
             const id = req.userId;
 
             if (!id) {
-                return res.status(401).json({ error: "Token inválido ou não fornecido." });
+                return res.status(401).json({ error: HTTP_ERRORS.UNAUTHORIZED.TOKEN_MISSING });
             }
 
             const token = await userService.refreshToken(id);
 
             return res.status(200).json(token)
 
-        } catch (error) { 
+        } catch (error) {
             if (error instanceof Error) {
-                if (error.message.includes("não encontrado")) return res.status(404).json({ error: error.message })
-                return res.status(401).json({ error: error.message });
+                return res.status(404).json({ error: error.message });
             }
-            return res.status(500).json({ error: "Erro ao buscar perfil." });
+            return res.status(500).json({ error: HTTP_ERRORS.INTERNAL_SERVER_ERROR });
         }
     }
 
