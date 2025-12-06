@@ -1,4 +1,4 @@
-CREATE TABLE usuario (
+CREATE TABLE usuarios (
     id UUID PRIMARY KEY,
     
     -- Dados Pessoais

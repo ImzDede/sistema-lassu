@@ -5,11 +5,11 @@ export interface User {
     email: string;
     telefone: string;
     fotoUrl?: string;
-    senha: string;
+    senha?: string;
     permAtendimento: boolean;
     permCadastro: boolean;
     permAdmin: boolean;
     ativo: boolean;
     primeiroAcesso?: boolean;
-    created_at: Date;
+    createdAt: Date;
 }
