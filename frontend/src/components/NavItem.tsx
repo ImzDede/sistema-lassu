@@ -18,18 +18,19 @@ const NavItem = ({ icon, label, href, active = false }: NavItemProps) => {
         selected={active}
         className={`transition-all duration-300 ${
           active
-            ? "bg-deep-purple-50 text-deep-purple-700 focus:bg-deep-purple-50 hover:bg-deep-purple-50 border-r-4 border-deep-purple-600 rounded-r-none shadow-sm"
-            : "text-blue-gray-500 hover:bg-gray-100 hover:text-deep-purple-500"
+            ? "bg-[#A78FBF]/10 text-[#A78FBF] focus:bg-[#A78FBF]/10 hover:bg-[#A78FBF]/10 border-r-4 border-[#A78FBF] rounded-r-none shadow-none"
+            : "text-gray-500 hover:bg-[#D9A3B6]/10 hover:text-[#A78FBF]"
         }`}
+        placeholder={undefined}
       >
-        <ListItemPrefix>
+        <ListItemPrefix placeholder={undefined}>
           {React.cloneElement(
             icon as React.ReactElement<{ className: string }>,
             {
               className: `w-5 h-5 transition-colors ${
                 active
-                  ? "text-deep-purple-700"
-                  : "text-blue-gray-400 group-hover:text-deep-purple-500"
+                  ? "text-[#A78FBF]"
+                  : "text-gray-400 group-hover:text-[#A78FBF]"
               }`,
             }
           )}
@@ -38,6 +39,7 @@ const NavItem = ({ icon, label, href, active = false }: NavItemProps) => {
           className={`mr-auto font-medium text-sm uppercase tracking-wide ${
             active ? "font-bold" : ""
           }`}
+          placeholder={undefined}
         >
           {label}
         </Typography>

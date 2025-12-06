@@ -2,13 +2,16 @@
 
 import React, { useState, FormEvent, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
-import Input from "@/components/Inputs";
-import Button from "@/components/Button";
-import { Checkbox, Typography, Alert } from "@material-tailwind/react";
-import { Eye, EyeOff, CheckCircle, AlertTriangle } from "lucide-react";
-import Image from "next/image";
 import axios from "axios";
 import { setCookie } from "nookies";
+import Image from "next/image";
+import { Eye, EyeOff } from "lucide-react";
+
+// Componentes
+import Input from "@/components/Input";
+import Button from "@/components/Button";
+import FeedbackAlert from "@/components/FeedbackAlert";
+import { Checkbox, Typography } from "@material-tailwind/react";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -45,7 +48,7 @@ export default function Login() {
 
       const { token } = response.data;
 
-      showAlert("green", "Login realizado com sucesso!");
+      showAlert("green", "Login efetuado com sucesso!");
 
       const cookieOptions: any = { path: "/" };
       if (manterConectado) cookieOptions.maxAge = 60 * 60 * 24 * 7;
@@ -53,13 +56,12 @@ export default function Login() {
 
       setTimeout(() => {
         router.push("/home");
-      }, 500);
+      }, 1000);
     } catch (err: any) {
       console.error(err);
       const msg =
         err.response?.data?.message ||
         "Erro de conexão ou credenciais inválidas.";
-
       showAlert("red", msg);
       setLoading(false);
     } finally {
@@ -71,37 +73,15 @@ export default function Login() {
 
   return (
     <main className="min-h-screen flex flex-col justify-center md:flex-row md:justify-normal bg-white relative">
-      {/* === ALERTA FLUTUANTE === */}
-      <div className="fixed top-10 right-4 z-50 w-full max-w-sm">
-        <Alert
-          open={feedback.open}
-          color={feedback.color}
-          className="flex items-center gap-3 shadow-xl border border-white/20"
-          onClose={() => setFeedback((prev) => ({ ...prev, open: false }))}
-          animate={{ mount: { y: 0 }, unmount: { y: -100 } }}
-          icon={
-            feedback.color === "green" ? <CheckCircle /> : <AlertTriangle />
-          }
-        >
-          <Typography
-            variant="small"
-            className="font-bold"
-            placeholder={undefined}
-          >
-            {feedback.color === "green" ? "Sucesso" : "Erro"}
-          </Typography>
-          <Typography
-            variant="small"
-            className="font-normal opacity-90"
-            placeholder={undefined}
-          >
-            {feedback.message}
-          </Typography>
-        </Alert>
-      </div>
+      <FeedbackAlert
+        open={feedback.open}
+        color={feedback.color}
+        message={feedback.message}
+        onClose={() => setFeedback((prev) => ({ ...prev, open: false }))}
+      />
 
       {/* LADO ESQUERDO */}
-      <div className="w-full md:w-1/2 md:bg-gradient-to-br md:from-deep-purple-900 md:to-deep-purple-500 flex flex-col items-center justify-center p-6 md:p-10 md:min-h-screen relative overflow-hidden">
+      <div className="w-full md:w-1/2 md:bg-[linear-gradient(to_bottom_right,_#A78FBF,_#D9A3B6,_#F2A9A2,_#F2B694)] flex flex-col items-center justify-center p-6 md:p-10 md:min-h-screen relative overflow-hidden">
         <div className="mb-4 md:mb-8 z-10">
           <Image
             src="/logo.svg"
@@ -119,8 +99,7 @@ export default function Login() {
         <div className="w-full max-w-md flex flex-col gap-6">
           <Typography
             variant="h2"
-            color="blue-gray"
-            className="text-center mb-4 uppercase tracking-widest font-normal"
+            className="text-center mb-4 uppercase tracking-widest font-normal text-[#A78FBF]"
           >
             Bem-vindo
           </Typography>
@@ -147,7 +126,7 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => setLookPassword(!lookPassword)}
-                  className="focus:outline-none hover:text-deep-purple-500 transition-colors cursor-pointer"
+                  className="focus:outline-none hover:text-[#A78FBF] text-gray-400 transition-colors cursor-pointer"
                 >
                   {lookPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -157,7 +136,8 @@ export default function Login() {
             <div className="-ml-2.5">
               <Checkbox
                 label="Manter conectado?"
-                color="deep-purple"
+                color="purple"
+                className="checked:bg-[#A78FBF] checked:border-[#A78FBF]"
                 checked={manterConectado}
                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
                   setManterConectado(e.target.checked)
@@ -175,7 +155,7 @@ export default function Login() {
           <div className="text-center mt-4">
             <a
               href="#"
-              className="text-sm text-gray-500 hover:text-deep-purple-500 hover:underline transition-colors font-medium"
+              className="text-sm text-gray-400 hover:text-[#A78FBF] hover:underline transition-colors font-medium"
             >
               Esqueceu sua senha?
             </a>

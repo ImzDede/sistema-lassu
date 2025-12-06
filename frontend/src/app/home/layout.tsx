@@ -6,22 +6,12 @@ import {
   Card,
   Badge,
   IconButton,
-  Avatar,
   Typography,
-  Button as MTButton,
 } from "@material-tailwind/react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  Home,
-  Users,
-  PlusSquare,
-  Calendar,
-  User,
-  Bell,
-  LogOut,
-} from "lucide-react";
+import { Home, Users, PlusSquare, Calendar, User, Bell } from "lucide-react";
 import NavItem from "@/components/NavItem";
 import { parseCookies, destroyCookie } from "nookies";
 import { jwtDecode } from "jwt-decode";
@@ -48,10 +38,12 @@ export default function HomeLayout({
       try {
         const decoded = jwtDecode<TokenPayload>(token);
         const tempoAtual = Date.now() / 1000;
+
         if (decoded.exp && decoded.exp < tempoAtual) {
           handleLogout();
           return;
         }
+
         if (decoded.nome) setNomeUsuario(decoded.nome);
         axios
           .get("http://localhost:3001/users/profile", {
@@ -70,9 +62,12 @@ export default function HomeLayout({
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row font-sans">
+    <div className="min-h-screen bg-[#FDFDFD] flex flex-col md:flex-row font-sans">
       {/* SIDEBAR */}
-      <Card className="hidden md:flex flex-col w-72 min-h-screen rounded-none shadow-xl border-r border-gray-100 bg-white sticky top-0 h-screen">
+      <Card
+        className="hidden md:flex flex-col w-72 min-h-screen rounded-none shadow-xl border-r border-[#D9A3B6]/20 bg-white sticky top-0 h-screen"
+        placeholder={undefined}
+      >
         <div className="p-8 flex justify-center mb-2 border-b border-gray-50">
           <Link href="/home">
             <Image
@@ -84,7 +79,10 @@ export default function HomeLayout({
             />
           </Link>
         </div>
-        <List className="min-w-0 p-3 flex-1 overflow-y-auto">
+        <List
+          className="min-w-0 p-3 flex-1 overflow-y-auto"
+          placeholder={undefined}
+        >
           <NavItem
             href="/home"
             icon={<Home />}
@@ -116,27 +114,24 @@ export default function HomeLayout({
             active={pathname === "/home/perfil"}
           />
         </List>
-        <div className="p-6 border-t border-gray-50 bg-gray-50/50">
-          <MTButton
-            variant="outlined"
-            color="red"
-            onClick={handleLogout}
-            fullWidth
-            className="flex items-center justify-center gap-2 hover:shadow-none"
-          >
-            <LogOut size={18} /> SAIR
-          </MTButton>
-        </div>
       </Card>
 
       {/* MAIN CONTENT */}
-      <main className="flex-1 flex flex-col relative h-screen overflow-y-auto bg-gray-50/50">
-        <header className="flex flex-col-reverse md:flex-row md:justify-between md:items-center bg-white/80 backdrop-blur-md sticky top-0 z-50 px-6 py-4 shadow-sm border-b border-gray-100 gap-4 md:gap-0">
+      <main className="flex-1 flex flex-col relative h-screen overflow-y-auto bg-[#FDFDFD]">
+        <header className="flex flex-col-reverse md:flex-row md:justify-between md:items-center bg-white/90 backdrop-blur-md sticky top-0 z-50 px-6 py-4 shadow-sm border-b border-[#D9A3B6]/20 gap-4 md:gap-0">
           <div className="flex flex-col">
-            <Typography variant="h5" color="blue-gray" className="font-bold">
+            <Typography
+              variant="h5"
+              className="font-bold text-[#A78FBF]"
+              placeholder={undefined}
+            >
               {nomeUsuario ? `Olá, ${nomeUsuario.split(" ")[0]}!` : "Bem-vindo"}
             </Typography>
-            <Typography variant="small" className="text-gray-400 font-normal">
+            <Typography
+              variant="small"
+              className="text-gray-400 font-normal"
+              placeholder={undefined}
+            >
               Tenha um ótimo dia de trabalho.
             </Typography>
           </div>
@@ -153,22 +148,17 @@ export default function HomeLayout({
               </Link>
             </div>
             <div className="flex items-center gap-4 ml-auto md:ml-0">
-              <button
-                onClick={handleLogout}
-                className="md:hidden text-gray-500"
-              >
-                <LogOut className="w-6 h-6" />
-              </button>
               <div className="flex items-center gap-4 bg-gray-50 p-2 rounded-full border border-gray-100">
                 <Badge
                   content="3"
                   withBorder
-                  className="bg-deep-purple-500 border-white min-w-[18px] min-h-[18px]"
+                  className="bg-[#F2B694] border-white min-w-[18px] min-h-[18px]" // Badge Pêssego
                 >
                   <IconButton
                     variant="text"
                     color="blue-gray"
-                    className="rounded-full hover:bg-white"
+                    className="rounded-full hover:bg-white text-gray-500 hover:text-[#A78FBF]"
+                    placeholder={undefined}
                   >
                     <Bell className="w-5 h-5" />
                   </IconButton>
@@ -183,57 +173,30 @@ export default function HomeLayout({
       </main>
 
       {/* MOBILE NAV */}
-      <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 flex justify-around py-3 z-50 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)]">
-        <Link
-          href="/home"
-          className={`p-2 rounded-xl transition-colors ${
-            pathname === "/home"
-              ? "bg-deep-purple-50 text-deep-purple-600"
-              : "text-gray-400"
-          }`}
-        >
-          <Home className="w-6 h-6" />
-        </Link>
-        <Link
-          href="/home/pacientes"
-          className={`p-2 rounded-xl transition-colors ${
-            pathname === "/home/pacientes"
-              ? "bg-deep-purple-50 text-deep-purple-600"
-              : "text-gray-400"
-          }`}
-        >
-          <Users className="w-6 h-6" />
-        </Link>
-        <Link
-          href="/home/cadastro"
-          className={`p-2 rounded-xl transition-colors ${
-            pathname.startsWith("/home/cadastro")
-              ? "bg-deep-purple-50 text-deep-purple-600"
-              : "text-gray-400"
-          }`}
-        >
-          <PlusSquare className="w-6 h-6" />
-        </Link>
-        <Link
-          href="/home/calendario"
-          className={`p-2 rounded-xl transition-colors ${
-            pathname === "/home/calendario"
-              ? "bg-deep-purple-50 text-deep-purple-600"
-              : "text-gray-400"
-          }`}
-        >
-          <Calendar className="w-6 h-6" />
-        </Link>
-        <Link
-          href="/home/perfil"
-          className={`p-2 rounded-xl transition-colors ${
-            pathname === "/home/perfil"
-              ? "bg-deep-purple-50 text-deep-purple-600"
-              : "text-gray-400"
-          }`}
-        >
-          <User className="w-6 h-6" />
-        </Link>
+      <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-[#D9A3B6]/20 flex justify-around py-3 z-50 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)]">
+        {[
+          { href: "/home", icon: Home },
+          { href: "/home/pacientes", icon: Users },
+          { href: "/home/cadastro", icon: PlusSquare },
+          { href: "/home/calendario", icon: Calendar },
+          { href: "/home/perfil", icon: User },
+        ].map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={`p-2 rounded-xl transition-colors ${
+              (
+                item.href === "/home"
+                  ? pathname === item.href
+                  : pathname.startsWith(item.href)
+              )
+                ? "bg-[#A78FBF]/10 text-[#A78FBF]"
+                : "text-gray-400"
+            }`}
+          >
+            <item.icon className="w-6 h-6" />
+          </Link>
+        ))}
       </nav>
     </div>
   );

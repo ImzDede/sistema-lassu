@@ -23,21 +23,18 @@ export default function Cadastro() {
     if (token) {
       try {
         const decoded = jwtDecode<TokenPayload>(token);
-
         setPerms({
           admin: decoded.permAdmin,
           cadastro: decoded.permCadastro,
           atendimento: decoded.permAtendimento,
         });
-        
         setLoading(false);
-
       } catch (error) {
         console.error("Erro ao ler permissões", error);
-        router.push('/');
+        router.push("/");
       }
     } else {
-        router.push('/');
+      router.push("/");
     }
   }, [router]);
 
@@ -50,13 +47,13 @@ export default function Cadastro() {
 
   const menuItemsEsp = [
     { label: "PACIENTES", href: "/home/cadastro/paciente" },
-    { label: "EXTENSIONISTAS", href: "/home/cadastroExtensionista" }, 
+    { label: "EXTENSIONISTAS", href: "/home/cadastro/extensionista" },
   ];
 
   if (loading) {
     return (
       <div className="flex items-center justify-center w-full h-[80vh]">
-        <Spinner className="h-12 w-12 text-deep-purple-500" />
+        <Spinner className="h-12 w-12 text-[#A78FBF]" />
       </div>
     );
   }
@@ -65,14 +62,13 @@ export default function Cadastro() {
     <div className="flex flex-col h-full w-full">
       <Typography
         variant="h3"
-        color="blue-gray"
-        className="font-bold uppercase mb-6 text-center md:text-left mt-4 md:mt-0"
+        className="font-bold uppercase mb-6 text-center md:text-left mt-4 md:mt-0 text-[#A78FBF]"
         placeholder={undefined}
       >
         CADASTRO
       </Typography>
 
-      <div className="w-full h-full bg-gray-100 border border-gray-200 p-4 md:p-8 rounded-xl shadow-sm">
+      <div className="w-full h-full bg-white border border-[#D9A3B6]/30 p-4 md:p-8 rounded-xl shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 w-full max-w-5xl mx-auto">
           {menuItemsGeral.map((item, index) => (
             <CardCadastro key={index} label={item.label} href={item.href} />
