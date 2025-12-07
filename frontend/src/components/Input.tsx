@@ -3,7 +3,8 @@
 import React from "react";
 import { Input as MTInput } from "@material-tailwind/react";
 
-interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> {
+interface InputProps
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> {
   label?: string;
   icon?: React.ReactNode;
 }
@@ -25,11 +26,11 @@ const Input = ({ label, icon, ...props }: InputProps) => {
             placeholder:opacity-0 focus:placeholder:opacity-100
         `}
         labelProps={{
-            className: `
+          className: `
                 text-gray-500 peer-focus:text-[#A78FBF]
                 font-medium
                 before:content-none after:content-none
-            `
+            `,
         }}
         containerProps={{ className: "min-w-[100px]" }}
         {...props}

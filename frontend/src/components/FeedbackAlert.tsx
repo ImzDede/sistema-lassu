@@ -11,16 +11,11 @@ interface FeedbackAlertProps {
   onClose: () => void;
 }
 
-const FeedbackAlert = ({
-  open,
-  color,
-  message,
-  onClose,
-}: FeedbackAlertProps) => {
+const FeedbackAlert = ({ open, color, message, onClose }: FeedbackAlertProps) => {
   const bgClass =
     color === "green"
       ? "bg-green-500 border-green-400"
-      : "bg-[#F2A9A2] border-[#F2A9A2] text-white";
+      : "bg-brand-error border-brand-error text-white";
 
   return (
     <div className="fixed z-50 top-4 left-4 right-4 md:top-10 md:right-4 md:left-auto md:w-full md:max-w-sm">
@@ -31,18 +26,10 @@ const FeedbackAlert = ({
         animate={{ mount: { y: 0 }, unmount: { y: -100 } }}
         icon={color === "green" ? <CheckCircle /> : <AlertTriangle />}
       >
-        <Typography
-          variant="small"
-          className="font-bold"
-          placeholder={undefined}
-        >
+        <Typography variant="small" className="font-bold">
           {color === "green" ? "Sucesso" : "Atenção"}
         </Typography>
-        <Typography
-          variant="small"
-          className="font-normal opacity-95"
-          placeholder={undefined}
-        >
+        <Typography variant="small" className="font-normal opacity-95">
           {message}
         </Typography>
       </Alert>

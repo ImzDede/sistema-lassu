@@ -15,31 +15,25 @@ const NavItem = ({ icon, label, href, active = false }: NavItemProps) => {
   return (
     <Link href={href} className="block w-full mb-1">
       <ListItem
-        selected={active}
-        className={`transition-all duration-300 ${
-          active
-            ? "bg-[#A78FBF]/10 text-[#A78FBF] focus:bg-[#A78FBF]/10 hover:bg-[#A78FBF]/10 border-r-4 border-[#A78FBF] rounded-r-none shadow-none"
-            : "text-gray-500 hover:bg-[#D9A3B6]/10 hover:text-[#A78FBF]"
-        }`}
-        placeholder={undefined}
+        className={`transition-all duration-300 group focus:outline-none
+          ${
+            active
+              ? "bg-white/20 text-white font-bold hover:bg-white/20 hover:text-white focus:bg-white/20 focus:text-white active:bg-white/20 active:text-white shadow-none"
+              : "text-white/70 hover:bg-white/10 hover:text-white focus:bg-white/10 focus:text-white active:bg-white/10 active:text-white"
+          }
+        `}
       >
-        <ListItemPrefix placeholder={undefined}>
-          {React.cloneElement(
-            icon as React.ReactElement<{ className: string }>,
-            {
-              className: `w-5 h-5 transition-colors ${
-                active
-                  ? "text-[#A78FBF]"
-                  : "text-gray-400 group-hover:text-[#A78FBF]"
-              }`,
-            }
-          )}
+        <ListItemPrefix>
+          {React.cloneElement(icon, {
+            className: `w-5 h-5 transition-colors ${
+              active 
+                ? "text-white"
+                : "text-white/70 group-hover:text-white group-focus:text-white"
+            }`,
+          })}
         </ListItemPrefix>
         <Typography
-          className={`mr-auto font-medium text-sm uppercase tracking-wide ${
-            active ? "font-bold" : ""
-          }`}
-          placeholder={undefined}
+          className="mr-auto font-medium text-sm uppercase tracking-wide"
         >
           {label}
         </Typography>

@@ -13,48 +13,26 @@ interface CardConsultaProps {
 
 const CardConsulta = ({ name, type, time, date }: CardConsultaProps) => {
   return (
-    <Card
-      className="w-full shadow-sm hover:shadow-md transition-all border border-gray-100 hover:border-[#D9A3B6]/30"
-      placeholder={undefined}
-    >
-      <CardBody
-        className="p-4 flex justify-between items-center"
-        placeholder={undefined}
-      >
+    <Card className="w-full shadow-sm hover:shadow-md transition-all border border-gray-100 hover:border-brand-pink/30">
+      <CardBody className="p-4 flex justify-between items-center">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-[#A78FBF]/10 flex items-center justify-center text-[#A78FBF] border border-[#A78FBF]/20">
+          <div className="w-12 h-12 rounded-full bg-brand-purple/10 flex items-center justify-center text-brand-purple border border-brand-purple/20">
             <User size={24} />
           </div>
           <div>
-            <Typography
-              variant="h6"
-              className="uppercase text-sm font-bold leading-tight text-gray-800"
-              placeholder={undefined}
-            >
+            <Typography variant="h6" className="uppercase text-sm font-bold leading-tight text-brand-dark">
               {name}
             </Typography>
-            <Typography
-              variant="small"
-              className="text-xs font-medium text-[#D9A3B6]"
-              placeholder={undefined}
-            >
+            <Typography variant="small" className="text-xs font-medium text-brand-pink">
               {type}
             </Typography>
           </div>
         </div>
         <div className="text-right">
-          <Typography
-            variant="small"
-            className="font-bold text-sm text-[#A78FBF]"
-            placeholder={undefined}
-          >
+          <Typography variant="small" className="font-bold text-sm text-brand-purple">
             {time}
           </Typography>
-          <Typography
-            variant="small"
-            className="font-bold text-xs text-gray-400"
-            placeholder={undefined}
-          >
+          <Typography variant="small" className="font-bold text-xs text-gray-400">
             {date}
           </Typography>
         </div>

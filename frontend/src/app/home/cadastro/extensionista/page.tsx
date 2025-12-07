@@ -2,20 +2,19 @@
 
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { parseCookies } from "nookies";
 import { useRouter } from "next/navigation";
-import { jwtDecode } from "jwt-decode";
-import { TokenPayload } from "@/types/usuarios";
+import { ArrowLeft, UserPlus } from "lucide-react";
+import { Card, CardBody, Typography, Spinner } from "@material-tailwind/react";
 import Input from "@/components/Input";
 import Button from "@/components/Button";
 import FeedbackAlert from "@/components/FeedbackAlert";
-import { Card, CardBody, Typography, Spinner } from "@material-tailwind/react";
-import { ArrowLeft, UserPlus } from "lucide-react";
+import { getUserFromToken } from "@/utils/auth";
+import { getAuthHeader } from "@/utils/api";
 
-export default function NovoExtensionista() {
+export default function NewExtensionist() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [authorized, setAuthorized] = useState(false);
+  const [isAuthorized, setIsAuthorized] = useState(false);
 
   const [feedback, setFeedback] = useState({
     open: false,
@@ -24,27 +23,24 @@ export default function NovoExtensionista() {
   });
 
   const [formData, setFormData] = useState({
-    nome: "",
+    name: "",
     email: "",
-    matricula: "",
-    telefone: "",
+    registration: "",
+    phone: "", 
   });
 
   useEffect(() => {
-    const { "lassuauth.token": token } = parseCookies();
-    if (!token) {
+    const user = getUserFromToken();
+    
+    if (!user) {
       router.push("/");
       return;
     }
-    try {
-      const decoded = jwtDecode<TokenPayload>(token);
-      if (!decoded.permAdmin && !decoded.permCadastro) {
-        router.push("/home/cadastro");
-      } else {
-        setAuthorized(true);
-      }
-    } catch (error) {
-      router.push("/");
+
+    if (!user.permAdmin && !user.permCadastro) {
+      router.push("/home/cadastro");
+    } else {
+      setIsAuthorized(true);
     }
   }, [router]);
 
@@ -60,145 +56,128 @@ export default function NovoExtensionista() {
     }, 4000);
   };
 
-  async function handleSalvar(e: React.FormEvent) {
+  async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setFeedback((prev) => ({ ...prev, open: false }));
 
     try {
-      const { "lassuauth.token": token } = parseCookies();
-      const dadosParaEnviar = {
-        nome: formData.nome,
+      const payload = {
+        nome: formData.name,
         email: formData.email,
-        matricula: Number(formData.matricula),
-        telefone: formData.telefone,
+        matricula: Number(formData.registration),
+        telefone: formData.phone,
       };
 
-      await axios.post("http://localhost:3001/users", dadosParaEnviar, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axios.post("http://localhost:3001/users", payload, getAuthHeader());
 
       showAlert("green", "Extensionista cadastrada com sucesso!");
-      setFormData({ nome: "", email: "", matricula: "", telefone: "" });
+      
+      setFormData({ name: "", email: "", registration: "", phone: "" });
+
     } catch (error: any) {
-      console.error("Erro na requisição:", error);
-      const dadosErro = error.response?.data;
-      const msgBackend = dadosErro?.error || dadosErro?.message;
-      const msgFinal =
-        typeof msgBackend === "string"
-          ? msgBackend
-          : "Erro ao realizar o cadastro.";
-      showAlert("red", msgFinal);
+      console.error("Error creating extensionist:", error);
+      const dataError = error.response?.data;
+      const msgBackend = dataError?.error || dataError?.message;
+      const finalMsg = typeof msgBackend === "string" ? msgBackend : "Erro ao realizar o cadastro.";
+      
+      showAlert("red", finalMsg);
     } finally {
       setLoading(false);
     }
   }
 
-  if (!authorized) {
+  if (!isAuthorized) {
     return (
       <div className="flex items-center justify-center w-full h-[80vh]">
-        <Spinner className="h-12 w-12 text-[#A78FBF]" />
+        <Spinner className="h-12 w-12 text-brand-purple" />
       </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full relative">
-      <FeedbackAlert
-        open={feedback.open}
-        color={feedback.color}
-        message={feedback.message}
-        onClose={() => setFeedback((prev) => ({ ...prev, open: false }))}
+      <FeedbackAlert 
+        open={feedback.open} 
+        color={feedback.color} 
+        message={feedback.message} 
+        onClose={() => setFeedback((prev) => ({ ...prev, open: false }))} 
       />
 
+      {/* HEADER */}
       <div className="flex items-center gap-4">
-        <button
-          onClick={() => router.back()}
-          className="p-3 rounded-full hover:bg-[#A78FBF]/10 text-[#A78FBF] transition-colors focus:outline-none"
+        <button 
+          onClick={() => router.back()} 
+          className="p-3 rounded-full hover:bg-brand-purple/10 text-brand-purple transition-colors focus:outline-none" 
           title="Voltar"
         >
           <ArrowLeft className="w-6 h-6" />
         </button>
         <div>
-          <Typography
-            variant="h4"
-            color="blue-gray"
-            className="font-bold uppercase tracking-wide"
-            placeholder={undefined}
-          >
+          <Typography variant="h4" className="font-bold uppercase tracking-wide text-brand-dark">
             Nova Extensionista
           </Typography>
-          <Typography
-            variant="paragraph"
-            className="text-gray-500 font-normal text-sm"
-            placeholder={undefined}
-          >
+          <Typography variant="paragraph" className="text-gray-500 font-normal text-sm">
             Preencha os dados abaixo.
           </Typography>
         </div>
       </div>
 
-      <Card
-        className="w-full shadow-lg border-t-4 border-[#A78FBF]"
-        placeholder={undefined}
-      >
-        <CardBody className="p-6 md:p-10" placeholder={undefined}>
+      {/* FORM CARD */}
+      <Card className="w-full shadow-lg border-t-4 border-brand-purple bg-brand-surface">
+        <CardBody className="p-6 md:p-10">
           <div className="flex items-center gap-3 mb-8 pb-4 border-b border-gray-100">
-            <div className="p-2 bg-[#A78FBF]/10 rounded-lg">
-              <UserPlus className="w-6 h-6 text-[#A78FBF]" />
+            <div className="p-2 bg-brand-purple/10 rounded-lg">
+              <UserPlus className="w-6 h-6 text-brand-purple" />
             </div>
-            <Typography
-              variant="h6"
-              color="blue-gray"
-              className="font-bold"
-              placeholder={undefined}
-            >
+            <Typography variant="h6" className="font-bold text-brand-dark">
               Informações Pessoais
             </Typography>
           </div>
 
-          <form onSubmit={handleSalvar} className="flex flex-col gap-8">
+          <form onSubmit={handleSave} className="flex flex-col gap-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Input
-                label="Nome Completo"
-                name="nome"
-                value={formData.nome}
-                onChange={handleChange}
-                required
+              <Input 
+                label="Nome Completo" 
+                name="name" 
+                value={formData.name} 
+                onChange={handleChange} 
+                required 
               />
-              <Input
-                label="E-mail"
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
+              <Input 
+                label="E-mail" 
+                type="email" 
+                name="email" 
+                value={formData.email} 
+                onChange={handleChange} 
+                required 
               />
             </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Input
-                label="Matrícula"
-                type="number"
-                name="matricula"
-                value={formData.matricula}
-                onChange={handleChange}
-                required
+              <Input 
+                label="Matrícula" 
+                type="number" 
+                name="registration" 
+                value={formData.registration} 
+                onChange={handleChange} 
+                required 
               />
-              <Input
-                label="Telefone"
-                name="telefone"
-                value={formData.telefone}
-                onChange={handleChange}
-                placeholder="(00) 00000-0000"
+              <Input 
+                label="Telefone" 
+                name="phone" 
+                value={formData.phone} 
+                onChange={handleChange} 
+                placeholder="(00) 00000-0000" 
               />
             </div>
 
             <div className="flex flex-col-reverse lg:flex-row gap-4 mt-4">
               <div className="w-full lg:w-1/2">
-                <Button
-                  variant="outline"
-                  type="button"
-                  onClick={() => router.back()}
+                <Button 
+                  variant="outline" 
+                  type="button" 
+                  onClick={() => router.back()} 
                   fullWidth
                 >
                   CANCELAR
