@@ -3,22 +3,20 @@
 import React, { useState, FormEvent, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import { setCookie } from "nookies";
 import Image from "next/image";
 import { Eye, EyeOff } from "lucide-react";
-
-// Componentes
 import Input from "@/components/Input";
 import Button from "@/components/Button";
 import FeedbackAlert from "@/components/FeedbackAlert";
 import { Checkbox, Typography } from "@material-tailwind/react";
+import { saveToken } from "@/utils/auth";
 
 export default function Login() {
   const [email, setEmail] = useState("");
-  const [senha, setSenha] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [lookPassword, setLookPassword] = useState(false);
-  const [manterConectado, setManterConectado] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [keepConnected, setKeepConnected] = useState(false);
 
   const [feedback, setFeedback] = useState({
     open: false,
@@ -43,16 +41,13 @@ export default function Login() {
     try {
       const response = await axios.post("http://localhost:3001/users/login", {
         email: email,
-        senha: senha,
+        senha: password,
       });
 
       const { token } = response.data;
-
       showAlert("green", "Login efetuado com sucesso!");
 
-      const cookieOptions: any = { path: "/" };
-      if (manterConectado) cookieOptions.maxAge = 60 * 60 * 24 * 7;
-      setCookie(undefined, "lassuauth.token", token, cookieOptions);
+      saveToken(token, keepConnected);
 
       setTimeout(() => {
         router.push("/home");
@@ -65,14 +60,12 @@ export default function Login() {
       showAlert("red", msg);
       setLoading(false);
     } finally {
-      if (feedback.color === "red") {
-        setSenha("");
-      }
+      if (feedback.color === "red") setPassword("");
     }
   }
 
   return (
-    <main className="min-h-screen flex flex-col justify-center md:flex-row md:justify-normal bg-white relative">
+    <main className="min-h-screen flex flex-col justify-center md:flex-row md:justify-normal bg-brand-bg relative">
       <FeedbackAlert
         open={feedback.open}
         color={feedback.color}
@@ -80,7 +73,6 @@ export default function Login() {
         onClose={() => setFeedback((prev) => ({ ...prev, open: false }))}
       />
 
-      {/* LADO ESQUERDO */}
       <div className="w-full md:w-1/2 md:bg-[linear-gradient(to_bottom_right,_#A78FBF,_#D9A3B6,_#F2A9A2,_#F2B694)] flex flex-col items-center justify-center p-6 md:p-10 md:min-h-screen relative overflow-hidden">
         <div className="mb-4 md:mb-8 z-10">
           <Image
@@ -94,12 +86,11 @@ export default function Login() {
         </div>
       </div>
 
-      {/* LADO DIREITO */}
-      <div className="w-full md:w-1/2 bg-white flex items-center justify-center p-8">
+      <div className="w-full md:w-1/2 bg-brand-bg flex items-center justify-center p-8">
         <div className="w-full max-w-md flex flex-col gap-6">
           <Typography
             variant="h2"
-            className="text-center mb-4 uppercase tracking-widest font-normal text-[#A78FBF]"
+            className="text-center mb-4 uppercase tracking-widest font-normal text-brand-purple"
           >
             Bem-vindo
           </Typography>
@@ -115,20 +106,20 @@ export default function Login() {
               required
             />
             <Input
-              type={lookPassword ? "text" : "password"}
+              type={showPassword ? "text" : "password"}
               label="Senha"
-              value={senha}
+              value={password}
               onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                setSenha(e.target.value)
+                setPassword(e.target.value)
               }
               required
               icon={
                 <button
                   type="button"
-                  onClick={() => setLookPassword(!lookPassword)}
-                  className="focus:outline-none hover:text-[#A78FBF] text-gray-400 transition-colors cursor-pointer"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="focus:outline-none hover:text-brand-purple text-gray-400 transition-colors cursor-pointer"
                 >
-                  {lookPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               }
             />
@@ -137,11 +128,12 @@ export default function Login() {
               <Checkbox
                 label="Manter conectado?"
                 color="purple"
-                className="checked:bg-[#A78FBF] checked:border-[#A78FBF]"
-                checked={manterConectado}
+                className="checked:bg-brand-purple checked:border-brand-purple"
+                checked={keepConnected}
                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                  setManterConectado(e.target.checked)
+                  setKeepConnected(e.target.checked)
                 }
+                crossOrigin={undefined}
               />
             </div>
 
@@ -155,7 +147,7 @@ export default function Login() {
           <div className="text-center mt-4">
             <a
               href="#"
-              className="text-sm text-gray-400 hover:text-[#A78FBF] hover:underline transition-colors font-medium"
+              className="text-sm text-gray-400 hover:text-brand-purple hover:underline transition-colors font-medium"
             >
               Esqueceu sua senha?
             </a>
