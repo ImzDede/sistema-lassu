@@ -138,7 +138,7 @@ O sistema utiliza **JWT (JSON Web Token)** para segurança.
 • 401 Unauthorized: Conta desativada. Entre em contato com a administração.
 
 ### 4. Completar Primeiro Acesso
-**Rota:** PATCH /users/primeiro-acesso
+**Rota:** PATCH /users/first-acess
 
 **Acesso:** Usuário logado com senha provisória
 
@@ -368,7 +368,7 @@ O sistema utiliza **JWT (JSON Web Token)** para segurança.
 ## Módulo Disponibilidade
 
 ### 1. Gerenciar Disponibilidade (Salvar)
-**Rota:** POST /availability
+**Rota:** PUT /availability
 
 **Acesso:** Qualquer usuário logado
 
