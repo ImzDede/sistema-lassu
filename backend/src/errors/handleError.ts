@@ -1,5 +1,5 @@
 import { Response } from "express";
-import { HTTP_ERRORS } from "../constants/messages";
+import { HTTP_ERRORS } from "./messages";
 import { AppError } from "./AppError";
 
 export function handleError(res: Response, error: unknown) {

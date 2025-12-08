@@ -3,7 +3,7 @@ import cors from "cors";
 import dotenv from 'dotenv';
 import pool from "./config/db";
 import userRoutes from './routes/user.routes';
-import disponibilidadeRoutes from './routes/disponibilidade.routes';
+import disponibilidadeRoutes from './routes/availability.routes';
 
 dotenv.config();
 
