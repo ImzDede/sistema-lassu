@@ -18,8 +18,9 @@ import {
 import Button from "@/components/Button";
 import ProfileMenuItem from "@/components/ProfileMenuItem";
 import { logout } from "@/utils/auth";
-import { getAuthHeader } from "@/utils/api";
+import { getAuthHeader } from "@/utils/api"; 
 
+// Menu estático de configurações
 const MENU_ITEMS = [
   { label: "DADOS PESSOAIS", icon: <User />, href: "/home/perfil/dados" },
   { label: "SENHA", icon: <Lock />, href: "/home/perfil/senha" },
@@ -34,12 +35,16 @@ const MENU_ITEMS = [
 
 export default function Perfil() {
   const router = useRouter();
+
+  // Estado para armazenar dados vindos da API
   const [userData, setUserData] = useState({
     name: "Carregando...",
     registration: "...",
   });
 
   useEffect(() => {
+    // Busca dados atualizados do perfil ao montar a tela.
+    // Utiliza getAuthHeader para injetar o token automaticamente.
     axios
       .get("http://localhost:3001/users/profile", getAuthHeader())
       .then((response) => {
@@ -53,6 +58,7 @@ export default function Perfil() {
       .catch((error) => console.error("Erro perfil:", error));
   }, []);
 
+  // Função de logout
   function handleLogout() {
     logout();
     router.push("/");
@@ -60,6 +66,8 @@ export default function Perfil() {
 
   return (
     <div className="flex flex-col w-full min-h-full pb-20 md:pb-0 font-sans">
+
+      {/* Cabeçalho Mobile com botão de Voltar */}
       <div className="mb-6 md:mb-8 flex items-center gap-2">
         <button
           onClick={() => router.back()}
@@ -84,8 +92,11 @@ export default function Perfil() {
       </div>
 
       <Card className="w-full max-w-6xl mx-auto shadow-sm lg:shadow-md border border-brand-pink/30 bg-brand-surface overflow-hidden">
+        {/* Layout Responsivo: Coluna no Mobile, Linha no Desktop */}
         <div className="flex flex-col lg:flex-row min-h-[500px]">
-          <div className="w-full lg:w-1/3 bg-brand-bg/50 lg:border-r border-brand-pink/20 p-6 lg:p-8 flex flex-col items-center lg:items-start">
+
+          {/* COLUNA ESQUERDA: Foto e Dados Básicos */}
+          <div className="w-full lg:w-1/3 bg-brand-bg/50 lg:border-r border-brand-pink/20 p-6 lg:p-8 flex flex-col items-center">
             <div className="relative mb-6 group">
               <div className="w-32 h-32 rounded-full bg-white border-4 border-white shadow-md flex items-center justify-center text-gray-300 overflow-hidden ring-1 ring-gray-100">
                 <User size={64} strokeWidth={1.5} />
@@ -94,7 +105,7 @@ export default function Perfil() {
                 <Pencil size={16} />
               </button>
             </div>
-            <div className="text-center lg:text-left w-full mb-8">
+            <div className="text-center w-full mb-8">
               <Typography
                 variant="h5"
                 className="font-bold uppercase text-brand-dark break-words"
@@ -105,6 +116,8 @@ export default function Perfil() {
                 Matrícula: {userData.registration}
               </Typography>
             </div>
+
+            {/* Botão de Sair (Versão Desktop) */}
             <div className="mt-auto hidden lg:block w-full">
               <Button
                 onClick={handleLogout}
@@ -118,6 +131,7 @@ export default function Perfil() {
             </div>
           </div>
 
+          {/* COLUNA DIREITA: Menu de Opções */}
           <div className="w-full lg:w-2/3 p-6 lg:p-8 bg-brand-surface flex flex-col">
             <Typography
               variant="small"
@@ -137,6 +151,8 @@ export default function Perfil() {
                 ))}
               </List>
             </div>
+
+            {/* Botão de Sair (Versão Mobile) */}
             <div className="mt-8 lg:hidden pt-6 border-t border-gray-100">
               <Button
                 onClick={handleLogout}

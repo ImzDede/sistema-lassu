@@ -12,12 +12,16 @@ import { Checkbox, Typography } from "@material-tailwind/react";
 import { saveToken } from "@/utils/auth";
 
 export default function Login() {
+  // Dadoa para realizar login
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  // States do formulário
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [keepConnected, setKeepConnected] = useState(false);
 
+  // Estado para feedback visual (Sucesso/Erro)
   const [feedback, setFeedback] = useState({
     open: false,
     color: "green" as "green" | "red",
@@ -44,13 +48,20 @@ export default function Login() {
         senha: password,
       });
 
-      const { token } = response.data;
+      const { token, user } = response.data;
+
       showAlert("green", "Login efetuado com sucesso!");
 
+      // Salva o token no cookie
       saveToken(token, keepConnected);
 
+      // Redirecionamento condicional baseado no status do usuário
       setTimeout(() => {
-        router.push("/home");
+        if (user.primeiroAcesso) {
+          router.push("/primeiroAcesso"); // Fluxo obrigatório de troca de senha
+        } else {
+          router.push("/home"); // Fluxo normal
+        }
       }, 1000);
     } catch (err: any) {
       console.error(err);
@@ -60,7 +71,9 @@ export default function Login() {
       showAlert("red", msg);
       setLoading(false);
     } finally {
-      if (feedback.color === "red") setPassword("");
+      if (feedback.color === "red") {
+        setPassword("");
+      }
     }
   }
 
@@ -73,6 +86,7 @@ export default function Login() {
         onClose={() => setFeedback((prev) => ({ ...prev, open: false }))}
       />
 
+      {/* Lado Esquerdo - Logo */}
       <div className="w-full md:w-1/2 md:bg-[linear-gradient(to_bottom_right,_#A78FBF,_#D9A3B6,_#F2A9A2,_#F2B694)] flex flex-col items-center justify-center p-6 md:p-10 md:min-h-screen relative overflow-hidden">
         <div className="mb-4 md:mb-8 z-10">
           <Image
@@ -86,6 +100,7 @@ export default function Login() {
         </div>
       </div>
 
+      {/* Lado Direito - Formulário */}
       <div className="w-full md:w-1/2 bg-brand-bg flex items-center justify-center p-8">
         <div className="w-full max-w-md flex flex-col gap-6">
           <Typography
@@ -117,6 +132,7 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  tabIndex={-1}
                   className="focus:outline-none hover:text-brand-purple text-gray-400 transition-colors cursor-pointer"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}

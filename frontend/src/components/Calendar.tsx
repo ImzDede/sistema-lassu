@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Card, CardBody, Typography, IconButton } from "@material-tailwind/react";
-import { ChevronLeft, ChevronRight, Stethoscope } from "lucide-react";
+import { Armchair, ChevronLeft, ChevronRight, Stethoscope } from "lucide-react";
 
 const daysOfWeek = ["D", "S", "T", "Q", "Q", "S", "S"];
 const monthNames = [
@@ -60,7 +60,7 @@ export default function CalendarWidget() {
           </span>
           {hasConsultation && (
             <div className={`transition-colors ${today ? "text-brand-peach" : "text-brand-purple"}`}>
-              <Stethoscope size={14} strokeWidth={2.5} />
+              <Armchair size={14} strokeWidth={2.5} />
             </div>
           )}
         </div>
@@ -70,17 +70,17 @@ export default function CalendarWidget() {
   };
 
   return (
-    <Card className="w-full shadow-sm border border-brand-pink/30 bg-brand-surface" placeholder={undefined}>
-      <CardBody className="p-4" placeholder={undefined}>
+    <Card className="w-full shadow-sm border border-brand-pink/30 bg-brand-surface">
+      <CardBody className="p-4">
         <div className="flex items-center justify-between mb-4">
-          <Typography variant="h6" className="capitalize font-bold text-brand-dark" placeholder={undefined}>
+          <Typography variant="h6" className="capitalize font-bold text-brand-dark">
             {monthNames[month]} <span className="text-gray-400 font-normal">{year}</span>
           </Typography>
           <div className="flex gap-1">
-            <IconButton variant="text" size="sm" onClick={handlePrevMonth} className="rounded-full hover:bg-brand-purple/10 text-gray-500" placeholder={undefined}>
+            <IconButton variant="text" size="sm" onClick={handlePrevMonth} className="rounded-full hover:bg-brand-purple/10 text-gray-500">
               <ChevronLeft className="h-5 w-5" />
             </IconButton>
-            <IconButton variant="text" size="sm" onClick={handleNextMonth} className="rounded-full hover:bg-brand-purple/10 text-gray-500" placeholder={undefined}>
+            <IconButton variant="text" size="sm" onClick={handleNextMonth} className="rounded-full hover:bg-brand-purple/10 text-gray-500">
               <ChevronRight className="h-5 w-5" />
             </IconButton>
           </div>
@@ -88,7 +88,7 @@ export default function CalendarWidget() {
         <div className="grid grid-cols-7 mb-2 border-b border-brand-pink/20 pb-2">
           {daysOfWeek.map((day, i) => (
             <div key={i} className="flex justify-center">
-              <Typography variant="small" className="font-bold text-xs text-brand-pink uppercase" placeholder={undefined}>
+              <Typography variant="small" className="font-bold text-xs text-brand-pink uppercase">
                 {day}
               </Typography>
             </div>
@@ -98,8 +98,8 @@ export default function CalendarWidget() {
           {renderDays()}
         </div>
         <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-brand-pink/20">
-          <Stethoscope size={14} className="text-brand-purple" />
-          <Typography variant="small" className="text-xs text-gray-400 font-medium" placeholder={undefined}>
+          <Armchair size={14} className="text-brand-purple" />
+          <Typography variant="small" className="text-xs text-gray-400 font-medium">
             Indica dia com consulta
           </Typography>
         </div>

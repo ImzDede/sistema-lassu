@@ -1,4 +1,5 @@
 export interface TokenPayload {
+  primeiroAcesso: boolean;
   id: string;
   nome: string;
   permAtendimento: boolean;

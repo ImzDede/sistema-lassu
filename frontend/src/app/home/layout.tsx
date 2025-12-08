@@ -7,6 +7,7 @@ import {
   Badge,
   IconButton,
   Typography,
+  Spinner,
 } from "@material-tailwind/react";
 import Link from "next/link";
 import Image from "next/image";
@@ -18,8 +19,9 @@ import {
   getUserFromToken,
   logout,
   getToken,
-} from "@/utils/auth"; // REFACTOR: Importações centralizadas
-import { getAuthHeader as getHeader } from "@/utils/api";
+  verifyUserRedirect,
+} from "@/utils/auth";
+import { getAuthHeader, getAuthHeader as getHeader } from "@/utils/api";
 
 export default function HomeLayout({
   children,
@@ -28,32 +30,50 @@ export default function HomeLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+
+  const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState("");
 
   useEffect(() => {
-    const token = getToken();
-    const user = getUserFromToken();
+    const checkAccess = async () => {
+      // Verifica token e redirecionamentos obrigatórios (Login ou Primeiro Acesso)
+      const user = verifyUserRedirect(router, pathname);
 
-    if (!token || !user) {
-      logout();
-      router.push("/");
-      return;
-    }
+      if (!user || user.primeiroAcesso) {
+        return;
+      }
 
-    if (user.nome) setUserName(user.nome);
+      try {
+        if (user.nome) setUserName(user.nome);
 
-    axios
-      .get("http://localhost:3001/users/profile", getHeader())
-      .then((response) => {
+        // Valida token no backend e busca dados atualizados
+        const response = await axios.get(
+          "http://localhost:3001/users/profile",
+          getAuthHeader()
+        );
+
         if (response.data.user && response.data.user.nome) {
           setUserName(response.data.user.nome);
         }
-      })
-      .catch(() => {
+
+        setIsLoading(false);
+      } catch (error) {
         logout();
         router.push("/");
-      });
-  }, [router]);
+      }
+    };
+
+    checkAccess();
+  }, [router, pathname]);
+
+  // Spinner
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-brand-bg flex items-center justify-center">
+        <Spinner className="h-12 w-12 text-brand-purple" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-brand-bg flex flex-col md:flex-row font-sans">
