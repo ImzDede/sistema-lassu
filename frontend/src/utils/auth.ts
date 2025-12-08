@@ -1,6 +1,7 @@
 import { destroyCookie, parseCookies, setCookie } from "nookies";
 import { jwtDecode } from "jwt-decode";
 import { TokenPayload } from "@/types/usuarios";
+import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 
 const TOKEN_KEY = "lassuauth.token";
 
@@ -43,4 +44,32 @@ export function getUserFromToken(): TokenPayload | null {
   } catch (error) {
     return null;
   }
+}
+
+// Essa função verifica onde o usuário está e para onde ele deveria ir
+export function verifyUserRedirect(router: AppRouterInstance, currentPath: string) {
+  const user = getUserFromToken();
+
+  if (!user) {
+    if (currentPath !== "/") {
+      router.push("/");
+    }
+    return null;
+  }
+
+  if (user.primeiroAcesso) {
+    if (currentPath !== "/primeiroAcesso") {
+      router.push("/primeiroAcesso");
+    }
+    return user;
+  }
+
+  if (!user.primeiroAcesso) {
+    if (currentPath === "/primeiroAcesso" || currentPath === "/") {
+      router.push("/home");
+    }
+    return user;
+  }
+
+  return user;
 }

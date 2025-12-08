@@ -1,14 +1,17 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { getUserFromToken } from "@/utils/auth";
+import { getUserFromToken, verifyUserRedirect } from "@/utils/auth";
 import CardCadastro from "@/components/CardCadastro";
 import { Typography, Spinner } from "@material-tailwind/react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 export default function Cadastro() {
   const router = useRouter();
+  const pathname = usePathname();
   const [loading, setLoading] = useState(true);
+
+  // Estado local para armazenar as permissões decodificadas do token
   const [permissions, setPermissions] = useState({
     admin: false,
     cadastro: false,
@@ -16,31 +19,35 @@ export default function Cadastro() {
   });
 
   useEffect(() => {
-    const user = getUserFromToken();
+    // Verifica segurança da rota
+    const user = verifyUserRedirect(router, pathname);
+    
     if (user) {
+      // Extrai as permissões do payload do token
       setPermissions({
         admin: user.permAdmin,
         cadastro: user.permCadastro,
         atendimento: user.permAtendimento,
       });
       setLoading(false);
-    } else {
-      router.push("/");
     }
-  }, [router]);
+  }, [router, pathname]);
 
+  // Itens gerais acessíveis a todos os níveis de permissão
   const menuItemsGeneral = [
-    { label: "CONSULTAS", href: "/home/cadastro/consulta" },
+    { label: "SESSÕES", href: "/home/cadastro/sessoes" },
     { label: "ANOTAÇÕES", href: "/home/cadastro/anotacoes" },
     { label: "ANAMNESE", href: "/home/cadastro/anamnese" },
-    { label: "SÍNTESE", href: "/home/cadastro/sintese" },
+    { label: "SÍNTESES", href: "/home/cadastro/sintese" },
   ];
 
+  // Itens restritos (Admin ou Equipe de Cadastro)
   const menuItemsSpecific = [
     { label: "PACIENTES", href: "/home/cadastro/paciente" },
     { label: "EXTENSIONISTAS", href: "/home/cadastro/extensionista" },
   ];
 
+  // Spinner
   if (loading) {
     return (
       <div className="flex items-center justify-center w-full h-[80vh]">

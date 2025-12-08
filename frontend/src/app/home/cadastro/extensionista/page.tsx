@@ -2,26 +2,31 @@
 
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ArrowLeft, UserPlus } from "lucide-react";
 import { Card, CardBody, Typography, Spinner } from "@material-tailwind/react";
 import Input from "@/components/Input";
 import Button from "@/components/Button";
 import FeedbackAlert from "@/components/FeedbackAlert";
-import { getUserFromToken } from "@/utils/auth";
+import { getUserFromToken, verifyUserRedirect } from "@/utils/auth";
 import { getAuthHeader } from "@/utils/api";
 
 export default function NewExtensionist() {
   const router = useRouter();
+  const pathname = usePathname();
+
+  // States do formulário
   const [loading, setLoading] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(false);
 
+  // States do feedback
   const [feedback, setFeedback] = useState({
     open: false,
     color: "green" as "green" | "red",
     message: "",
   });
 
+  // Dados a serem enviados
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -29,21 +34,21 @@ export default function NewExtensionist() {
     phone: "", 
   });
 
+  // Verificação de Segurança e Permissões
   useEffect(() => {
-    const user = getUserFromToken();
+    const user = verifyUserRedirect(router, pathname);
     
-    if (!user) {
-      router.push("/");
-      return;
+    if (user) {
+      // Exige permissão de Admin ou Cadastro
+      if (!user.permAdmin && !user.permCadastro) {
+        router.push("/home/cadastro");
+      } else {
+        setIsAuthorized(true);
+      }
     }
+  }, [router, pathname]);
 
-    if (!user.permAdmin && !user.permCadastro) {
-      router.push("/home/cadastro");
-    } else {
-      setIsAuthorized(true);
-    }
-  }, [router]);
-
+  // Atualiza os estados dos inputs simples (Nome, Email, Matricula e Celular)
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -87,6 +92,7 @@ export default function NewExtensionist() {
     }
   }
 
+  // Spinner
   if (!isAuthorized) {
     return (
       <div className="flex items-center justify-center w-full h-[80vh]">
