@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { v4 } from "uuid";
 import { User } from "../types/User";
 import jwt from 'jsonwebtoken';
-import { HTTP_ERRORS, HTTP_SUCCESS } from "../constants/messages";
+import { HTTP_ERRORS, HTTP_SUCCESS } from "../errors/messages";
 import { AppError } from "../errors/AppError";
 
 export class UserService {
