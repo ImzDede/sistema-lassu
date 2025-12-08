@@ -135,7 +135,7 @@ O sistema utiliza **JWT (JSON Web Token)** para segurança.
 
 • 401 Unauthorized: Token inválido ou não fornecido.
 
-• 401 Unauthorized: Conta desativada. Entre em contato com a administração..
+• 401 Unauthorized: Conta desativada. Entre em contato com a administração.
 
 ### 4. Completar Primeiro Acesso
 **Rota:** PATCH /users/primeiro-acesso
@@ -364,3 +364,88 @@ O sistema utiliza **JWT (JSON Web Token)** para segurança.
 • 401 Unauthorized: Conta desativada. Entre em contato com a administração.
 
 • 404 Not Found: Usuário não encontrado.
+
+## Módulo Disponibilidade
+
+### 1. Gerenciar Disponibilidade (Salvar)
+**Rota:** POST /availability
+
+**Acesso:** Qualquer usuário logado
+
+**Descrição:** Define a grade de horários do usuário.
+
+• **Lógica de Substituição:** Esta rota apaga todos os horários anteriores do usuário e grava a nova lista enviada.
+
+• **Limpar Agenda:** Para remover todos os horários, basta enviar um array vazio [].
+
+• **Validação:** O sistema verifica automaticamente se há conflitos (horários sobrepostos) ou erros de lógica (início maior que fim) antes de salvar.
+
+**Corpo da requisição (JSON - Array):**
+
+````json 
+[
+  {
+    "dia": 3,            // Quarta-feira
+    "horaInicio": 8,
+    "horaFim": 12
+  },
+  {
+    "dia": 1,            // Segunda-feira
+    "horaInicio": 14,    // 14:00
+    "horaFim": 18        // 18:00
+  }
+]
+````
+
+**Resposta Sucesso (201 Created):**
+````json 
+[
+  {
+    "dia": 1,
+    "horaInicio": 14,
+    "horaFim": 18
+  },
+  {
+    "dia": 3,
+    "horaInicio": 8,
+    "horaFim": 12
+  }
+]
+````
+**Erros Comuns:**
+
+• 400 Bad Request: Formato inválido. Envie uma array.
+
+• 400 Bad Request: Horário inválido no dia X: Fim deve ser maior que início.
+
+• 400 Bad Request: Conflito de horários no dia X.
+
+### 2. Obter Disponibilidade do Perfil
+**Rota:** GET /availability
+
+**Acesso:** Qualquer usuário logado
+
+**Descrição:** Retorna a grade de horários cadastrada para o usuário logado.
+
+**Corpo da requisição (JSON):** Vazio
+
+**Resposta Sucesso (200 OK):**
+````json 
+[
+  {
+    "dia": 1,
+    "horaInicio": 14,
+    "horaFim": 18
+  },
+  {
+    "dia": 3,
+    "horaInicio": 8,
+    "horaFim": 12
+  }
+]
+````
+**Erros Comuns:**
+
+• 401 Unauthorized: Token inválido ou não fornecido.
+
+• 401 Unauthorized: Erro de conexão com o banco.

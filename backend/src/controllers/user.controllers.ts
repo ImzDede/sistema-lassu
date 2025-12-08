@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { UserService } from "../services/user.services";
-import { HTTP_ERRORS } from "../constants/messages";
+import { HTTP_ERRORS } from "../errors/messages";
 import { handleError } from "../errors/handleError";
 
 const userService = new UserService();
