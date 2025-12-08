@@ -3,8 +3,10 @@ import bcrypt from 'bcryptjs';
 import { v4 } from "uuid";
 import { User } from "../types/User";
 import jwt from 'jsonwebtoken';
-import { HTTP_ERRORS, HTTP_SUCCESS } from "../errors/messages";
+import { HTTP_ERRORS } from "../errors/messages";
 import { AppError } from "../errors/AppError";
+import { NotificationService } from "./notification.services";
+const notificationService = new NotificationService()
 
 export class UserService {
     private mapUser(dbUser: any): User {
@@ -69,6 +71,12 @@ export class UserService {
         const result = await pool.query(query, values);
 
         const dbUser = result.rows[0];
+
+        //Manda notificação para todos os admins
+        await notificationService.notifyAdmins(
+            "Novo Usuário Cadastrado",
+            `O usuário ${dbUser.nome} (Matrícula: ${dbUser.matricula}) acabou de ser criado.`
+        )
 
         return {
             user: this.mapUser(dbUser)

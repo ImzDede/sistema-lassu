@@ -38,6 +38,14 @@ const DAYS_OF_WEEK = [
   "Sexta-feira",
 ];
 
+const DAY_MAP: Record<string, number> = {
+  "Segunda-feira": 1,
+  "Terça-feira": 2,
+  "Quarta-feira": 3,
+  "Quinta-feira": 4,
+  "Sexta-feira": 5
+}
+
 // Horários Início (08:00 - 17:00)
 const HOURS_START = Array.from({ length: 10 }, (_, i) => {
   const hour = i + 8;
@@ -139,10 +147,9 @@ export default function FirstAccess() {
   const handleSaveAll = async () => {
     setLoadingSave(true);
     try {
-      // Validação de horário reverso
-      const hasInvalidTime = availability.some(
-        (slot) =>
-          parseInt(slot.start.split(":")[0]) >= parseInt(slot.end.split(":")[0])
+      // 1. Validação visual dos horários
+      const hasInvalidTime = availability.some(slot => 
+        parseInt(slot.start.split(':')[0], 10) >= parseInt(slot.end.split(':')[0], 10)
       );
 
       if (hasInvalidTime) {
@@ -151,28 +158,66 @@ export default function FirstAccess() {
         return;
       }
 
-      const payload = {
+      // --- ETAPA 1: ALTERAR SENHA (PATCH) ---
+      const payloadSenha = {
         senha: passwords.new,
         fotoUrl: null,
-        // disponibilidade: availability
       };
 
-      
-      const response = await axios.patch(
+      // ATENÇÃO: Confirme se a rota é 'first-acess' ou 'first-access' (com dois 's')
+      // A doc dele diz 'primeiro-acesso', mas ele te falou 'first-acess'.
+      // Vamos tentar usar a que você disse que ele criou:
+      const responseSenha = await axios.patch(
         "http://localhost:3001/users/first-acess", 
-        payload, 
+        payloadSenha, 
         getAuthHeader()
       );
 
-      // SUCESSO: Força o logout e manda para o login
-      showAlert("green", "Senha definida! Faça login novamente.");
+      const newToken = responseSenha.data.token;
+
+      if (!newToken) {
+        throw new Error("Backend não retornou o novo token na troca de senha.");
+      }
+
+      // Salva o token novo (importante!)
+      saveToken(newToken);
+
+      // --- ETAPA 2: DISPONIBILIDADE (PUT) ---
+      // Montamos o Array
+      const payloadDisponibilidade = availability.map(slot => ({
+        dia: DAY_MAP[slot.day], // Certifique-se que DAY_MAP está declarado lá em cima
+        horaInicio: parseInt(slot.start.split(':')[0], 10),
+        horaFim: parseInt(slot.end.split(':')[0], 10),
+      }));
+
+      // 🔍 DEBUG: Abra o F12 (Console) e veja o que aparece aqui antes de dar erro
+      console.log("=== ENVIANDO DISPONIBILIDADE ===");
+      console.log(JSON.stringify(payloadDisponibilidade, null, 2));
+
+      // Se o array estiver vazio ou com 'undefined', o erro está no mapeamento.
+      
+      await axios.put(
+        "http://localhost:3001/availability", // Confirme se é /availability ou /disponibilidade
+        payloadDisponibilidade, 
+        { 
+          headers: { 
+            Authorization: `Bearer ${newToken}`, // Usa o token novo explicitamente
+            'Content-Type': 'application/json'   // Força o tipo JSON
+          } 
+        }
+      );
+
+      // --- SUCESSO ---
+      showAlert("green", "Cadastro finalizado! Faça login novamente.");
       logout();
       setTimeout(() => router.push("/"), 2000);
+
     } catch (error: any) {
-      console.error(error);
-      const msg =
-        error.response?.data?.message ||
-        "Erro ao salvar";
+      console.error("Erro completo:", error);
+      
+      // Tenta pegar a mensagem específica do erro de disponibilidade ou senha
+      const msg = error.response?.data?.error || error.response?.data?.message || "Erro ao salvar.";
+      
       showAlert("red", msg);
     } finally {
       setLoadingSave(false);

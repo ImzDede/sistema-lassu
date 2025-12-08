@@ -31,6 +31,7 @@ export const HTTP_ERRORS = {
     // 404 - Not Found
     NOT_FOUND: {
         USER: "Usuário não encontrado.",
+        NOTIFICATION: "Notificação não encontrada."
     },
 
     // 500 - Internal Server Error
