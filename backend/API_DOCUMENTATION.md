@@ -431,22 +431,18 @@ O sistema utiliza **JWT (JSON Web Token)** para segurança.
 
 **Resposta Sucesso (200 OK):**
 ````json 
-{
-  "user": {
-    "id": "6385ddd7-48dd-4517-85d1-c182253e740c",
-    "matricula": 20250412,
-    "nome": "Nova Bolsista",
-    "email": "novabolsista@gmail.com",
-    "telefone": "889995555",
-    "fotoUrl": null,
-    "permAtendimento": true,
-    "permCadastro": false,
-    "permAdmin": false,
-    "ativo": true,
-    "primeiroAcesso": true,
-    "createdAt": "2025-12-07T00:48:25.548Z"
+[
+  {
+    "dia": 1,
+    "horaInicio": 14,
+    "horaFim": 18
+  },
+  {
+    "dia": 3,
+    "horaInicio": 8,
+    "horaFim": 12
   }
-}
+]
 ````
 **Erros Comuns:**
 
