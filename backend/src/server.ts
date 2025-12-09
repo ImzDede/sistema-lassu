@@ -5,6 +5,7 @@ import pool from "./config/db";
 import userRoutes from './routes/user.routes';
 import availabilityRoutes from './routes/availability.routes';
 import notificationRoutes from './routes/notification.routes'
+import patientRoutes from './routes/patient.routes'
 
 dotenv.config();
 
@@ -16,6 +17,7 @@ app.use(express.json())
 app.use('/users', userRoutes)
 app.use('/availability', availabilityRoutes);
 app.use('/notification', notificationRoutes);
+app.use('/patient', patientRoutes);
 
 app.get('/', (req: Request, res: Response) => {
     res.send('API Online')
