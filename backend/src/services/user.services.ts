@@ -9,20 +9,20 @@ import { NotificationService } from "./notification.services";
 const notificationService = new NotificationService()
 
 export class UserService {
-    private mapUser(dbUser: any): User {
+    private mapUser(userDb: any): User {
         return {
-            id: dbUser.id,
-            matricula: dbUser.matricula,
-            nome: dbUser.nome,
-            email: dbUser.email,
-            telefone: dbUser.telefone,
-            fotoUrl: dbUser.foto_url,
-            permAtendimento: dbUser.perm_atendimento,
-            permCadastro: dbUser.perm_cadastro,
-            permAdmin: dbUser.perm_admin,
-            ativo: dbUser.ativo,
-            primeiroAcesso: dbUser.primeiro_acesso,
-            createdAt: dbUser.created_at
+            id: userDb.id,
+            matricula: userDb.matricula,
+            nome: userDb.nome,
+            email: userDb.email,
+            telefone: userDb.telefone,
+            fotoUrl: userDb.foto_url,
+            permAtendimento: userDb.perm_atendimento,
+            permCadastro: userDb.perm_cadastro,
+            permAdmin: userDb.perm_admin,
+            ativo: userDb.ativo,
+            primeiroAcesso: userDb.primeiro_acesso,
+            createdAt: userDb.created_at
         };
     }
 
@@ -70,16 +70,16 @@ export class UserService {
 
         const result = await pool.query(query, values);
 
-        const dbUser = result.rows[0];
+        const userDb = result.rows[0];
 
         //Manda notificação para todos os admins
         await notificationService.notifyAdmins(
             "Novo Usuário Cadastrado",
-            `O usuário ${dbUser.nome} (Matrícula: ${dbUser.matricula}) acabou de ser criado.`
+            `O usuário ${userDb.nome} (Matrícula: ${userDb.matricula}) acabou de ser criado.`
         )
 
         return {
-            user: this.mapUser(dbUser)
+            user: this.mapUser(userDb)
         }
 
     }
@@ -94,25 +94,25 @@ export class UserService {
             throw new AppError(HTTP_ERRORS.UNAUTHORIZED.CREDENTIALS_INVALID, 401)
         }
 
-        const dbUser = result.rows[0]
+        const userDb = result.rows[0]
 
         //Verifica se está ativo
-        if (!dbUser.ativo) {
+        if (!userDb.ativo) {
             throw new AppError(HTTP_ERRORS.UNAUTHORIZED.ACCOUNT_DISABLED, 401);
         }
 
         //Verifica se senha bate, se não credenciais inválidas
-        const passwordMatch = await bcrypt.compare(password, dbUser.senha_hash);
+        const passwordMatch = await bcrypt.compare(password, userDb.senha_hash);
 
         if (!passwordMatch) {
             throw new AppError(HTTP_ERRORS.UNAUTHORIZED.CREDENTIALS_INVALID, 401);
         }
 
         //Gera token
-        const token = this.generateToken(dbUser);
+        const token = this.generateToken(userDb);
 
         return {
-            user: this.mapUser(dbUser),
+            user: this.mapUser(userDb),
             token: token
         };
     }
@@ -130,24 +130,24 @@ export class UserService {
             return null;
         }
 
-        const dbUser = result.rows[0];
+        const userDb = result.rows[0];
 
-        return dbUser;
+        return userDb;
     }
 
     async getProfile(userId: string) {
-        const dbUser = await this.findById(userId)
+        const userDb = await this.findById(userId)
 
-        if (dbUser == null) {
+        if (userDb == null) {
             throw new AppError(HTTP_ERRORS.NOT_FOUND.USER, 404)
         }
 
-        if (!dbUser.ativo) {
+        if (!userDb.ativo) {
              throw new AppError(HTTP_ERRORS.UNAUTHORIZED.ACCOUNT_DISABLED, 401)
         }
 
         return {
-            user: this.mapUser(dbUser)
+            user: this.mapUser(userDb)
         };
     }
 
@@ -356,7 +356,7 @@ export class UserService {
         return { token: novoToken }
     }
 
-    private generateToken(dbUser: any) {
+    private generateToken(userDb: any) {
         const secret = process.env.JWT_SECRET;
 
         if (!secret) {
@@ -365,12 +365,12 @@ export class UserService {
 
         const token = jwt.sign(
             {
-                id: dbUser.id,
-                nome: dbUser.nome,
-                permAtendimento: dbUser.perm_atendimento,
-                permCadastro: dbUser.perm_cadastro,
-                permAdmin: dbUser.perm_admin,
-                primeiroAcesso: dbUser.primeiro_acesso
+                id: userDb.id,
+                nome: userDb.nome,
+                permAtendimento: userDb.perm_atendimento,
+                permCadastro: userDb.perm_cadastro,
+                permAdmin: userDb.perm_admin,
+                primeiroAcesso: userDb.primeiro_acesso
             },
             secret,
             { expiresIn: '7d' }

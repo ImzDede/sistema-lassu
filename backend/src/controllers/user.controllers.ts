@@ -86,21 +86,12 @@ export class UserController {
 
     async refreshToken(req: Request, res: Response) {
         try {
-            const id = req.userId;
-
-            if (!id) {
-                return res.status(401).json({ error: HTTP_ERRORS.UNAUTHORIZED.TOKEN_MISSING });
-            }
-
-            const token = await userService.refreshToken(id);
-
-            return res.status(200).json(token)
+            const userId = req.userId as string;
+            const newToken = await userService.refreshToken(userId);
+            return res.status(200).json(newToken)
 
         } catch (error) {
-            if (error instanceof Error) {
-                return res.status(404).json({ error: error.message });
-            }
-            return res.status(500).json({ error: HTTP_ERRORS.INTERNAL_SERVER_ERROR });
+            return handleError(res, error)
         }
     }
 

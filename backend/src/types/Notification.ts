@@ -1,8 +1,32 @@
+import { UUID } from "crypto";
+
 export interface Notification {
-    id: number;
-    usuarioId: string;
-    titulo: string;
-    mensagem: string;
-    lida: boolean;
-    createdAt: Date;
+    title: string;
+    message: string;
+}
+
+export const NOTIFICATION = {
+    //Administrador
+    ADMIN: {
+        NEW_PATIENT: (patientName: string, patientId: string, userName: string, userId: string, professionalName: string, professionalId: string) => {
+            return {
+                title: "Nova Paciente Cadastrada",
+                message:
+                    `A paciente [${patientName}](patient:${patientId}) acaba de ser registrada por [${userName}](user:${userId}), 
+                com a extensionista [${professionalName}](user:${professionalId}) como responsável.`
+            }
+        }
+    },
+
+    //Atendimento
+    USER: {
+        NEW_PATIENT: (patientName: string, patientId: string) => {
+            return {
+                title: "Nova Paciente Atribuida",
+                message:
+                    `A paciente [${patientName}](patient:${patientId}) acaba de ser atribuida a você.`
+            }
+        }
+    }
+
 }

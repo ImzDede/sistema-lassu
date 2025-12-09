@@ -56,9 +56,7 @@ CREATE TABLE pacientes (
     
     -- triagem ou encaminhada
     status VARCHAR(20) DEFAULT 'triagem',
-    
-    -- Pode ser NULL, se a aluna for excluída, o paciente volta a ficar "sem dono", não é apagado.
-    profissional_responsavel_id UUID REFERENCES usuarios(id) ON DELETE SET NULL,
+    profissional_responsavel_id UUID NOT NULL REFERENCES usuarios(id),
 
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

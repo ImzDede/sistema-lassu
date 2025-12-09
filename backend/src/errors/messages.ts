@@ -5,6 +5,7 @@ export const HTTP_ERRORS = {
         VALIDATION: "Erro de validação nos campos enviados.",
         USER_ALREADY_EXISTS: "Este e-mail ou matrícula já estão cadastrados.",
         USER_ALREADY_FIRST_ACESS: "Este usuário já realizou primeiro acesso",
+        PATIENT_ALREADY_EXISTS: "Este cpf já foi cadastrado em um paciente.",
         PASSWORD_MISMATCH: "A nova senha deve ser diferente da anterior.",
         MISSING_FIELDS: "Campos obrigatórios não preenchidos.",
         NO_ARRAY: "Formato inválido. Envie uma array.",

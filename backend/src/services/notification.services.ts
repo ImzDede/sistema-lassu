@@ -1,23 +1,24 @@
 import pool from "../config/db";
 import { AppError } from "../errors/AppError";
 import { HTTP_ERRORS } from "../errors/messages";
+import { Notification } from "../types/Notification";
 
 export class NotificationService {
-    async create(userId: string, title: string, message: string) {
+    async create(userId: string, notification: Notification) {
         const query = `
             INSERT INTO notificacoes (usuario_id, titulo, mensagem)
             VALUES ($1, $2, $3)
         `;
-        await pool.query(query, [userId, title, message]);
+        await pool.query(query, [userId, notification.title, notification.message]);
     }
 
-    async notifyAdmins(title: string, mensagem: string) {
+    async notifyAdmins(notification: Notification) {
         // Busca todos os admins
         const admins = await pool.query('SELECT id FROM usuarios WHERE perm_admin = true');
 
         // Notifica todos os admins
         for (const admin of admins.rows) {
-            this.create(admin.id, title, mensagem)
+            this.create(admin.id, notification)
         }
     }
 
