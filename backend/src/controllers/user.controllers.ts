@@ -38,7 +38,8 @@ export class UserController {
     async completeFirstAcess(req: Request, res: Response) {
         try {
             const userId = req.userId as string;
-            const updatedUser = await userService.completeFirstAcess(userId, req.body)
+            const { senha, disponibilidade } = req.body
+            const updatedUser = await userService.completeFirstAcess(userId, senha, disponibilidade)
             return res.status(200).json(updatedUser);
         } catch (error) {
             return handleError(res, error)

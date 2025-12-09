@@ -6,7 +6,11 @@ import jwt from 'jsonwebtoken';
 import { HTTP_ERRORS } from "../errors/messages";
 import { AppError } from "../errors/AppError";
 import { NotificationService } from "./notification.services";
+import { NOTIFICATION } from "../types/Notification";
+import { AvailabilityService } from "./availability.services";
+import { Availability } from "../types/Availability";
 const notificationService = new NotificationService()
+const availabilityService = new AvailabilityService();
 
 export class UserService {
     private mapUser(userDb: any): User {
@@ -73,10 +77,7 @@ export class UserService {
         const userDb = result.rows[0];
 
         //Manda notificação para todos os admins
-        await notificationService.notifyAdmins(
-            "Novo Usuário Cadastrado",
-            `O usuário ${userDb.nome} (Matrícula: ${userDb.matricula}) acabou de ser criado.`
-        )
+        await notificationService.notifyAdmins(NOTIFICATION.ADMIN.NEW_USER(userDb.nome, userDb.id))
 
         return {
             user: this.mapUser(userDb)
@@ -151,15 +152,14 @@ export class UserService {
         };
     }
 
-    async completeFirstAcess(userId: string, userData: Partial<User>) {
-
+    async completeFirstAcess(userId: string, password: string, availability: Availability[]) {
         //É necessário informar uma senha nova
-        if (!userData.senha) {
+        if (!password) {
             throw new AppError(HTTP_ERRORS.BAD_REQUEST.PASSWORD_MISMATCH, 400);
         }
 
         //Validação simples senha > 6, MELHORAR ISSO
-        if (userData.senha.length < 6) {
+        if (password.length < 6) {
             throw new AppError(HTTP_ERRORS.BAD_REQUEST.VALIDATION, 400);
         }
 
@@ -179,27 +179,29 @@ export class UserService {
         //Verifica se a senha mudou, se não, da erro
         const oldPassword = userDb.rows[0].senha_hash;
 
-        if (await bcrypt.compare(userData.senha, oldPassword)) {
+        if (await bcrypt.compare(password, oldPassword)) {
             throw new AppError(HTTP_ERRORS.BAD_REQUEST.PASSWORD_MISMATCH, 400);
         }
 
+        //Lança Disponibilidade
+        const availabilityResult = await availabilityService.save(userId, availability)
+
         //Transforma senha nova em hash
-        const senhaHash = await bcrypt.hash(userData.senha, 10);
+        const passwordHash = await bcrypt.hash(password, 10);
+
 
         //Atualiza usuário
         const query = `
             UPDATE usuarios
             SET 
-                foto_url = $1,
-                senha_hash = $2,
+                senha_hash = $1,
                 primeiro_acesso = false
-            WHERE id = $3
+            WHERE id = $2
             RETURNING id, nome, email, matricula, telefone, foto_url, perm_atendimento, perm_cadastro, perm_admin, ativo, primeiro_acesso, created_at;
         `;
 
         const values = [
-            userData.fotoUrl || null,
-            senhaHash,
+            passwordHash,
             userId
         ];
 
@@ -212,6 +214,7 @@ export class UserService {
 
         return {
             user: this.mapUser(userUpdatedDb),
+            availability: availabilityResult,
             token: newToken
         }
     }
