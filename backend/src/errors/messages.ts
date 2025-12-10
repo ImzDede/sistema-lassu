@@ -32,6 +32,7 @@ export const HTTP_ERRORS = {
     // 404 - Not Found
     NOT_FOUND: {
         USER: "Usuário não encontrado.",
+        PATIENT: "Paciente não encontrado.",
         NOTIFICATION: "Notificação não encontrada."
     },
 

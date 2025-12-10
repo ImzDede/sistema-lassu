@@ -14,4 +14,36 @@ export class PatientController {
             return handleError(res, error)
         }
     }
+
+    async list(req: Request, res: Response) {
+        try {
+            const userId = req.userId as string
+            const perms = req.userPerms
+            const patients = await patientService.list(userId, perms)
+            res.status(200).json(patients);
+        } catch (error) {
+            return handleError(res, error)
+        }
+    }
+
+    async getById(req: Request, res: Response) {
+        try {
+            const { targetId } = req.params;
+            const patient = await patientService.getById(targetId)
+            res.status(200).json(patient);
+        } catch (error) {
+            return handleError(res, error)
+        }
+    }
+
+    async update(req: Request, res: Response) {
+        try {
+            const { targetId } = req.params;
+            const patient = await patientService.update(targetId, req.body)
+            res.status(200).json(patient);
+        } catch (error) {
+            return handleError(res, error)
+        }
+    }
+
 }

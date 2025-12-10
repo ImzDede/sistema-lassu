@@ -144,7 +144,7 @@ export class UserService {
         }
 
         if (!userDb.ativo) {
-             throw new AppError(HTTP_ERRORS.UNAUTHORIZED.ACCOUNT_DISABLED, 401)
+            throw new AppError(HTTP_ERRORS.UNAUTHORIZED.ACCOUNT_DISABLED, 401)
         }
 
         return {
@@ -258,7 +258,7 @@ export class UserService {
         }
 
         const userDb = result.rows[0];
-        
+
         return {
             user: this.mapUser(userDb)
         }
@@ -332,7 +332,8 @@ export class UserService {
         }
 
         return result.rows.map(userDb => ({
-            user: this.mapUser(userDb)}))
+            user: this.mapUser(userDb)
+        }))
     }
 
     async getById(userId: string) {
@@ -341,7 +342,7 @@ export class UserService {
         if (userDb == null) {
             throw new AppError(HTTP_ERRORS.NOT_FOUND.USER, 404)
         }
-        
+
         return {
             user: this.mapUser(userDb)
         };
@@ -382,4 +383,65 @@ export class UserService {
         return token;
     }
 
+    async getAvailableUsers(dia: number, inicio: number, fim: number) {
+        if (!dia || !inicio || !fim) {
+            throw new AppError(HTTP_ERRORS.BAD_REQUEST.MISSING_FIELDS)
+        }
+
+        const query = `
+            SELECT 
+                u.id, u.matricula, u.nome, d.dia_semana, d.hora_inicio, d.hora_fim
+            FROM usuarios as u, disponibilidades as d
+            WHERE u.id = d.usuario_id
+			  AND d.dia_semana = $1
+              AND u.ativo = TRUE
+              AND u.perm_atendimento = TRUE
+			  AND (
+        		(d.hora_inicio < $2 AND d.hora_fim > $2 AND d.hora_fim < $3)
+        	  OR
+        		(d.hora_inicio > $2 AND d.hora_inicio <= $3 AND d.hora_fim > $3)
+			  OR
+			  	(d.hora_inicio <= $2 AND d.hora_fim >= $3)
+     		  )
+			ORDER BY u.id;
+        `;
+
+        const result = await pool.query(query, [dia, inicio, fim]);
+
+        const usersMap = new Map();
+
+        for (const row of result.rows) {
+            if (!usersMap.has(row.id)) {
+                usersMap.set(row.id, {
+                    user: {
+                        id: row.id,
+                        nome: row.nome
+                    },
+                    availabilities: []
+                });
+            }
+
+            let horaInicio;
+            if (row.hora_inicio <= inicio) {
+                horaInicio = inicio
+            } else horaInicio = row.hora_inicio
+
+            let horaFim;
+            if (row.hora_fim >= fim) {
+                horaFim = fim
+            } else horaFim = row.hora_fim
+
+            usersMap.get(row.id).availabilities.push({
+                dia: row.dia_semana,
+                inicio: horaInicio,
+                fim: horaFim
+            });
+        }
+
+        // Converte o Map para array
+        const users = Array.from(usersMap.values());
+
+        return users;
+
+    }
 }

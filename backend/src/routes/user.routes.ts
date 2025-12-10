@@ -9,6 +9,7 @@ router.post('/login', userController.login);
 
 router.use(authMiddleware);
 
+router.get('/available', is('cadastro'), userController.getAvailable);
 router.post('/', is('cadastro'), userController.create);
 router.get('/profile', userController.getProfile);
 router.patch('/first-acess', userController.completeFirstAcess)

@@ -18,8 +18,8 @@ CREATE TABLE usuarios (
 
     -- Controle
     ativo BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    primeiro_acesso BOOLEAN DEFAULT TRUE;
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    primeiro_acesso BOOLEAN DEFAULT TRUE
 );
 
 CREATE TABLE disponibilidades (
