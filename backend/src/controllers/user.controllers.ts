@@ -96,4 +96,17 @@ export class UserController {
         }
     }
 
+    async getAvailable(req: Request, res: Response) {
+        try {
+            const dia = Number(req.query.dia);
+            const inicio = Number(req.query.inicio);
+            const fim = Number(req.query.fim);
+            const users = await userService.getAvailableUsers(dia, inicio, fim);
+            return res.status(200).json(users);
+
+        } catch (error) {
+            return handleError(res, error);
+        }
+    }
+
 }

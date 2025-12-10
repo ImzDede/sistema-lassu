@@ -138,18 +138,29 @@ O sistema utiliza **JWT (JSON Web Token)** para segurança.
 • 401 Unauthorized: Conta desativada. Entre em contato com a administração.
 
 ### 4. Completar Primeiro Acesso
-**Rota:** PATCH /users/first-acess
+**Rota:** PATCH /users/first-access
 
 **Acesso:** Usuário logado com senha provisória
 
-**Descrição:** Rota obrigatória para quem tem `primeiroAcesso: true`. Obriga a definição de uma nova senha. Retorna novo token.
+**Descrição:** Rota obrigatória para quem tem `primeiroAcesso: true`. Obriga a definição de uma nova senha e o cadastro da disponibilidade de horários. Se as disponibildiades forem inválidas, a senha não é alterada. Retorna o usuário atualizado, a grade salva e o novo token.
 
 **Corpo da requisição (JSON):**
 
 ````json 
 {
-  "fotoUrl": "url",
-  "senha": "SenhaNova123!"
+  "senha": "SenhaNova123!",
+  "disponibilidade": [
+    {
+      "dia": 1,           // 1 = Segunda-feira
+      "horaInicio": 14,   // 14:00
+      "horaFim": 18       // 18:00
+    },
+    {
+      "dia": 3,           // 3 = Quarta-feira
+      "horaInicio": 8,
+      "horaFim": 12
+    }
+  ]
 }
 ````
 
@@ -167,10 +178,22 @@ O sistema utiliza **JWT (JSON Web Token)** para segurança.
     "permCadastro": false,
     "permAdmin": false,
     "ativo": true,
-    "primeiroAcesso": false,
+    "primeiroAcesso": false, // Atualizado
     "createdAt": "2025-12-07T00:48:25.548Z"
   },
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjYzODVkZGQ3LTQ4ZGQtNDUxNy04NWQxLWMxODIyNTNlNzQwYyIsIm5vbWUiOiJOb3ZhIEJvbHNpc3RhIiwicGVybUF0ZW5kaW1lbnRvIjp0cnVlLCJwZXJtQ2FkYXN0cm8iOmZhbHNlLCJwZXJtQWRtaW4iOmZhbHNlLCJwcmltZWlyb0FjZXNzbyI6ZmFsc2UsImlhdCI6MTc2NTA1ODM4MiwiZXhwIjoxNzY1NjYzMTgyfQ.b4RZCsCrI1H8B4K78SKUUvY7uapNy-Si3Z-x4m8FPj0"
+  "availability": [
+    {
+      "dia": 1,
+      "horaInicio": 14,
+      "horaFim": 18
+    },
+    {
+      "dia": 3,
+      "horaInicio": 8,
+      "horaFim": 12
+    }
+  ],
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 ````
 **Erros Comuns:**
@@ -178,6 +201,12 @@ O sistema utiliza **JWT (JSON Web Token)** para segurança.
 • 400 Bad Request: A nova senha deve ser diferente da anterior.
 
 • 400 Bad Request: Este usuário já realizou primeiro acesso.
+
+• 400 Bad Request: Formato inválido. Envie uma array.
+
+• 400 Bad Request: Horário inválido no dia X: Fim deve ser maior que início.
+
+• 400 Bad Request: Conflito de horários no dia X.
 
 ### 5. Atualizar Peril
 **Rota:** PUT /users/profile
@@ -222,7 +251,7 @@ O sistema utiliza **JWT (JSON Web Token)** para segurança.
 • 404 Not Found: Usuário não encontrado.
 
 ### 6. Atualizar Usuário
-**Rota:** PUT /users/
+**Rota:** PUT /users/:targetId
 
 **Acesso:** Permissão de Admin
 
@@ -365,6 +394,67 @@ O sistema utiliza **JWT (JSON Web Token)** para segurança.
 
 • 404 Not Found: Usuário não encontrado.
 
+### 10. Buscar Extensionistas Disponíveis
+**Rota:** POST /users/available
+
+**Acesso:** Requer permissão de Cadastro
+
+**Descrição:** Busca quais usuários (com permissão de atendimento) possuem disponibilidade em um dia e intervalo de horário específico. Útil para encontrar quem pode atender um paciente naquele momento.
+
+**Parâmetros de Consulta (Query Params)**: Exemplo: /users/available?dia=2&inicio=11&fim=15
+
+`dia:` (Obrigatório) Número do dia (0=Dom, 1=Seg... 6=Sáb).
+
+`inicio:` (Obrigatório) Hora de início em hora.
+
+`fim:` (Obrigatório) Hora de fim em hora.
+
+**Corpo da requisição (JSON):** Vazio
+
+**Resposta Sucesso (200 OK):** Retorna uma lista de usuários e qual horário deles coincidiu com a busca.
+````json 
+[
+  {
+    "user": {
+      "id": "6be94a9e-214e-4357-9b8e-488129ec4574",
+      "nome": "Cadastro"
+    },
+    "availabilities": [
+      {
+        "dia": 2,
+        "inicio": 8,
+        "fim": 12
+      },
+      {
+        "dia": 2,
+        "inicio": 13,
+        "fim": 16
+      }
+    ]
+  },
+  {
+    "user": {
+      "id": "9483193c-4b5a-4ea4-a9f3-cfdc65f2b8aa",
+      "nome": "Atendimento"
+    },
+    "availabilities": [
+      {
+        "dia": 2,
+        "inicio": 10,
+        "fim": 16
+      }
+    ]
+  }
+]
+````
+**Erros Comuns:**
+
+• 401 Unauthorized: Token inválido ou expirado.
+
+• 401 Unauthorized: Conta desativada. Entre em contato com a administração.
+
+• 404 Not Found: Usuário não encontrado.
+
 ## Módulo Disponibilidade
 
 ### 1. Gerenciar Disponibilidade (Salvar)
@@ -449,3 +539,212 @@ O sistema utiliza **JWT (JSON Web Token)** para segurança.
 • 401 Unauthorized: Token inválido ou não fornecido.
 
 • 401 Unauthorized: Erro de conexão com o banco.
+
+
+## Módulo Notificação
+
+### 1. Listar Notificações
+**Rota:** GET /notifications
+
+**Acesso:** Qualquer usuário logado
+
+**Descrição:** Retorna a lista de notificações do usuário logado, ordenadas das mais recentes para as mais antigas.
+
+**Corpo da requisição (JSON):** Vazio
+
+**Resposta Sucesso (200 OK):**
+````json 
+[
+  {
+    "id": 15,
+    "usuarioId": "6385ddd7-48dd-4517-85d1-c182253e740c",
+    "titulo": "Nova Paciente Cadastrada",
+    "mensagem": "A paciente [Maria](patient:uuid...) acaba de ser registrada...",
+    "lida": false,
+    "createdAt": "2025-12-07T10:30:00.000Z"
+  },
+  {
+    "id": 12,
+    "usuarioId": "6385ddd7-48dd-4517-85d1-c182253e740c",
+    "titulo": "Bem-vindo",
+    "mensagem": "Sua conta foi ativada com sucesso.",
+    "lida": true,
+    "createdAt": "2025-12-06T14:00:00.000Z"
+  }
+]
+````
+(Retorna [] se não houver notificações).
+
+### 2. Marcar como Lida
+**Rota:** PATCH /notifications/:notificationId/read
+
+**Acesso:** Qualquer usuário logado
+
+**Descrição:** Marca uma notificação específica como "Lida" (true). O sistema garante que você só pode marcar as notificações que pertencem a você.
+
+**Corpo da requisição (JSON):** Vazio
+
+**Resposta Sucesso (200 OK):**
+````json 
+{
+  "message": "Notificação marcada como lida."
+}
+````
+**Erros Comuns:**
+
+• 404 Not Found: Notificação não encontrada
+
+## Módulo de Pacientes
+
+### 1. Cadastrar Paciente
+**Rota:** POST /patient
+
+**Acesso:** Permissão de **Cadastro** ou **Admin**
+
+**Descrição:** É obrigatório vincular uma profissionalResponsavelId (Terapeuta) no momento do cadastro. O CPF deve ser único no sistema. O status inicial é definido automaticamente. Envia notificação para todos os Admins ("Nova Paciente Cadastrada"). Envia notificação para a Profissional Responsável ("Nova Paciente Vinculada").
+
+**Corpo da requisição (JSON):**
+
+````json 
+{
+  "nome": "Nova Paciente",
+  "dataNascimento": "1995-05-20", // Formato YYYY-MM-DD
+  "cpf": "123.456.789-00",
+  "telefone": "85999998888",
+  "profissionalResponsavelId": "uuid-da-terapeuta-responsavel"
+}
+````
+
+**Resposta Sucesso (201 Created):**
+````json 
+{
+  "patient": {
+    "id": "uuid-gerado",
+    "nome": "Ana Clara",
+    "dataNascimento": "1995-05-20T00:00:00.000Z",
+    "cpf": "123.456.789-00",
+    "telefone": "85999998888",
+    "profissionalResponsavelId": "uuid-da-extensionista-responsavel",
+    "status": "triagem",
+    "createdAt": "2025-12-10T10:00:00.000Z"
+  }
+}
+````
+**Erros Comuns:**
+
+• 400 Bad Request: "Campos obrigatórios não preenchidos."
+
+• 400 Bad Request: "Paciente já cadastrada com este CPF."
+
+### 2. Listar Pacientes
+**Rota:** GET /patients
+
+**Acesso:** Qualquer usuário logado
+
+**Descrição:** Retorna a lista de pacientes. O sistema aplica um filtro de visualização baseado no nível de permissão do usuário logado:
+
+- Se tiver permissão Admin: Visualiza TODOS os pacientes do sistema.
+- Se não: Visualiza APENAS os pacientes vinculados a você (profissionalResponsavelId igual ao seu ID).
+
+**Corpo da requisição (JSON):** Vazio
+
+**Resposta Sucesso (200 OK):**
+````json 
+[
+  {
+    "patient": {
+      "id": "def364a8-d23e-4279-bdb1-d1313d8bec4a",
+      "nome": "Nova Paciente 2",
+      "dataNascimento": "2007-01-18T03:00:00.000Z",
+      "cpf": "012345678-92",
+      "telefone": "889995555",
+      "profissionalResponsavelId": "9483193c-4b5a-4ea4-a9f3-cfdc65f2b8aa",
+      "status": "triagem",
+      "createdAt": "2025-12-10T03:42:57.108Z"
+    }
+  },
+  {
+    "patient": {
+      "id": "4451f715-7202-4e0f-b254-aa822354a8fa",
+      "nome": "Nova Paciente 3",
+      "dataNascimento": "2007-01-18T03:00:00.000Z",
+      "cpf": "012345678-93",
+      "telefone": "889995555",
+      "profissionalResponsavelId": "9483193c-4b5a-4ea4-a9f3-cfdc65f2b8aa",
+      "status": "triagem",
+      "createdAt": "2025-12-10T03:43:06.543Z"
+    }
+  },
+]
+````
+
+### 3. Detalhes Pacientes
+**Rota:** GET /patients/:targetId
+
+**Acesso:** Permissão de Cadastro
+
+**Descrição:** Retorna a ficha completa de um paciente específico pelo ID.
+
+**Corpo da requisição (JSON):** Vazio
+
+**Resposta Sucesso (200 OK):**
+````json 
+{
+  "patient": {
+    "id": "c9a053ea-03f1-4241-b145-887aad7371ac",
+    "nome": "Paciente 4",
+    "dataNascimento": "2006-01-17T03:00:00.000Z",
+    "cpf": "012345678-94",
+    "telefone": "859995555",
+    "profissionalResponsavelId": "42b83a9a-06cd-4dc7-bf1d-c6c6583b3fe3",
+    "status": "triagem",
+    "createdAt": "2025-12-10T03:43:10.951Z"
+  }
+}
+````
+**Erros Comuns:**
+
+• 403 Forbidden: Usuário sem permissão de cadastro.
+
+• 404 Not Found: Paciente não encontrado.
+
+### 4. Atualizar Paciente
+**Rota:** PUT /patient/:targetId
+
+**Acesso:** Permissão de Cadastro
+
+**Descrição:** Atualiza dados cadastrais do paciente ou altera o status/vínculo. Validação: Se o CPF for enviado, verifica se ele já existe no banco.
+
+**Corpo da requisição (JSON):**
+
+````json 
+{
+  "nome": "Paciente 4",
+  "dataNascimento": "2006-01-17",
+  "cpf": "012345678-94",
+  "telefone": "859995555",
+  "profissionalResponsavelId": "42b83a9a-06cd-4dc7-bf1d-c6c6583b3fe3",
+  "status": "encaminhada"
+}
+````
+
+**Resposta Sucesso (200 OK):**
+````json 
+{
+  "patient": {
+    "id": "c9a053ea-03f1-4241-b145-887aad7371ac",
+    "nome": "Paciente 4",
+    "dataNascimento": "2006-01-17T03:00:00.000Z",
+    "cpf": "012345678-94",
+    "telefone": "859995555",
+    "profissionalResponsavelId": "42b83a9a-06cd-4dc7-bf1d-c6c6583b3fe3",
+    "status": "encaminhada",
+    "createdAt": "2025-12-10T03:43:10.951Z"
+  }
+}
+````
+**Erros Comuns:**
+
+• 400 Bad Request: "Paciente já cadastrada com este CPF."
+
+• 404 Not Found: Paciente não encontrada.
