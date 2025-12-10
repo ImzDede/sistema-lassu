@@ -12,7 +12,7 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, Users, PlusSquare, Calendar, User, Bell } from "lucide-react";
+import { Home, Users, PlusSquare, Calendar, User, Bell, Menu } from "lucide-react";
 import NavItem from "@/components/NavItem";
 import axios from "axios";
 import {
@@ -33,6 +33,13 @@ export default function HomeLayout({
 
   const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState("");
+
+  const [showSideBar, setShowSideBar] = useState(true);
+
+  // 2. Função para alternar (toggle)
+  const toggleSideBar = () => {
+    setShowSideBar(!showSideBar);
+  };
 
   useEffect(() => {
     const checkAccess = async () => {
@@ -78,62 +85,90 @@ export default function HomeLayout({
   return (
     <div className="min-h-screen bg-brand-bg flex flex-col md:flex-row font-sans">
       {/* SIDEBAR DESKTOP */}
-      <Card className="hidden md:flex flex-col w-64 min-h-screen rounded-none shadow-xl border-r border-white/10 sticky top-0 h-screen bg-brand-purple">
-        <div className="p-8 flex justify-center mb-2 border-b border-white/20">
-          <Link href="/home">
-            <Image
-              src="/logoVertical.svg"
-              alt="Logo"
-              width={160}
-              height={60}
-              className="w-44 h-auto hover:scale-105 transition-transform duration-300 brightness-0 invert"
+      {showSideBar && (
+        <Card className="hidden md:flex flex-col w-64 min-h-screen rounded-none shadow-xl border-r border-white/10 sticky top-0 h-screen bg-brand-purple">
+          {/* Cabeçalho da Sidebar alterado para Flex Row */}
+          <div className="p-4 flex items-center justify-between border-b border-white/20 mb-2">
+            <Link href="/home">
+              <Image
+                src="/logoVertical.svg"
+                alt="Logo"
+                width={120}
+                height={40}
+                className="w-32 h-auto hover:scale-105 transition-transform duration-300 brightness-0 invert"
+              />
+            </Link>
+            
+            {/* Botão de Fechar NA DIREITA da Sidebar */}
+            <IconButton
+              variant="text"
+              color="white"
+              onClick={toggleSideBar}
+              className="hover:bg-white/10"
+            >
+              <Menu className="w-6 h-6 text-white" />
+            </IconButton>
+          </div>
+
+          <List className="min-w-0 p-3 flex-1 overflow-y-auto">
+            <NavItem
+              href="/home"
+              icon={<Home />}
+              label="Início"
+              active={pathname === "/home"}
             />
-          </Link>
-        </div>
-        <List className="min-w-0 p-3 flex-1 overflow-y-auto">
-          <NavItem
-            href="/home"
-            icon={<Home />}
-            label="Início"
-            active={pathname === "/home"}
-          />
-          <NavItem
-            href="/home/pacientes"
-            icon={<Users />}
-            label="Pacientes"
-            active={pathname === "/home/pacientes"}
-          />
-          <NavItem
-            href="/home/cadastro"
-            icon={<PlusSquare />}
-            label="Cadastro"
-            active={pathname.startsWith("/home/cadastro")}
-          />
-          <NavItem
-            href="/home/calendario"
-            icon={<Calendar />}
-            label="Calendário"
-            active={pathname === "/home/calendario"}
-          />
-          <NavItem
-            href="/home/perfil"
-            icon={<User />}
-            label="Perfil"
-            active={pathname === "/home/perfil"}
-          />
-        </List>
-      </Card>
+            <NavItem
+              href="/home/pacientes"
+              icon={<Users />}
+              label="Pacientes"
+              active={pathname === "/home/pacientes"}
+            />
+            <NavItem
+              href="/home/cadastro"
+              icon={<PlusSquare />}
+              label="Cadastro"
+              active={pathname.startsWith("/home/cadastro")}
+            />
+            <NavItem
+              href="/home/calendario"
+              icon={<Calendar />}
+              label="Calendário"
+              active={pathname === "/home/calendario"}
+            />
+            <NavItem
+              href="/home/perfil"
+              icon={<User />}
+              label="Perfil"
+              active={pathname === "/home/perfil"}
+            />
+          </List>
+        </Card>
+      )}
 
       {/* MAIN CONTENT */}
       <main className="flex-1 flex flex-col relative h-screen overflow-y-auto bg-brand-bg">
         <header className="flex flex-col-reverse md:flex-row md:justify-between md:items-center bg-brand-bg/90 backdrop-blur-md sticky top-0 z-50 px-6 py-4 shadow-sm border-b border-brand-pink/20 gap-4 md:gap-0">
-          <div className="flex flex-col">
-            <Typography variant="h5" className="font-bold text-brand-dark">
-              {userName ? `Olá, ${userName.split(" ")[0]}!` : "Bem-vindo"}
-            </Typography>
-            <Typography variant="small" className="text-gray-400 font-normal">
-              Tenha um ótimo dia de trabalho.
-            </Typography>
+          <div className="flex items-center gap-4">
+            
+            {/* Botão abrir sideBar */}
+            {!showSideBar && (
+              <IconButton
+                variant="text"
+                className="hidden md:flex text-brand-dark hover:bg-brand-purple/10"
+                onClick={toggleSideBar}
+              >
+                <Menu className="w-6 h-6" />
+              </IconButton>
+            )}
+
+            <div className="flex flex-col">
+              <Typography variant="h5" className="font-bold text-brand-dark">
+                {userName ? `Olá, ${userName.split(" ")[0]}!` : "Bem-vindo"}
+              </Typography>
+              <Typography variant="small" className="text-gray-400 font-normal">
+                Tenha um ótimo dia de trabalho.
+              </Typography>
+            </div>
           </div>
 
           <div className="flex justify-between items-center w-full md:w-auto">

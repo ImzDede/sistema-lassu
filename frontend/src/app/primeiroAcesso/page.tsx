@@ -4,134 +4,73 @@ import React, { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import axios from "axios";
-import {
-  Card,
-  CardBody,
-  Typography,
-  IconButton,
-  Spinner,
-} from "@material-tailwind/react";
-import {
-  Lock,
-  Clock,
-  Plus,
-  Trash2,
-  ArrowRight,
-  Eye,
-  EyeOff,
-  LogOut,
-} from "lucide-react";
+import { Card, CardBody, Typography, Spinner } from "@material-tailwind/react";
+import { Lock, Clock, ArrowRight, LogOut, EyeOff, Eye } from "lucide-react";
 import Input from "@/components/Input";
 import Button from "@/components/Button";
 import FeedbackAlert from "@/components/FeedbackAlert";
-import Select from "@/components/SelectBox";
-import InfoBox from "@/components/InfoBox";
-import { logout, saveToken, verifyUserRedirect } from "@/utils/auth";
+import AvailabilityEditor from "@/components/AvailabilityEditor";
+import { logout, saveToken, verifyUserRedirect, getToken } from "@/utils/auth";
 import { TimeSlot } from "@/types/disponibilidade";
 import { getAuthHeader } from "@/utils/api";
 
-const DAYS_OF_WEEK = [
-  "Segunda-feira",
-  "Terça-feira",
-  "Quarta-feira",
-  "Quinta-feira",
-  "Sexta-feira",
-];
-
-const DAY_MAP: Record<string, number> = {
+const day_map: Record<string, number> = {
   "Segunda-feira": 1,
   "Terça-feira": 2,
   "Quarta-feira": 3,
   "Quinta-feira": 4,
-  "Sexta-feira": 5
-}
+  "Sexta-feira": 5,
+};
 
-// Horários Início (08:00 - 17:00)
-const HOURS_START = Array.from({ length: 10 }, (_, i) => {
-  const hour = i + 8;
-  return `${hour.toString().padStart(2, "0")}:00`;
-});
-
-// Horários Fim (09:00 - 18:00)
-const HOURS_END = Array.from({ length: 10 }, (_, i) => {
-  const hour = i + 9;
-  return `${hour.toString().padStart(2, "0")}:00`;
-});
+const numberToDayMap: Record<number, string> = {
+  1: "Segunda-feira",
+  2: "Terça-feira",
+  3: "Quarta-feira",
+  4: "Quinta-feira",
+  5: "Sexta-feira",
+};
 
 export default function FirstAccess() {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Controle de acesso e carregamento
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [step, setStep] = useState(1);
-  const [loadingSave, setLoadingSave] = useState(false);
-
+  const [loading, setLoading] = useState(false);
   const [userName, setUserName] = useState("");
+
   const [feedback, setFeedback] = useState({
     open: false,
     color: "green" as "green" | "red",
     message: "",
   });
 
-  // States do Formulário
+  // Estado dos Dados
   const [passwords, setPasswords] = useState({ new: "", confirm: "" });
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-
   const [availability, setAvailability] = useState<TimeSlot[]>([
     { id: "1", day: "Segunda-feira", start: "08:00", end: "12:00" },
   ]);
 
   useEffect(() => {
-    // Middleware Client-Side: Verifica se o usuário tem a flag 'primeiroAcesso: true'
     const user = verifyUserRedirect(router, pathname);
-
     if (user) {
       setUserName(user.nome);
       setIsAuthorized(true);
     }
   }, [router, pathname]);
 
-  const handleLogout = () => {
-    logout();
-    router.push("/");
-  };
-
-  // Gerenciamento de Slots de Disponibilidade
-  const addSlot = () => {
-    const newSlot: TimeSlot = {
-      id: Math.random().toString(36).substr(2, 9),
-      day: "Segunda-feira",
-      start: "08:00",
-      end: "18:00",
-    };
-    setAvailability([...availability, newSlot]);
-  };
-
-  const removeSlot = (id: string) => {
-    if (availability.length === 1) {
-      showAlert("red", "Defina pelo menos um horário.");
-      return;
-    }
-    setAvailability(availability.filter((slot) => slot.id !== id));
-  };
-
-  const updateSlot = (id: string, field: keyof TimeSlot, value: string) => {
-    setAvailability(
-      availability.map((slot) =>
-        slot.id === id ? { ...slot, [field]: value } : slot
-      )
-    );
-  };
-
-  // Funções Auxiliares
   const showAlert = (color: "green" | "red", message: string) => {
     setFeedback({ open: true, color, message });
-    setTimeout(() => setFeedback((prev) => ({ ...prev, open: false })), 4000);
+    if (color === "red") {
+      setTimeout(() => setFeedback((prev) => ({ ...prev, open: false })), 4000);
+    }
   };
 
-  const handleNextStep = () => {
+  // Navegação entre passos
+  const handleGoToStep2 = () => {
+    // Valida senha antes de avançar, mas NÃO envia para o back ainda
     if (passwords.new.length < 6) {
       showAlert("red", "A senha deve ter pelo menos 6 caracteres.");
       return;
@@ -143,88 +82,77 @@ export default function FirstAccess() {
     setStep(2);
   };
 
-  // Envia os dados para o backend
-  const handleSaveAll = async () => {
-    setLoadingSave(true);
+  const handleBackToStep1 = () => {
+    setStep(1);
+  };
+
+  // Finalização
+  const handleFinalize = async () => {
+    // Valida se horários fazem sentido (fim > inicio)
+    const hasInvalidTime = availability.some(
+      (slot) =>
+        parseInt(slot.start.split(":")[0], 10) >=
+        parseInt(slot.end.split(":")[0], 10)
+    );
+
+    if (hasInvalidTime) {
+      showAlert("red", "Horário final deve ser maior que inicial.");
+      return;
+    }
+
+    setLoading(true);
+
     try {
-      // 1. Validação visual dos horários
-      const hasInvalidTime = availability.some(slot => 
-        parseInt(slot.start.split(':')[0], 10) >= parseInt(slot.end.split(':')[0], 10)
-      );
+      const disponibilidadeFormatada = availability.map((slot) => ({
+        dia: day_map[slot.day],
+        horaInicio: parseInt(slot.start.split(":")[0], 10),
+        horaFim: parseInt(slot.end.split(":")[0], 10),
+      }));
 
-      if (hasInvalidTime) {
-        showAlert("red", "Horário final deve ser maior que inicial.");
-        setLoadingSave(false);
-        return;
-      }
-
-      // --- ETAPA 1: ALTERAR SENHA (PATCH) ---
-      const payloadSenha = {
+      const payload = {
         senha: passwords.new,
-        fotoUrl: null,
+        disponibilidade: disponibilidadeFormatada,
       };
 
-      // ATENÇÃO: Confirme se a rota é 'first-acess' ou 'first-access' (com dois 's')
-      // A doc dele diz 'primeiro-acesso', mas ele te falou 'first-acess'.
-      // Vamos tentar usar a que você disse que ele criou:
-      const responseSenha = await axios.patch(
-        "http://localhost:3001/users/first-acess", 
-        payloadSenha, 
+      const response = await axios.patch(
+        "http://localhost:3001/users/first-acess",
+        payload,
         getAuthHeader()
       );
 
-      const newToken = responseSenha.data.token;
+      // 5. Atualiza o token
+      const newToken = response.data.token;
+      if (!newToken) throw new Error("Erro: Token não retornado.");
 
-      if (!newToken) {
-        throw new Error("Backend não retornou o novo token na troca de senha.");
-      }
-
-      // Salva o token novo (importante!)
       saveToken(newToken);
 
-      // --- ETAPA 2: DISPONIBILIDADE (PUT) ---
-      // Montamos o Array
-      const payloadDisponibilidade = availability.map(slot => ({
-        dia: DAY_MAP[slot.day], // Certifique-se que DAY_MAP está declarado lá em cima
-        horaInicio: parseInt(slot.start.split(':')[0], 10),
-        horaFim: parseInt(slot.end.split(':')[0], 10),
-      }));
+      showAlert("green", "Cadastro finalizado! Entrando...");
 
-      // 🔍 DEBUG: Abra o F12 (Console) e veja o que aparece aqui antes de dar erro
-      console.log("=== ENVIANDO DISPONIBILIDADE ===");
-      console.log(JSON.stringify(payloadDisponibilidade, null, 2));
-
-      // Se o array estiver vazio ou com 'undefined', o erro está no mapeamento.
-      
-      await axios.put(
-        "http://localhost:3001/availability", // Confirme se é /availability ou /disponibilidade
-        payloadDisponibilidade, 
-        { 
-          headers: { 
-            Authorization: `Bearer ${newToken}`, // Usa o token novo explicitamente
-            'Content-Type': 'application/json'   // Força o tipo JSON
-          } 
-        }
-      );
-
-      // --- SUCESSO ---
-      showAlert("green", "Cadastro finalizado! Faça login novamente.");
-      logout();
-      setTimeout(() => router.push("/"), 2000);
-
+      setTimeout(() => router.push("/home"), 1500);
     } catch (error: any) {
-      console.error("Erro completo:", error);
-      
-      // Tenta pegar a mensagem específica do erro de disponibilidade ou senha
-      const msg = error.response?.data?.error || error.response?.data?.message || "Erro ao salvar.";
-      
+      console.error(error);
+      let msg =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        "Erro ao salvar.";
+
+      // Tratamento de mensagens de erro com dias numéricos
+      msg = msg.replace(/\b([1-5])\b/g, (match: string) => {
+        const numero = parseInt(match, 10);
+        return numberToDayMap[numero] || match;
+      });
+
+      // Se der erro na senha volta para o passo 1
+      if (typeof msg === "string" && msg.includes("diferente da anterior")) {
+        setStep(1);
+      }
+
       showAlert("red", msg);
     } finally {
-      setLoadingSave(false);
+      setLoading(false);
     }
   };
 
-  // Spinner
   if (!isAuthorized) {
     return (
       <div className="min-h-screen bg-brand-bg flex items-center justify-center">
@@ -237,18 +165,6 @@ export default function FirstAccess() {
     <div className="min-h-screen bg-brand-bg flex flex-col items-center justify-center p-4 relative overflow-hidden">
       <div className="absolute top-0 left-0 w-full h-2 bg-brand-purple"></div>
 
-      {/* BOTÃO DE SAIR (TEMPORÁRIO) */}
-      <div className="absolute top-4 right-4 z-20">
-        <Button
-          variant="outline"
-          onClick={handleLogout}
-          className="border-brand-pink text-brand-pink hover:bg-brand-pink/10 px-4 py-2"
-        >
-          <LogOut size={16} className="mr-2" /> Sair
-        </Button>
-      </div>
-
-      {/* Feedback Alerta */}
       <FeedbackAlert
         open={feedback.open}
         color={feedback.color}
@@ -265,11 +181,7 @@ export default function FirstAccess() {
             height={60}
             className="mx-auto mb-4"
           />
-
-          <Typography
-            className="text-xl md:text-3xl text-brand-dark font-bold uppercase break-words px-4 leading-tight"
-            placeholder={undefined}
-          >
+          <Typography className="text-xl md:text-3xl text-brand-dark font-bold uppercase break-words px-4 leading-tight">
             Olá, {userName.split(" ")[0]}!
           </Typography>
           <Typography
@@ -317,12 +229,9 @@ export default function FirstAccess() {
           </div>
         </div>
 
-        <Card
-          className="shadow-lg border border-brand-pink/20 bg-brand-surface"
-          placeholder={undefined}
-        >
-          <CardBody className="p-6 md:p-10" placeholder={undefined}>
-            {/* PASSO 1: SENHA */}
+        <Card className="shadow-lg border border-brand-pink/20 bg-brand-surface">
+          <CardBody className="p-6 md:p-10">
+            {/* SENHA */}
             {step === 1 && (
               <div className="flex flex-col gap-6 animate-fade-in">
                 <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
@@ -333,15 +242,10 @@ export default function FirstAccess() {
                     <Typography
                       variant="h6"
                       className="text-brand-dark font-bold"
-                      placeholder={undefined}
                     >
                       Definir Nova Senha
                     </Typography>
-                    <Typography
-                      variant="small"
-                      className="text-gray-400"
-                      placeholder={undefined}
-                    >
+                    <Typography variant="small" className="text-gray-400">
                       Sua segurança é importante para nós.
                     </Typography>
                   </div>
@@ -388,7 +292,7 @@ export default function FirstAccess() {
 
                 <div className="flex justify-end mt-4">
                   <Button
-                    onClick={handleNextStep}
+                    onClick={handleGoToStep2}
                     className="flex items-center gap-2"
                   >
                     PRÓXIMO <ArrowRight size={18} />
@@ -397,7 +301,7 @@ export default function FirstAccess() {
               </div>
             )}
 
-            {/* PASSO 2: DISPONIBILIDADE */}
+            {/* DISPONIBILIDADE */}
             {step === 2 && (
               <div className="flex flex-col gap-6 animate-fade-in">
                 <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
@@ -408,121 +312,36 @@ export default function FirstAccess() {
                     <Typography
                       variant="h6"
                       className="text-brand-dark font-bold"
-                      placeholder={undefined}
                     >
                       Definir Disponibilidade
                     </Typography>
-                    <Typography
-                      variant="small"
-                      className="text-gray-400"
-                      placeholder={undefined}
-                    >
+                    <Typography variant="small" className="text-gray-400">
                       Informe seus horários livres.
                     </Typography>
                   </div>
                 </div>
 
-                {/* SCROLLBAR CONTAINER */}
-                <div className="flex flex-col gap-4 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
-                  {availability.map((slot) => (
-                    <div
-                      key={slot.id}
-                      className="bg-brand-bg p-4 rounded-lg border border-gray-100 flex flex-col md:flex-row gap-3 md:items-center transition-colors hover:border-brand-pink/50"
-                    >
-                      <div className="flex items-center justify-between gap-2 w-full md:w-1/3">
-                        <div className="w-full">
-                          <Select
-                            options={DAYS_OF_WEEK}
-                            value={slot.day}
-                            onChange={(e) =>
-                              updateSlot(slot.id, "day", e.target.value)
-                            }
-                          />
-                        </div>
-                        {/* Lixeira Mobile (Fica ao lado do dia) */}
-                        <div className="md:hidden shrink-0">
-                          <IconButton
-                            variant="text"
-                            color="red"
-                            onClick={() => removeSlot(slot.id)}
-                            className="hover:bg-red-50"
-                            placeholder={undefined}
-                          >
-                            <Trash2 size={18} />
-                          </IconButton>
-                        </div>
-                      </div>
+                <AvailabilityEditor
+                  availability={availability}
+                  setAvailability={setAvailability}
+                  onError={(msg) => showAlert("red", msg)}
+                />
 
-                      <div className="grid grid-cols-2 md:flex md:items-center gap-2 w-full md:w-2/3">
-                        <div className="w-full">
-                          <Select
-                            options={HOURS_START}
-                            value={slot.start}
-                            onChange={(e) =>
-                              updateSlot(slot.id, "start", e.target.value)
-                            }
-                          />
-                        </div>
-
-                        <span className="hidden md:block text-gray-400 font-bold">
-                          -
-                        </span>
-
-                        <div className="w-full">
-                          <Select
-                            options={HOURS_END}
-                            value={slot.end}
-                            onChange={(e) =>
-                              updateSlot(slot.id, "end", e.target.value)
-                            }
-                          />
-                        </div>
-
-                        {/* Lixeira Desktop (Fica no final) */}
-                        <div className="hidden md:block ml-auto">
-                          <IconButton
-                            variant="text"
-                            color="red"
-                            onClick={() => removeSlot(slot.id)}
-                            className="hover:bg-red-50"
-                            placeholder={undefined}
-                          >
-                            <Trash2 size={18} />
-                          </IconButton>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <Button
-                  variant="outline"
-                  onClick={addSlot}
-                  className="flex items-center justify-center gap-2 border-dashed border-2"
-                >
-                  <Plus size={18} /> ADICIONAR NOVO HORÁRIO
-                </Button>
-
-                <InfoBox>
-                  Não se preocupe, você poderá alterar ou adicionar novos
-                  horários a qualquer momento no seu <b>Perfil</b>.
-                </InfoBox>
-
-                {/* BOTÕES */}
                 <div className="flex flex-col-reverse md:flex-row justify-between gap-4 mt-4 pt-4 border-t border-gray-100">
                   <div className="w-full md:w-1/3">
                     <Button
                       variant="outline"
-                      onClick={() => setStep(1)}
+                      onClick={handleBackToStep1}
                       fullWidth
                     >
                       VOLTAR
                     </Button>
                   </div>
                   <div className="w-full md:w-2/3">
+                    {/* Botão Finalizar dispara as requisições */}
                     <Button
-                      onClick={handleSaveAll}
-                      loading={loadingSave}
+                      onClick={handleFinalize}
+                      loading={loading}
                       fullWidth
                     >
                       FINALIZAR CADASTRO
