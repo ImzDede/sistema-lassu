@@ -53,3 +53,13 @@ export const numberToDayMap: Record<number, string> = {
 
 // Helper para gerar as opções de Select
 export const daysOptions = Object.keys(dayMap);
+
+// Converte 8 -> "08:00"
+export const formatTime = (hour: number) => {
+  return `${hour.toString().padStart(2, "0")}:00`;
+};
+
+// Converte (8, 12) -> "08:00 - 12:00"
+export const formatTimeInterval = (start: number, end: number) => {
+  return `${formatTime(start)} - ${formatTime(end)}`;
+};
