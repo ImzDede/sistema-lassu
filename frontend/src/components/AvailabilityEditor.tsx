@@ -63,7 +63,7 @@ export default function AvailabilityEditor({
         {availability.map((slot) => (
           <div
             key={slot.id}
-            className="flex w-full bg-gray-50 rounded-lg border border-gray-200 overflow-hidden transition-colors hover:border-brand-pink/50"
+            className="flex w-full bg-gray-50 rounded-lg border border-gray-200 transition-colors hover:border-brand-pink/50"
           >
             <div className="flex-1 p-4 flex flex-col gap-3">
               <div className="w-full"> 
