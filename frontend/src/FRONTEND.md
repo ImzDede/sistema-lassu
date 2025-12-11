@@ -40,10 +40,12 @@ src/
 ├── components/                 # Componentes reutilizáveis (UI Kit e Lógica)
 ├── contexts/                   # Estados globais (Sessão do Usuário)
 ├── hooks/                      # Lógica de negócio encapsulada (Custom Hooks)
+├── services/                   # Configuração de serviços externos (API)
 ├── utils/
 │   ├── api.ts                  # Configuração do Axios e Interceptors
 │   ├── auth.ts                 # Lógica de Token, Cookies e Redirecionamento
-│   └── format.ts               # Formatações de CPF, Telefone e Mapas de Dias
+│   ├── date.ts                 # Cálculos de datas (Idade, Diferenças)
+│   └── format.ts               # Formatações de CPF, Telefone, Horários e Mapas
 ├── types/                      # Definições de Tipos TypeScript (Interfaces)
 └── middleware.ts               # Porteiro do servidor (Verificação de Cookies)
 ```
@@ -61,8 +63,11 @@ Camada responsável pela comunicação externa, segurança e formatação de dad
 * **Gerenciamento de Cookies:** Funções para Salvar (`saveToken`), Ler (`getToken`) e Destruir (`logout`) cookies de sessão.
 
 ### 🛠 `utils/format.ts`
-* **Formatadores:** Máscaras visuais para CPF e Telefone.
+* **Formatadores:** Máscaras visuais para CPF, Telefone e Horários (`formatTimeInterval`).
 * **Mapeamento:** Objetos auxiliares para tradução de dias da semana (Backend usa números 1-5, Frontend usa strings "Segunda-feira").
+
+### 📅 `utils/date.ts`
+* **Cálculos:** Funções puras para manipulação de datas, como `calculateAge` (converte data de nascimento em idade atual).
 
 ---
 
@@ -76,10 +81,13 @@ Camada de Gerenciamento de Estado e Lógica de Negócio.
 
 ### 🎣 Custom Hooks
 * **`useUsers.ts`**:
-    * Centraliza o CRUD de usuários.
-    * Expõe: `fetchUsers`, `updateUser`, `deleteUser` e estados de `loading`/`error`.
+    * Centraliza o CRUD de usuários (Terapeutas/Admins).
+    * Expõe: `fetchUsers`, `updateUser`, `deleteUser`.
+* **`usePatients.ts`**:
+    * Centraliza o CRUD de pacientes.
+    * Gerencia a listagem envelopada (`patientWrapper`) e atualizações.
 * **`useProfessionalSearch.ts`**:
-    * Lógica exclusiva da tela de Pacientes.
+    * Lógica exclusiva da tela de cadastro.
     * Realiza busca cruzada (Dia x Hora) conectando com a rota `/users/available`.
 * **`useFeedback.ts`**:
     * Controla a UI de alertas (Toasts). Permite chamar `showAlert('green', 'Mensagem')` de qualquer componente.
@@ -109,7 +117,9 @@ Componentes que "envelopam" o Material Tailwind para garantir a identidade visua
 * **`AvailabilitySearchSelector.tsx`**: Versão simplificada do editor. Serve apenas para *selecionar* filtros de busca (Dia + Hora) no cadastro de pacientes.
 * **`Calendar.tsx`**: Widget visual. Renderiza os dias do mês e destaca eventos.
 * **`CardCadastro.tsx`**: Cartão grande usado como botão de navegação no Hub de Cadastro.
-* **`CardListagem.tsx`**: Componente versátil para listas (Paciente ou Terapeuta). Padroniza avatar, títulos e badges.
+* **`CardListagem.tsx`**: Componente versátil para listas (Paciente ou Terapeuta).
+    * Suporta modo interativo (`onClick`) e visual de seleção (`selected`) com borda em gradiente.
+    * Aceita HTML no detalhe para formatações complexas.
 * **`FeedbackAlert.tsx`**: Notificação flutuante (Toast) de sucesso ou erro.
 * **`InfoBox.tsx`**: Caixa azul de instrução para formulários.
 * **`RoleBadge.tsx`**: Etiqueta inteligente. Renderiza cor e texto baseados nas permissões do usuário (Admin, Cadastro, Atendimento).
@@ -131,8 +141,9 @@ Detalhamento das páginas e lógicas de roteamento.
 
 ### 👥 Funcionalidades
 * **`terapeutas/page.tsx`:** Listagem de usuários. Utiliza `useUsers` e implementa filtragem local (client-side) via nome/matrícula/status.
+* **`pacientes/page.tsx`:** Listagem de pacientes. Utiliza `usePatients` e aplica formatação de idade (`date.ts`) e telefone (`format.ts`) nos cards.
 * **`cadastro/page.tsx` (Hub):** Menu de botões. Verifica permissões (`permCadastro` ou `isTeacher`) para exibir opções sensíveis.
-    * **`cadastro/paciente/page.tsx`:** Formulário complexo. Exige busca de disponibilidade (`useProfessionalSearch`) antes de permitir salvar.
+    * **`cadastro/paciente/page.tsx`:** Formulário complexo. Integra `useProfessionalSearch` para encontrar terapeutas disponíveis e utiliza `CardListagem` selecionável para o vínculo.
     * **`cadastro/extensionista/page.tsx`:** Formulário para criação de novos usuários.
 * **`perfil/page.tsx`:** Exibe dados do usuário e menu lateral de configurações (Dados, Senha, Disponibilidade).
 
@@ -144,3 +155,4 @@ Definições TypeScript para garantir a integridade dos dados.
 
 * **`usuarios.ts`**: Interface `TokenPayload` descrevendo a estrutura do JWT.
 * **`disponibilidade.ts`**: Interface `TimeSlot` para manipulação da grade de horários.
+* **`paciente.ts`**: Interface `Patient` e `PatientResponseItem` para tipagem da resposta do backend.
