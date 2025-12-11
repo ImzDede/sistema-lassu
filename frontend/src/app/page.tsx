@@ -2,7 +2,6 @@
 
 import React, { useState, FormEvent, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
-import axios from "axios";
 import Image from "next/image";
 import { Eye, EyeOff } from "lucide-react";
 import Input from "@/components/Input";
@@ -10,9 +9,11 @@ import Button from "@/components/Button";
 import FeedbackAlert from "@/components/FeedbackAlert";
 import { Checkbox, Typography } from "@material-tailwind/react";
 import { saveToken } from "@/utils/auth";
+import { useFeedback } from "@/hooks/useFeedback";
+import api from "@/services/api";
 
 export default function Login() {
-  // Dadoa para realizar login
+  // Dados para realizar login
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -21,29 +22,18 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [keepConnected, setKeepConnected] = useState(false);
 
-  // Estado para feedback visual (Sucesso/Erro)
-  const [feedback, setFeedback] = useState({
-    open: false,
-    color: "green" as "green" | "red",
-    message: "",
-  });
+  // Hook de Feedback
+  const { feedback, showAlert, closeAlert } = useFeedback();
 
   const router = useRouter();
 
-  const showAlert = (color: "green" | "red", message: string) => {
-    setFeedback({ open: true, color, message });
-    if (color === "red") {
-      setTimeout(() => setFeedback((prev) => ({ ...prev, open: false })), 4000);
-    }
-  };
-
   async function handleLogin(event: FormEvent) {
     event.preventDefault();
-    setFeedback((prev) => ({ ...prev, open: false }));
+    closeAlert();
     setLoading(true);
 
     try {
-      const response = await axios.post("http://localhost:3001/users/login", {
+      const response = await api.post("/users/login", {
         email: email,
         senha: password,
       });
@@ -83,19 +73,30 @@ export default function Login() {
         open={feedback.open}
         color={feedback.color}
         message={feedback.message}
-        onClose={() => setFeedback((prev) => ({ ...prev, open: false }))}
+        onClose={closeAlert}
       />
 
       {/* Lado Esquerdo - Logo */}
       <div className="w-full md:w-1/2 md:bg-[linear-gradient(to_bottom_right,_#A78FBF,_#D9A3B6,_#F2A9A2,_#F2B694)] flex flex-col items-center justify-center p-6 md:p-10 md:min-h-screen relative overflow-hidden">
         <div className="mb-4 md:mb-8 z-10">
+          {/* logo desktop */}
           <Image
-            src="/logo.svg"
+            src="/lassuLogo.svg"
             alt="Logo LSSSU"
             width={300}
             height={300}
             priority
-            className="w-40 md:w-56 lg:w-64 h-auto md:brightness-0 md:invert"
+            className="w-40 hidden md:block md:w-56 lg:w-64 h-auto md:brightness-0 md:invert"
+          />
+
+          {/* logo mobile */}
+          <Image
+            src="/lassuLogoCor.svg"
+            alt="Logo LSSSU"
+            width={300}
+            height={300}
+            priority
+            className="w-40 md:hidden"
           />
         </div>
       </div>

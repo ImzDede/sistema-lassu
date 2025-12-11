@@ -21,4 +21,7 @@ declare module "@material-tailwind/react" {
   export const Badge: any;
   export const Spinner: any;
   export const Alert: any;
+  export const Drawer: any;
+  export const Select: any;
+  export const PopoverContent: any;
 }

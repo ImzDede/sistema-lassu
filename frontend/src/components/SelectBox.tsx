@@ -1,55 +1,64 @@
 "use client";
 
 import React from "react";
+import { Select as MTSelect, Option } from "@material-tailwind/react";
 
 interface SelectOption {
   label: string;
   value: string | number;
 }
 
-interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
+interface SelectProps {
   label?: string;
+  value: string;
+  onChange: (value: string) => void;
   options: (string | SelectOption)[];
+  className?: string;
 }
 
-const Select = ({ label, options, className = "", ...props }: SelectProps) => {
+const Select = ({ label, value, onChange, options, className = "" }: SelectProps) => {
   return (
-    <div className="w-full relative min-w-[100px]">
-      {label && (
-        <label className="block text-xs font-bold text-brand-purple mb-1 ml-1 uppercase tracking-wide">
-          {label}
-        </label>
-      )}
-      <div className="relative">
-        <select
-          className={`
-            w-full bg-transparent text-brand-dark font-medium text-sm
-            px-3 py-3 rounded-lg
-            border border-brand-pink
-            focus:border-brand-purple focus:ring-1 focus:ring-brand-purple
-            outline-none appearance-none transition-all
-            cursor-pointer
-            ${className}
-          `}
-          {...props}
-        >
-          {options.map((opt, index) => {
-            const label = typeof opt === "string" ? opt : opt.label;
-            const value = typeof opt === "string" ? opt : opt.value;
-            return (
-              <option key={index} value={value} className="text-gray-700">
-                {label}
-              </option>
-            );
-          })}
-        </select>
-        
-        <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-brand-purple">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-          </svg>
-        </div>
-      </div>
+    <div className="w-full">
+      <MTSelect
+        label={label}
+        value={value}
+        onChange={(val: string) => {
+          if (val) onChange(val);
+        }}
+        size="lg"
+        variant="standard"
+        color="gray"
+        className={`
+          bg-transparent font-medium text-gray-700
+          !border-b-[#D9A3B6]
+          focus:!border-b-[#A78FBF]
+          !border-b-[1px] focus:!border-b-[2px]
+          ${className}
+        `}
+        labelProps={{
+          className: `
+            text-gray-500 peer-focus:text-[#A78FBF]
+            font-medium
+            before:content-none after:content-none
+          `,
+        }}
+        containerProps={{ className: "min-w-0 w-full" }} 
+        animate={{
+          mount: { y: 0 },
+          unmount: { y: 25 },
+        }}
+        placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}      >
+        {options.map((opt, index) => {
+          const labelOpt = typeof opt === "string" ? opt : opt.label;
+          const valueOpt = typeof opt === "string" ? opt : opt.value;
+          
+          return (
+            <Option key={index} value={String(valueOpt)} className="text-gray-700 hover:bg-brand-purple/10 hover:text-brand-purple">
+              {labelOpt}
+            </Option>
+          );
+        })}
+      </MTSelect>
     </div>
   );
 };

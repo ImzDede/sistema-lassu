@@ -1,11 +1,13 @@
+import axios from "axios";
 import { getToken } from "./auth";
 
-// Retorna o cabeçalho Authorization com o token para o Axios
-export function getAuthHeader() {
+export const api = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001",
+});
+
+// Intercepta TODAS requisições automaticamente
+api.interceptors.request.use((config) => {
   const token = getToken();
-  return {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  };
-}
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
