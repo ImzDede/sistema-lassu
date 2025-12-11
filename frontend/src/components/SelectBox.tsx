@@ -46,8 +46,7 @@ const Select = ({ label, value, onChange, options, className = "" }: SelectProps
         animate={{
           mount: { y: 0 },
           unmount: { y: 25 },
-        }}
-        placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}      >
+        }}>
         {options.map((opt, index) => {
           const labelOpt = typeof opt === "string" ? opt : opt.label;
           const valueOpt = typeof opt === "string" ? opt : opt.value;
