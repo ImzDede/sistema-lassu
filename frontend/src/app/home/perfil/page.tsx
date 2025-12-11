@@ -1,16 +1,15 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { useRouter } from "next/navigation";
-import axios from "axios";
-import { Card, Typography, List } from "@material-tailwind/react";
+import { Card, Typography, List, Spinner } from "@material-tailwind/react";
 import {
   ChevronLeft,
   User,
   Lock,
   Bell,
   Clock,
-  Briefcase,
+  History,
   Pencil,
   LogOut,
   ChevronRight,
@@ -18,45 +17,12 @@ import {
 import Button from "@/components/Button";
 import ProfileMenuItem from "@/components/ProfileMenuItem";
 import { logout } from "@/utils/auth";
-import { getAuthHeader } from "@/utils/api"; 
-
-// Menu estático de configurações
-const MENU_ITEMS = [
-  { label: "DADOS PESSOAIS", icon: <User />, href: "/home/perfil/dados" },
-  { label: "SENHA", icon: <Lock />, href: "/home/perfil/senha" },
-  { label: "NOTIFICAÇÕES", icon: <Bell />, href: "/home/perfil/notificacoes" },
-  {
-    label: "DISPONIBILIDADE",
-    icon: <Clock />,
-    href: "/home/perfil/disponibilidade",
-  },
-  { label: "CARGOS", icon: <Briefcase />, href: "/home/perfil/cargos" },
-];
+import { useAuth } from "@/contexts/AuthContext";
+import RoleBadge from "@/components/RoleBadge";
 
 export default function Perfil() {
   const router = useRouter();
-
-  // Estado para armazenar dados vindos da API
-  const [userData, setUserData] = useState({
-    name: "Carregando...",
-    registration: "...",
-  });
-
-  useEffect(() => {
-    // Busca dados atualizados do perfil ao montar a tela.
-    // Utiliza getAuthHeader para injetar o token automaticamente.
-    axios
-      .get("http://localhost:3001/users/profile", getAuthHeader())
-      .then((response) => {
-        if (response.data.user) {
-          setUserData({
-            name: response.data.user.nome,
-            registration: response.data.user.matricula || "N/A",
-          });
-        }
-      })
-      .catch((error) => console.error("Erro perfil:", error));
-  }, []);
+  const { user, isTeacher, isLoading } = useAuth();
 
   // Função de logout
   function handleLogout() {
@@ -64,9 +30,61 @@ export default function Perfil() {
     router.push("/");
   }
 
+  // Definição dos itens do menu
+  const menuItems = [
+    {
+      label: "DADOS PESSOAIS",
+      icon: <User />,
+      href: "/home/perfil/dados",
+      showForAdmin: true,
+      showForOthers: true,
+    },
+    {
+      label: "SENHA",
+      icon: <Lock />,
+      href: "/home/perfil/senha",
+      showForAdmin: true,
+      showForOthers: true,
+    },
+    {
+      label: "NOTIFICAÇÕES",
+      icon: <Bell />,
+      href: "/home/perfil/notificacoes",
+      showForAdmin: false,
+      showForOthers: true,
+    },
+    {
+      label: "DISPONIBILIDADE",
+      icon: <Clock />,
+      href: "/home/perfil/disponibilidade",
+      showForAdmin: false,
+      showForOthers: true,
+    },
+    {
+      label: "HISTÓRICO",
+      icon: <History />,
+      href: "/home/perfil/historico",
+      showForAdmin: true,
+      showForOthers: true,
+    },
+  ];
+
+  // Filtra os itens baseado na permissão (isTeacher)
+  const visibleItems = menuItems.filter((item) =>
+    isTeacher ? item.showForAdmin : item.showForOthers
+  );
+
+  // Spinner de carregamento
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center w-full h-full min-h-[500px]">
+        <Spinner className="h-12 w-12 text-brand-purple" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col w-full min-h-full pb-20 md:pb-0 font-sans">
-
       {/* Cabeçalho Mobile com botão de Voltar */}
       <div className="mb-6 md:mb-8 flex items-center gap-2">
         <button
@@ -92,29 +110,31 @@ export default function Perfil() {
       </div>
 
       <Card className="w-full max-w-6xl mx-auto shadow-sm lg:shadow-md border border-brand-pink/30 bg-brand-surface overflow-hidden">
-        {/* Layout Responsivo: Coluna no Mobile, Linha no Desktop */}
         <div className="flex flex-col lg:flex-row min-h-[500px]">
-
           {/* COLUNA ESQUERDA: Foto e Dados Básicos */}
           <div className="w-full lg:w-1/3 bg-brand-bg/50 lg:border-r border-brand-pink/20 p-6 lg:p-8 flex flex-col items-center">
             <div className="relative mb-6 group">
               <div className="w-32 h-32 rounded-full bg-white border-4 border-white shadow-md flex items-center justify-center text-gray-300 overflow-hidden ring-1 ring-gray-100">
+                {/* fotoUrl no futuro */}
                 <User size={64} strokeWidth={1.5} />
               </div>
               <button className="absolute bottom-1 right-1 bg-brand-purple text-white p-2.5 rounded-full shadow-md hover:bg-[#967bb3] transition-all transform hover:scale-105 border-2 border-white">
                 <Pencil size={16} />
               </button>
             </div>
+
             <div className="text-center w-full mb-8">
               <Typography
                 variant="h5"
                 className="font-bold uppercase text-brand-dark break-words"
               >
-                {userData.name}
+                {user?.nome || "Usuário"}
               </Typography>
               <Typography className="text-brand-purple font-medium text-sm mt-1">
-                Matrícula: {userData.registration}
+                Matrícula: {user?.matricula || "N/A"}
               </Typography>
+              
+              <RoleBadge user={user} />
             </div>
 
             {/* Botão de Sair (Versão Desktop) */}
@@ -131,7 +151,7 @@ export default function Perfil() {
             </div>
           </div>
 
-          {/* COLUNA DIREITA: Menu de Opções */}
+          {/* COLUNA DIREITA: Menu de Opções Dinâmico */}
           <div className="w-full lg:w-2/3 p-6 lg:p-8 bg-brand-surface flex flex-col">
             <Typography
               variant="small"
@@ -141,7 +161,7 @@ export default function Perfil() {
             </Typography>
             <div className="flex-1 w-full">
               <List className="p-0 min-w-full">
-                {MENU_ITEMS.map((item, index) => (
+                {visibleItems.map((item, index) => (
                   <ProfileMenuItem
                     key={index}
                     label={item.label}

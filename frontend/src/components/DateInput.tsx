@@ -11,10 +11,13 @@ interface DateInputProps
 const DateInput = ({ maxDate, ...props }: DateInputProps) => {
   const handleOpenPicker = (e: React.SyntheticEvent<HTMLInputElement>) => {
     try {
+      // Verificação de segurança
       if (typeof e.currentTarget.showPicker === "function") {
         e.currentTarget.showPicker();
       }
-    } catch (error) {}
+    } catch (error) {
+      console.warn("Browser does not support showPicker API");
+    }
   };
 
   return (
