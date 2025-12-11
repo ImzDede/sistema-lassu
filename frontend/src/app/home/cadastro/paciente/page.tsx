@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, UserPlus, Clock, Search, CheckCircle } from "lucide-react";
+import { ArrowLeft, UserPlus, Clock, Search } from "lucide-react";
 import { Card, CardBody, Typography, Spinner } from "@material-tailwind/react";
 import Input from "@/components/Input";
 import DateInput from "@/components/DateInput";
@@ -11,22 +11,26 @@ import FeedbackAlert from "@/components/FeedbackAlert";
 import InfoBox from "@/components/InfoBox";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFeedback } from "@/hooks/useFeedback";
-import { formatCPF, formatPhone, cleanFormat } from "@/utils/format";
+import { formatCPF, formatPhone, cleanFormat, formatTimeInterval } from "@/utils/format";
 import { TimeSlot } from "@/types/disponibilidade";
 import { useProfessionalSearch } from "@/hooks/useProfessionalSearch";
 import AvailabilitySearchSelector from "@/components/AvailabilitySearchSelector";
 import api from "@/services/api";
+import CardListagem from "@/components/CardListagem";
 
 export default function NewPatient() {
   const router = useRouter();
   const { user, isTeacher, isLoading: authLoading } = useAuth();
   const { feedback, showAlert, closeAlert } = useFeedback();
+  
+  // Hook de busca
   const {
     searchProfessionals,
     results: searchResults,
     loading: searchLoading,
     clearResults,
   } = useProfessionalSearch();
+
   const [loadingSave, setLoadingSave] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -34,13 +38,15 @@ export default function NewPatient() {
     cpf: "",
     cellphone: "",
   });
+  
+  // Estado do Filtro de Disponibilidade
   const [availability, setAvailability] = useState<TimeSlot[]>([
     { id: "1", day: "Segunda-feira", start: "08:00", end: "09:00" },
   ]);
-  const [selectedProfessionalId, setSelectedProfessionalId] = useState<
-    string | null
-  >(null);
+  
+  const [selectedProfessionalId, setSelectedProfessionalId] = useState<string | null>(null);
 
+  // Proteção de Rota
   useEffect(() => {
     if (!authLoading && user) {
       const canAccess = isTeacher || user.permCadastro;
@@ -57,7 +63,7 @@ export default function NewPatient() {
     else setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // FUNÇÃO DE BUSCA
+  // BUSCA
   const handleSearch = async () => {
     setSelectedProfessionalId(null);
     clearResults();
@@ -69,18 +75,7 @@ export default function NewPatient() {
     await searchProfessionals(slot.day, slot.start, slot.end);
   };
 
-  useEffect(() => {
-    if (
-      !searchLoading &&
-      searchResults.length === 0 &&
-      availability[0] &&
-      selectedProfessionalId === null
-    ) {
-
-    }
-  }, [searchLoading, searchResults]);
-
-  // SALVAR PACIENTE
+  // SALVAR
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoadingSave(true);
@@ -105,7 +100,6 @@ export default function NewPatient() {
 
       showAlert("green", "Paciente cadastrada e vinculada com sucesso!");
 
-      // Limpar form
       setFormData({ name: "", birthDate: "", cpf: "", cellphone: "" });
       setSelectedProfessionalId(null);
       clearResults();
@@ -135,6 +129,7 @@ export default function NewPatient() {
         onClose={closeAlert}
       />
 
+      {/* HEADER */}
       <div className="flex items-center gap-4">
         <button
           onClick={() => router.back()}
@@ -143,10 +138,7 @@ export default function NewPatient() {
           <ArrowLeft className="w-6 h-6" />
         </button>
         <div>
-          <Typography
-            variant="h4"
-            className="font-bold uppercase tracking-wide text-brand-dark"
-          >
+          <Typography variant="h4" className="font-bold uppercase tracking-wide text-brand-dark">
             Nova Paciente
           </Typography>
           <Typography variant="paragraph" className="text-gray-500 text-sm">
@@ -158,6 +150,7 @@ export default function NewPatient() {
       <Card className="w-full shadow-lg border-t-4 border-brand-purple bg-brand-surface">
         <CardBody className="p-6 md:p-10">
           <form onSubmit={handleSave} className="flex flex-col gap-10">
+            
             {/* 1. DADOS PESSOAIS */}
             <div className="flex flex-col gap-6">
               <div className="flex items-center gap-3 pb-2 border-b border-gray-100">
@@ -170,45 +163,17 @@ export default function NewPatient() {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Input
-                  label="Nome Completo"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                />
-                <DateInput
-                  label="Data de Nascimento"
-                  name="birthDate"
-                  value={formData.birthDate}
-                  onChange={handleChange}
-                  required
-                />
+                <Input label="Nome Completo" name="name" value={formData.name} onChange={handleChange} required />
+                <DateInput label="Data de Nascimento" name="birthDate" value={formData.birthDate} onChange={handleChange} required />
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Input
-                  label="CPF"
-                  name="cpf"
-                  value={formData.cpf}
-                  onChange={handleChange}
-                  placeholder="000.000.000-00"
-                  maxLength={14}
-                  required
-                />
-                <Input
-                  label="Telefone"
-                  name="cellphone"
-                  value={formData.cellphone}
-                  onChange={handleChange}
-                  placeholder="(00) 00000-0000"
-                  maxLength={15}
-                  required
-                />
+                <Input label="CPF" name="cpf" value={formData.cpf} onChange={handleChange} placeholder="000.000.000-00" maxLength={14} required />
+                <Input label="Telefone" name="cellphone" value={formData.cellphone} onChange={handleChange} placeholder="(00) 00000-0000" maxLength={15} required />
               </div>
             </div>
 
-            {/* TRIAGEM E VINCULAÇÃO */}
+            {/* 2. VINCULAÇÃO */}
             <div className="flex flex-col gap-6">
               <div className="flex items-center gap-3 pb-2 border-b border-gray-100">
                 <div className="p-2 bg-brand-purple/10 rounded-lg">
@@ -220,8 +185,7 @@ export default function NewPatient() {
               </div>
 
               <InfoBox>
-                Selecione o horário preferencial da paciente para encontrar
-                extensionistas disponíveis.
+                Selecione o horário preferencial da paciente para encontrar extensionistas disponíveis.
               </InfoBox>
 
               <div className="flex flex-col gap-4">
@@ -241,42 +205,30 @@ export default function NewPatient() {
                 </Button>
               </div>
 
-              {/* LISTA DE RESULTADOS */}
+              {/* RESULTADOS DA BUSCA */}
               {searchResults.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                   {searchResults.map((item) => {
-                    const prof = item.user; // O Hook garante essa estrutura
+                    const prof = item.user;
                     const isSelected = selectedProfessionalId === prof.id;
+                    
+                    // CORREÇÃO: O cálculo da string deve ser feito AQUI DENTRO do map
+                    const horariosString = item.availabilities
+                      .map(a => formatTimeInterval(a.inicio, a.fim))
+                      .join(" / ");
+
                     return (
-                      <div
+                      <CardListagem
                         key={prof.id}
+                        nomePrincipal={prof.nome}
+                        detalhe={
+                          <span className="text-xs font-medium text-brand-purple bg-brand-purple/5 px-2 py-1 rounded-md">
+                            {horariosString || "Disponível"}
+                          </span>
+                        }
                         onClick={() => setSelectedProfessionalId(prof.id)}
-                        className={`
-                          cursor-pointer p-4 rounded-xl border-2 transition-all flex items-center justify-between
-                          ${
-                            isSelected
-                              ? "border-brand-purple bg-brand-purple/5 shadow-md"
-                              : "border-gray-100 bg-white hover:border-brand-purple/30"
-                          }
-                        `}
-                      >
-                        <div>
-                          <Typography
-                            variant="h6"
-                            className="text-brand-dark font-bold"
-                          >
-                            {prof.nome}
-                          </Typography>
-                          <Typography variant="small" className="text-gray-500">
-                            {prof.matricula
-                              ? `Matrícula: ${prof.matricula}`
-                              : "Sem matrícula"}
-                          </Typography>
-                        </div>
-                        {isSelected && (
-                          <CheckCircle className="text-brand-purple w-6 h-6" />
-                        )}
-                      </div>
+                        selected={isSelected}
+                      />
                     );
                   })}
                 </div>
@@ -289,15 +241,10 @@ export default function NewPatient() {
               )}
             </div>
 
-            {/* BOTÕES FINAIS */}
+            {/* BOTÕES DE AÇÃO */}
             <div className="flex flex-col-reverse lg:flex-row gap-4 mt-4 pt-6 border-t border-gray-100">
               <div className="w-full lg:w-1/2">
-                <Button
-                  variant="outline"
-                  type="button"
-                  onClick={() => router.back()}
-                  fullWidth
-                >
+                <Button variant="outline" type="button" onClick={() => router.back()} fullWidth>
                   CANCELAR
                 </Button>
               </div>
