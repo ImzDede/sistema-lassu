@@ -79,6 +79,7 @@ export default function TerapeutasPage() {
         onSearchChange={setSearchTerm}
         statusFilter={statusFilter}
         onFilterChange={setStatusFilter}
+        searchLabel="Procurar terapeuta"
       />
 
       <div className="flex flex-col gap-4 pb-20 md:pb-0">

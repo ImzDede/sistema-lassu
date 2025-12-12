@@ -86,23 +86,17 @@ export default function Perfil() {
   return (
     <div className="flex flex-col w-full min-h-full pb-20 md:pb-0 font-sans">
       {/* Cabeçalho Mobile com botão de Voltar */}
-      <div className="mb-6 md:mb-8 flex items-center gap-2">
-        <button
-          onClick={() => router.back()}
-          className="md:hidden p-2 -ml-2 text-gray-500 hover:bg-brand-purple/10 hover:text-brand-purple rounded-full transition-colors"
-        >
-          <ChevronLeft size={28} />
-        </button>
+      <div className="mb-6 md:mb-8 flex items-center">
         <div>
           <Typography
             variant="h3"
-            className="font-bold uppercase text-xl md:text-3xl text-brand-dark"
+            className="font-bold uppercase mb-2 text-center md:text-left mt-4 md:mt-0 text-brand-dark"
           >
             Meu Perfil
           </Typography>
           <Typography
             variant="paragraph"
-            className="text-gray-400 text-sm md:text-base hidden md:block"
+            className="text-gray-400 text-sm text-center md:text-left md:text-base"
           >
             Gerencie suas informações pessoais e configurações.
           </Typography>

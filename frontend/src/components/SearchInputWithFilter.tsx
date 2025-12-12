@@ -10,6 +10,7 @@ interface SearchInputWithFilterProps {
   onSearchChange: (value: string) => void;
   statusFilter: string;
   onFilterChange: (value: string) => void;
+  searchLabel: string;
 }
 
 export default function SearchInputWithFilter({
@@ -17,13 +18,14 @@ export default function SearchInputWithFilter({
   onSearchChange,
   statusFilter,
   onFilterChange,
+  searchLabel
 }: SearchInputWithFilterProps) {
   return (
     <div className="flex flex-col md:flex-row gap-6 w-full mb-8 items-end">
       {/* Input de Busca */}
       <div className="w-full md:flex-1">
         <Input
-          label="Procurar Terapeuta"
+          label={searchLabel}
           icon={<Search className="h-5 w-5 text-gray-400" />}
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
