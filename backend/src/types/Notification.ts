@@ -10,15 +10,14 @@ export const NOTIFICATION = {
             return {
                 title: "Nova Paciente Cadastrada",
                 message:
-                    `A paciente [${patientName}](patient:${patientId}) acaba de ser registrada por [${userName}](user:${userId}), 
-                com a extensionista [${professionalName}](user:${professionalId}) como responsável.`
+                    `A paciente [${patientName}](patient:${patientId}) acaba de ser registrada por [${userName}](user:${userId}), com a extensionista [${professionalName}](user:${professionalId}) como responsável.`
             }
         },
         NEW_USER: (userName: string, userId: string) => {
             return {
                 title: "Nova Usuária Cadastrada",
                 message: 
-                `A usuária [${userName}](patient:${userId}) acabou de ser criada.`
+                `A usuária [${userName}](user:${userId}) acabou de ser criada.`
             }
         }
     },

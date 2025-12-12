@@ -6,6 +6,7 @@ import userRoutes from './routes/user.routes';
 import availabilityRoutes from './routes/availability.routes';
 import notificationRoutes from './routes/notification.routes'
 import patientRoutes from './routes/patient.routes'
+import sessionRoutes from './routes/session.routes'
 
 dotenv.config();
 
@@ -18,6 +19,7 @@ app.use('/users', userRoutes)
 app.use('/availability', availabilityRoutes);
 app.use('/notification', notificationRoutes);
 app.use('/patient', patientRoutes);
+app.use('/sessions', sessionRoutes);
 
 app.get('/', (req: Request, res: Response) => {
     res.send('API Online')

@@ -544,7 +544,7 @@ O sistema utiliza **JWT (JSON Web Token)** para segurança.
 ## Módulo Notificação
 
 ### 1. Listar Notificações
-**Rota:** GET /notifications
+**Rota:** GET /notification
 
 **Acesso:** Qualquer usuário logado
 
@@ -556,20 +556,20 @@ O sistema utiliza **JWT (JSON Web Token)** para segurança.
 ````json 
 [
   {
-    "id": 15,
-    "usuarioId": "6385ddd7-48dd-4517-85d1-c182253e740c",
-    "titulo": "Nova Paciente Cadastrada",
-    "mensagem": "A paciente [Maria](patient:uuid...) acaba de ser registrada...",
+    "id": 50,
+    "usuarioId": "02e6b058-a427-4d07-a39e-c849424a7f31",
+    "titulo": "Nova Usuária Cadastrada",
+    "mensagem": "A usuária [Nova Bolsista](user:49ddb05f-f819-4e4d-b8c3-f3c5a67d078e) acabou de ser criada.",
     "lida": false,
-    "createdAt": "2025-12-07T10:30:00.000Z"
+    "createdAt": "2025-12-13T00:09:22.657Z"
   },
   {
-    "id": 12,
-    "usuarioId": "6385ddd7-48dd-4517-85d1-c182253e740c",
-    "titulo": "Bem-vindo",
-    "mensagem": "Sua conta foi ativada com sucesso.",
-    "lida": true,
-    "createdAt": "2025-12-06T14:00:00.000Z"
+    "id": 48,
+    "usuarioId": "02e6b058-a427-4d07-a39e-c849424a7f31",
+    "titulo": "Nova Paciente Cadastrada",
+    "mensagem": "A paciente [paciente1](patient:01fcc35c-fb1a-4fce-b7d1-2bb7d8db5ada) acaba de ser registrada por [Nocta](user:02e6b058-a427-4d07-a39e-c849424a7f31), com a extensionista [Cadastro](user:6be94a9e-214e-4357-9b8e-488129ec4574) como responsável.",
+    "lida": false,
+    "createdAt": "2025-12-12T23:16:38.816Z"
   }
 ]
 ````
