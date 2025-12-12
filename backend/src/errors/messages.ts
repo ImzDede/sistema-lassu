@@ -6,10 +6,12 @@ export const HTTP_ERRORS = {
         USER_ALREADY_EXISTS: "Este e-mail ou matrícula já estão cadastrados.",
         USER_ALREADY_FIRST_ACESS: "Este usuário já realizou primeiro acesso",
         PATIENT_ALREADY_EXISTS: "Este cpf já foi cadastrado em um paciente.",
+        SESSION_COLISION: "Horário indisponível. Já existe uma sessão agendada.",
         PASSWORD_MISMATCH: "A nova senha deve ser diferente da anterior.",
         MISSING_FIELDS: "Campos obrigatórios não preenchidos.",
         NO_ARRAY: "Formato inválido. Envie uma array.",
-        HOUR: (dia: number) => {return "Horário errado no dia " + dia + ": Fim deve ser maior que início."},
+        HOUR_WRONG: "Fim deve ser maior que início.",
+        HOUR: (dia: number) => {return "Horário errado no dia " + dia + ": " + HTTP_ERRORS.BAD_REQUEST.HOUR_WRONG},
         HOURS: (dia: number) => {return "Horários incompatíveis no dia " + dia},
     },
 
@@ -27,6 +29,7 @@ export const HTTP_ERRORS = {
         DEFAULT: "Acesso negado.",
         REGISTRATION_PERMISSION: "Esta ação requer privilégios de cadastro.",
         ADMIN_ONLY: "Esta ação requer privilégios de administrador.",
+        ANOTHER_PATIENT: "Você não tem permissão para agendar sessões para esta paciente."
     },
 
     // 404 - Not Found

@@ -285,11 +285,10 @@ export class UserService {
                 matricula = COALESCE($5, matricula),
                 perm_atendimento = COALESCE($6, perm_atendimento),
                 perm_cadastro = COALESCE($7, perm_cadastro),
-                perm_admin = COALESCE($8, perm_admin),
-                ativo = COALESCE($9, ativo)
+                ativo = COALESCE($8, ativo)
                 
-            WHERE id = $10
-            RETURNING id, nome, email, matricula, telefone, foto_url, perm_atendimento, perm_cadastro, perm_admin, ativo, primeiro_acesso, created_at;
+            WHERE id = $9
+            RETURNING id, nome, email, matricula, telefone, foto_url, perm_atendimento, perm_cadastro, ativo, primeiro_acesso, created_at;
         `;
 
         const values = [
@@ -300,7 +299,6 @@ export class UserService {
             userData.matricula || null,
             userData.permAtendimento ?? null,
             userData.permCadastro ?? null,
-            userData.permAdmin ?? null,
             userData.ativo ?? null,
             targetId
         ];
@@ -343,8 +341,11 @@ export class UserService {
             throw new AppError(HTTP_ERRORS.NOT_FOUND.USER, 404)
         }
 
+        const availability = await availabilityService.getByUserId(userId);
+
         return {
-            user: this.mapUser(userDb)
+            user: this.mapUser(userDb),
+            availability: availability
         };
     }
 
@@ -388,6 +389,10 @@ export class UserService {
             throw new AppError(HTTP_ERRORS.BAD_REQUEST.MISSING_FIELDS)
         }
 
+        if (fim <= inicio) {
+            throw new AppError(HTTP_ERRORS.BAD_REQUEST.HOUR_WRONG)
+        }
+
         const query = `
             SELECT 
                 u.id, u.matricula, u.nome, d.dia_semana, d.hora_inicio, d.hora_fim
@@ -399,9 +404,11 @@ export class UserService {
 			  AND (
         		(d.hora_inicio < $2 AND d.hora_fim > $2 AND d.hora_fim < $3)
         	  OR
-        		(d.hora_inicio > $2 AND d.hora_inicio <= $3 AND d.hora_fim > $3)
+        		(d.hora_inicio > $2 AND d.hora_inicio < $3 AND d.hora_fim > $3)
 			  OR
 			  	(d.hora_inicio <= $2 AND d.hora_fim >= $3)
+                OR
+			  	(d.hora_inicio >= $2 AND d.hora_fim <= $3)
      		  )
 			ORDER BY u.id;
         `;
@@ -425,11 +432,13 @@ export class UserService {
             if (row.hora_inicio <= inicio) {
                 horaInicio = inicio
             } else horaInicio = row.hora_inicio
+            
 
             let horaFim;
             if (row.hora_fim >= fim) {
                 horaFim = fim
             } else horaFim = row.hora_fim
+            
 
             usersMap.get(row.id).availabilities.push({
                 dia: row.dia_semana,
