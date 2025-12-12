@@ -268,6 +268,7 @@ export default function TherapistDetails({
             onSearchChange={setSearchTerm}
             statusFilter={statusFilter}
             onFilterChange={setStatusFilter}
+            searchLabel="Procurar paciente"
           />
         </div>
 
