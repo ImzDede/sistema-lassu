@@ -21,6 +21,20 @@ export function useUsers() {
     }
   }, []);
 
+  // Retorna os dados diretamente para quem chamou, em vez de salvar no state global 'users'
+  const getUserById = useCallback(async (id: string) => {
+    setLoading(true);
+    try {
+      const response = await api.get(`/users/${id}`);
+      return response.data.user;
+    } catch (err) {
+      console.error("Erro ao buscar usuário", err);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   // ATUALIZAR USUÁRIO (PUT /users)
   const updateUser = useCallback(async (id: string, data: any) => {
     setLoading(true);
@@ -60,6 +74,7 @@ export function useUsers() {
     loading,
     error,
     fetchUsers,
+    getUserById,
     updateUser,
     deleteUser
   };

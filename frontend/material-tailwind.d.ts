@@ -24,4 +24,9 @@ declare module "@material-tailwind/react" {
   export const Drawer: any;
   export const Select: any;
   export const PopoverContent: any;
+  export const DialogFooter: any;
+  export const Switch: any;
+  export const DialogBody: any;
+  export const DialogHeader: any;
+  export const Dialog: any;
 }

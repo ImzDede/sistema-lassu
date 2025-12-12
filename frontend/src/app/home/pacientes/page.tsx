@@ -9,13 +9,16 @@ import CardListagem from "@/components/CardListagem";
 import SearchInputWithFilter from "@/components/SearchInputWithFilter";
 import { calculateAge } from "@/utils/date";
 import { formatPhone } from "@/utils/format";
+import Button from "@/components/Button";
+import { usePagination } from "@/hooks/usePagination";
 
 export default function PacientesPage() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
   const { patients, loading: loadingData, fetchPatients } = usePatients();
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("todos");
+  const [statusFilter, setStatusFilter] = useState("ativo");
+  const { visibleCount, loadMore, hasMore } = usePagination(8, 8);
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -33,19 +36,41 @@ export default function PacientesPage() {
     }
   }, [fetchPatients, user]);
 
+  // Lógica de Filtro
   const filteredList = patients.filter((item) => {
-    const p = item.patient;
+    const p = item.patient || item; 
+    
     if (!p) return false;
 
     const term = searchTerm.toLowerCase();
+    
+    // Filtro de Texto
     const matchesSearch =
-      p.nome.toLowerCase().includes(term) || (p.cpf && p.cpf.includes(term));
+      (p.nome && p.nome.toLowerCase().includes(term)) || 
+      (p.cpf && p.cpf.includes(term));
 
-    const matchesStatus =
-      statusFilter === "todos" ? true : p.status === statusFilter;
+    // Lista de status que consideramos "Inativos" ou "Encerrados"
+    const inactiveKeywords = ["arquivado", "inativo", "alta", "desistiu", "cancelado"];
+    
+    // Normalizamos o status para comparar
+    const pStatus = p.status ? p.status.toLowerCase() : "";
+    const isInactive = inactiveKeywords.some(k => pStatus.includes(k));
+
+    let matchesStatus = true;
+
+    if (statusFilter === "ativo") {
+      // "Ativo" mostra tudo que NÃO é inativo (triagem, encaminhada, etc)
+      matchesStatus = !isInactive;
+    } else if (statusFilter === "inativo") {
+      // "Inativo" mostra SÓ o que está na lista de inativos
+      matchesStatus = isInactive;
+    }
+    // "todos" mantém true
 
     return matchesSearch && matchesStatus;
   });
+
+  const paginatedList = filteredList.slice(0, visibleCount);
 
   if (authLoading) {
     return (
@@ -58,10 +83,7 @@ export default function PacientesPage() {
   return (
     <div className="flex flex-col w-full h-full">
       <div className="mb-8 text-center md:text-left">
-        <Typography
-          variant="h3"
-          className="font-bold uppercase text-brand-dark"
-        >
+        <Typography variant="h3" className="font-bold uppercase text-brand-dark">
           Meus Pacientes
         </Typography>
       </div>
@@ -80,24 +102,43 @@ export default function PacientesPage() {
           </div>
         ) : (
           <>
-            {filteredList.length > 0 ? (
-              filteredList.map((item) => (
-                <CardListagem
-                  key={item.patient.id}
-                  nomePrincipal={item.patient.nome}
-                  detalhe={
-                    <div className="flex flex-col gap-1">
-                      <span className="font-bold text-gray-700">
-                        Idade: {calculateAge(item.patient.dataNascimento)}
-                      </span>
-                      <span className="text-gray-500 text-xs">
-                        Tel: {formatPhone(item.patient.telefone)}
-                      </span>
-                    </div>
-                  }
-                  status={item.patient.status}
-                />
-              ))
+            {paginatedList.length > 0 ? (
+              <>
+                {/* Renderiza a lista paginada */}
+                {paginatedList.map((item) => {
+                  const p = item.patient || item;
+                  return (
+                    <CardListagem
+                      key={p.id}
+                      nomePrincipal={p.nome}
+                      detalhe={
+                        <div className="flex flex-col gap-1">
+                          <span className="font-bold text-gray-700">
+                            Idade: {calculateAge(p.dataNascimento)}
+                          </span>
+                          <span className="text-gray-500 text-xs">
+                            Tel: {formatPhone(p.telefone)}
+                          </span>
+                        </div>
+                      }
+                      status={p.status}
+                    />
+                  );
+                })}
+
+                {/* 4. BOTÃO CARREGAR MAIS */}
+                {hasMore(filteredList.length) && (
+                  <div className="mt-4 flex justify-center">
+                    <Button 
+                      variant="outline" 
+                      onClick={loadMore}
+                      className="border-brand-purple text-brand-purple hover:bg-brand-purple hover:text-white"
+                    >
+                      Carregar Mais Pacientes
+                    </Button>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="text-center p-8 bg-white/50 rounded-xl border border-gray-100">
                 <Typography className="text-gray-500">

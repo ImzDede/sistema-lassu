@@ -22,7 +22,7 @@ export function useFeedback() {
       setTimeout(() => {
         setFeedback((prev) => ({ ...prev, open: false }));
       }, 4000);
-    }
+    } 
   }, []);
 
   const closeAlert = useCallback(() => {

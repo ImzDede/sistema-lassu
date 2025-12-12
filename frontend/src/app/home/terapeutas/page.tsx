@@ -8,6 +8,8 @@ import { useUsers } from "@/hooks/useUsers";
 import CardListagem from "@/components/CardListagem";
 import SearchInputWithFilter from "@/components/SearchInputWithFilter";
 import RoleBadge from "@/components/RoleBadge";
+import Button from "@/components/Button";
+import { usePagination } from "@/hooks/usePagination";
 
 export default function TerapeutasPage() {
   const router = useRouter();
@@ -15,6 +17,7 @@ export default function TerapeutasPage() {
   const { users, loading: loadingData, fetchUsers } = useUsers(); 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ativo");
+  const { visibleCount, loadMore, hasMore } = usePagination(8, 8);
 
   // Proteção de rota
   useEffect(() => {
@@ -53,6 +56,8 @@ export default function TerapeutasPage() {
     return matchesSearch && matchesStatus;
   });
 
+  const paginatedUsers = filteredUsers.slice(0, visibleCount);
+
   if (authLoading || !isTeacher) {
     return (
       <div className="flex items-center justify-center h-[80vh]">
@@ -83,20 +88,36 @@ export default function TerapeutasPage() {
           </div>
         ) : (
           <>
-            {filteredUsers.length > 0 ? (
-              filteredUsers.map((item: any) => (
-                <CardListagem
-                  key={item.user.id}
-                  badge={<RoleBadge user={item.user} />}
-                  nomePrincipal={item.user.nome}
-                  detalhe={
-                    item.user.matricula
-                      ? `Matrícula: ${item.user.matricula}`
-                      : "Sem matrícula"
-                  }
-                  status={item.user.ativo ? "Ativo" : "Inativo"}
-                />
-              ))
+            {paginatedUsers.length > 0 ? (
+              <>
+                {paginatedUsers.map((item: any) => (
+                  <CardListagem
+                    key={item.user.id}
+                    badge={<RoleBadge user={item.user} />}
+                    nomePrincipal={item.user.nome}
+                    detalhe={
+                      item.user.matricula
+                        ? `Matrícula: ${item.user.matricula}`
+                        : "Sem matrícula"
+                    }
+                    status={item.user.ativo ? "Ativo" : "Inativo"}
+                    onClick={() => router.push(`/home/terapeutas/${item.user.id}`)}
+                  />
+                ))}
+
+                {/* 4. BOTÃO CARREGAR MAIS */}
+                {hasMore(filteredUsers.length) && (
+                  <div className="mt-4 flex justify-center">
+                    <Button 
+                      variant="outline" 
+                      onClick={loadMore}
+                      className="border-brand-purple text-brand-purple hover:bg-brand-purple hover:text-white"
+                    >
+                      Carregar Mais Terapeutas
+                    </Button>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="text-center p-8 bg-white/50 rounded-xl border border-gray-100">
                 <Typography className="text-gray-500">
