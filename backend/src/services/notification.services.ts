@@ -24,7 +24,7 @@ export class NotificationService {
 
     async listByUser(userId: string) {
         const query = `
-            SELECT id, usuario_id, mensagem, lida, created_at
+            SELECT id, usuario_id, titulo, mensagem, lida, created_at
             FROM notificacoes
             WHERE usuario_id = $1
             ORDER BY created_at DESC
