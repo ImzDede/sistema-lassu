@@ -8,16 +8,10 @@ import {
   UserCog,
   Power,
   CalendarClock,
-  Lock,
 } from "lucide-react";
 import {
   Typography,
   Spinner,
-  Switch,
-  Dialog,
-  DialogHeader,
-  DialogBody,
-  DialogFooter,
 } from "@material-tailwind/react";
 import Button from "@/components/Button";
 import CardListagem from "@/components/CardListagem";
@@ -26,13 +20,14 @@ import SearchInputWithFilter from "@/components/SearchInputWithFilter";
 import TherapistProfileCard from "@/components/TherapistProfileCard";
 import ConfirmationDialog from "@/components/ConfirmationDialog";
 import AvailabilityDialog from "@/components/AvailabilityDialog";
+import PermissionsDialog from "@/components/PermissionsDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUsers } from "@/hooks/useUsers";
 import { usePatients } from "@/hooks/usePatients";
 import { calculateAge } from "@/utils/date";
-import { formatPhone } from "@/utils/format";
+import { formatPhone, numberToDayMap } from "@/utils/format";
 import { usePagination } from "@/hooks/usePagination";
-import PermissionsDialog from "@/components/PermissionsDialog";
+import { useFeedback } from "@/hooks/useFeedback";
 
 interface TherapistData {
   id: string;
@@ -61,18 +56,14 @@ export default function TherapistDetails({
   const { patients, fetchPatients, loading: loadingPatients } = usePatients();
 
   const [therapist, setTherapist] = useState<TherapistData | null>(null);
-  const [alert, setAlert] = useState({
-    open: false,
-    color: "green" as "green" | "red",
-    msg: "",
-  });
+  const { feedback, showAlert, closeAlert } = useFeedback();
 
   // Estados dos Modais
   const [openRoleDialog, setOpenRoleDialog] = useState(false);
   const [openStatusDialog, setOpenStatusDialog] = useState(false);
   const [openAvailabilityDialog, setOpenAvailabilityDialog] = useState(false);
 
-  // Estados do Filtro de Pacientes
+  // Estados do Filtro
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ativo");
 
@@ -81,13 +72,38 @@ export default function TherapistDetails({
   // 1. CARREGAR DADOS
   const loadData = useCallback(async () => {
     if (!id) return;
-    const data = await getUserById(id);
-    if (data) {
-      setTherapist(data);
-    } else {
-      setAlert({ open: true, color: "red", msg: "Terapeuta não encontrada." });
+    
+    try {
+      const response = await getUserById(id);
+      
+      if (response) {
+        // Extrai os dados da usuária do envelope 'user'
+        const userData = response.user ? response.user : response;
+
+        // Extrai a disponibilidade
+        const rawAvailability = response.availability || response.disponibilidade || [];
+        
+        // Traduzi a disponibilidade para o Modal (1 -> "Segunda-feira")
+        const mappedAvailability = rawAvailability.map((slot: any) => ({
+          dia: numberToDayMap[Number(slot.dia)] || `Dia ${slot.dia}`,
+          inicio: slot.horaInicio ?? slot.inicio,
+          fim: slot.horaFim ?? slot.fim,
+        }));
+
+        // Salva tudo "achatado" no estado
+        setTherapist({
+          ...userData, // Espalha nome, ativo, perms... na raiz
+          disponibilidade: mappedAvailability // Adiciona a lista formatada
+        });
+
+      } else {
+        showAlert("red", "Terapeuta não encontrada.");
+      }
+    } catch (error) {
+      console.error("Erro ao carregar dados:", error);
+      showAlert("red", "Erro de conexão.");
     }
-  }, [id, getUserById]);
+  }, [id, getUserById, showAlert]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -99,7 +115,7 @@ export default function TherapistDetails({
     fetchPatients();
   }, [authLoading, isTeacher, loadData, fetchPatients, router]);
 
-  // 2. LÓGICA DE FILTRO DE PACIENTES
+  // LÓGICA DE FILTRO DE PACIENTES
   const myPatients =
     patients?.filter(
       (item: { patient: { profissionalResponsavelId: string } }) =>
@@ -113,7 +129,7 @@ export default function TherapistDetails({
     // Busca por nome
     const matchesSearch = p.nome.toLowerCase().includes(term);
 
-    // Definimos quais palavras-chave significam "INATIVO"
+    // Filtro de Status
     const inactiveKeywords = [
       "arquivado",
       "inativo",
@@ -122,7 +138,6 @@ export default function TherapistDetails({
       "cancelado",
     ];
 
-    // Normalizamos o status do paciente para comparar
     const pStatus = p.status ? p.status.toLowerCase() : "";
     const isInactive = inactiveKeywords.some((keyword) =>
       pStatus.includes(keyword)
@@ -143,33 +158,40 @@ export default function TherapistDetails({
 
   // 3. AÇÕES
   const handleConfirmStatusChange = async () => {
-    if (!therapist) return;
+    if (!id || !therapist) return; // Usa id da rota para segurança
     const novoStatus = !therapist.ativo;
-    const success = await updateUser(therapist.id, { ativo: novoStatus });
+    
+    try {
+      const success = await updateUser(id, { ativo: novoStatus });
 
-    if (success) {
-      setTherapist({ ...therapist, ativo: novoStatus });
-      setAlert({
-        open: true,
-        color: novoStatus ? "green" : "red",
-        msg: novoStatus
-          ? "Conta reativada com sucesso!"
-          : "Conta desativada com sucesso.",
-      });
-    } else {
-      setAlert({ open: true, color: "red", msg: "Erro ao alterar status." });
+      if (success) {
+        setTherapist({ ...therapist, ativo: novoStatus });
+        showAlert(
+          novoStatus ? "green" : "red",
+          novoStatus ? "Conta reativada com sucesso!" : "Conta desativada com sucesso."
+        );
+      } else {
+        showAlert("red", "Erro ao alterar status.");
+      }
+    } catch (e) {
+      showAlert("red", "Erro de comunicação.");
     }
   };
 
   const handlePermissionChange = async (key: keyof TherapistData) => {
-    if (!therapist) return;
+    if (!id || !therapist) return;
     const newValue = !therapist[key];
-    const success = await updateUser(therapist.id, { [key]: newValue });
+    
+    try {
+      const success = await updateUser(id, { [key]: newValue });
 
-    if (success) {
-      setTherapist({ ...therapist, [key]: newValue });
-    } else {
-      setAlert({ open: true, color: "red", msg: "Erro ao atualizar cargo." });
+      if (success) {
+        setTherapist({ ...therapist, [key]: newValue });
+      } else {
+        showAlert("red", "Erro ao atualizar cargo.");
+      }
+    } catch (e) {
+      showAlert("red", "Erro de comunicação.");
     }
   };
 
@@ -184,10 +206,10 @@ export default function TherapistDetails({
   return (
     <div className="flex flex-col w-full h-full pb-10">
       <FeedbackAlert
-        open={alert.open}
-        color={alert.color}
-        message={alert.msg}
-        onClose={() => setAlert((prev) => ({ ...prev, open: false }))}
+        open={feedback.open}
+        color={feedback.color}
+        message={feedback.message}
+        onClose={closeAlert}
       />
 
       {/* HEADER NAV */}
@@ -211,7 +233,6 @@ export default function TherapistDetails({
 
       {/* BOTÕES DE AÇÕES */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-8">
-        {/* 1. Gerenciar Permissões */}
         <Button
           variant="outline"
           onClick={() => setOpenRoleDialog(true)}
@@ -220,7 +241,6 @@ export default function TherapistDetails({
           <UserCog size={18} /> Gerenciar Permissões
         </Button>
 
-        {/* 2. Ver Disponibilidade */}
         <Button
           variant="outline"
           onClick={() => setOpenAvailabilityDialog(true)}
@@ -229,7 +249,6 @@ export default function TherapistDetails({
           <CalendarClock size={18} /> Ver Disponibilidade
         </Button>
 
-        {/* 3. Ativar/Desativar Conta */}
         <Button
           variant="outline"
           onClick={() => setOpenStatusDialog(true)}
@@ -335,8 +354,7 @@ export default function TherapistDetails({
           </div>
         </div>
 
-        {/* --- MODAIS --- */}
-        {/* 1. Modal de Permissões */}
+        {/* MODAIS */}
         <PermissionsDialog
           open={openRoleDialog}
           onClose={() => setOpenRoleDialog(false)}
@@ -344,7 +362,6 @@ export default function TherapistDetails({
           onUpdate={handlePermissionChange}
         />
 
-        {/* 2. Modal de Confirmação de Status */}
         <ConfirmationDialog
           open={openStatusDialog}
           onClose={() => setOpenStatusDialog(false)}
@@ -359,7 +376,6 @@ export default function TherapistDetails({
           isDestructive={therapist.ativo}
         />
 
-        {/* 3. Modal de Disponibilidade */}
         <AvailabilityDialog
           open={openAvailabilityDialog}
           onClose={() => setOpenAvailabilityDialog(false)}
