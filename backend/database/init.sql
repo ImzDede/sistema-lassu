@@ -60,3 +60,24 @@ CREATE TABLE pacientes (
 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE sessoes (
+    id SERIAL PRIMARY KEY,
+    
+    paciente_id UUID NOT NULL REFERENCES pacientes(id),
+    usuario_id UUID NOT NULL REFERENCES usuarios(id),
+    
+    -- Dados do Agendamento
+    dia VARCHAR(10) NOT NULL,
+    hora INTEGER NOT NULL,
+    sala INTEGER NOT NULL,
+    
+    status VARCHAR(30) NOT NULL DEFAULT 'agendada' 
+        CHECK (status IN ('agendada', 'realizada', 'falta', 'cancelada_paciente', 'cancelada_profissional')),
+    
+    anotacoes TEXT,
+
+    -- Auditoria
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP DEFAULT NULL
+);

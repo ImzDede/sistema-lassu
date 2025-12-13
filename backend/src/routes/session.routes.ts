@@ -7,6 +7,11 @@ const sessionController = new SessionControllers();
 
 router.use(authMiddleware);
 
-router.get('/', sessionController.create);
+router.post('/', sessionController.create);
+router.get('/', sessionController.list);
+router.get('/:id', sessionController.getById);
+router.put('/:id', sessionController.update);
+router.patch('/:id/status', sessionController.evolution);
+router.delete('/:id', sessionController.delete);
 
 export default router;
