@@ -748,3 +748,102 @@ O sistema utiliza **JWT (JSON Web Token)** para segurança.
 • 400 Bad Request: "Paciente já cadastrada com este CPF."
 
 • 404 Not Found: Paciente não encontrada.
+
+
+## Módulo de Sessões
+
+### 1. Agendar Sessão
+**Rota:** POST /sessions
+
+**Acesso:** Terapeuta Responsável
+
+**Descrição:** Cria um novo agendamento.
+
+Regras de Permissão: Você só pode agendar sessões para pacientes que estão vinculados a você (profissionalResponsavelId).
+
+Validação de Conflito: O sistema impede que a extensionista tenha dois atendimentos no mesmo horário (dia + hora).
+
+Notificações: Envia alerta para admins e para a terapeuta.
+
+**Corpo da requisição (JSON):**
+
+````json 
+{
+  "pacienteId": "6e969c8e-4dc6-4a26-b7a3-3c391b82f032",
+  "dia": "2025-12-13",
+  "hora": 11,
+  "sala": 4,
+  "anotacoes": "Anotação"
+}
+````
+
+**Resposta Sucesso (201 Created):**
+````json 
+{
+  "id": 10,
+  "pacienteId": "6e969c8e-4dc6-4a26-b7a3-3c391b82f032",
+  "usuarioId": "9483193c-4b5a-4ea4-a9f3-cfdc65f2b8aa",
+  "dia": "2025-12-13",
+  "hora": 11,
+  "sala": 4,
+  "status": "agendada",
+  "anotacoes": "Anotação"
+}
+````
+**Erros Comuns:**
+
+• 403 Forbidden: "Apenas a extensionista responsável pode agendar sessões para este paciente."
+
+• 409 Conflict: "A extensionista já possui um agendamento neste horário."
+
+• 400 Bad Request: Campos obrigatórios faltando.
+
+### 2. Listar Agenda (Calendário)
+**Rota:** GET /sessions
+
+**Acesso:** Qualquer usuário logado
+
+**Descrição:** Retorna a lista de sessões para popular o calendário.
+
+Filtros de Data: Recomendado enviar start e end para carregar apenas o mês visível.
+
+Visibilidade:
+
+Admin: Vê a agenda de todos.
+
+Extensionista/Cadastro: Vê apenas as suas próprias sessões (usuarioId = seu ID).
+
+**Parâmetros de Consulta (Query Params):** Exemplo: /sessions?start=2025-12-01&end=2025-12-31
+
+**Corpo da requisição (JSON):** Vazio
+
+**Resposta Sucesso (200 OK):**
+````json 
+[
+  {
+    "id": 9,
+    "pacienteId": "6e969c8e-4dc6-4a26-b7a3-3c391b82f032",
+    "usuarioId": "9483193c-4b5a-4ea4-a9f3-cfdc65f2b8aa",
+    "dia": "2025-01-04",
+    "hora": 11,
+    "sala": 4,
+    "status": "agendada",
+    "anotacoes": "Antoação",
+    "pacienteNome": "Paciente Nova",
+    "profissionalNome": "Atendimento"
+  },
+  {
+    "id": 3,
+    "pacienteId": "6e969c8e-4dc6-4a26-b7a3-3c391b82f032",
+    "usuarioId": "9483193c-4b5a-4ea4-a9f3-cfdc65f2b8aa",
+    "dia": "2025-01-26",
+    "hora": 12,
+    "sala": 1,
+    "status": "agendada",
+    "anotacoes": "Antoação",
+    "pacienteNome": "Paciente Nova",
+    "profissionalNome": "Atendimento"
+  }
+]
+````
+
