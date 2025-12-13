@@ -2,90 +2,74 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, UserPlus } from "lucide-react";
-import { Card, CardBody, Typography, Spinner } from "@material-tailwind/react";
+import { ArrowLeft, User, Save, Lock } from "lucide-react";
+import { Card, CardBody, Typography, Tooltip } from "@material-tailwind/react";
 import Input from "@/components/Input";
 import Button from "@/components/Button";
 import FeedbackAlert from "@/components/FeedbackAlert";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFeedback } from "@/hooks/useFeedback";
 import api from "@/services/api";
-import { cleanFormat, formatPhone } from "@/utils/format";
+import { formatPhone, cleanFormat } from "@/utils/format";
 
-export default function NewExtensionist() {
+export default function ProfileData() {
   const router = useRouter();
-  const { user, isTeacher, isLoading: authLoading } = useAuth();
-  const [formLoading, setFormLoading] = useState(false);
+  const { user } = useAuth();
   const { feedback, showAlert, closeAlert } = useFeedback();
+  const [loadingSave, setLoadingSave] = useState(false);
+
   const [formData, setFormData] = useState({
-    name: "",
+    nome: "",
+    matricula: "",
     email: "",
-    registration: "",
-    phone: "",
+    telefone: "",
   });
 
-  // Proteção de Rota
   useEffect(() => {
-    if (!authLoading && user) {
-      const canAccess = isTeacher || user.permCadastro;
-
-      if (!canAccess) {
-        router.push("/home/cadastro");
-      }
+    if (user) {
+      setFormData({
+        nome: user.nome || "",
+        matricula: user.matricula ? String(user.matricula) : "",
+        email: user.email || "",
+        telefone: user.telefone ? formatPhone(user.telefone) : "",
+      });
     }
-  }, [authLoading, user, isTeacher, router]);
+  }, [user]);
 
-  // Bloqueio de renderização
-  const canAccess = isTeacher || user?.permCadastro;
-  if (authLoading || !canAccess) {
-    return (
-      <div className="flex items-center justify-center w-full h-[80vh]">
-        <Spinner className="h-12 w-12 text-brand-purple" />
-      </div>
-    );
-  }
-
-  // Funções do Form
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    if (name === "phone")
+    if (name === "telefone") {
       setFormData((prev) => ({ ...prev, [name]: formatPhone(value) }));
-    else setFormData((prev) => ({ ...prev, [name]: value }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
-  async function handleSave(e: React.FormEvent) {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setFormLoading(true);
+    setLoadingSave(true);
     closeAlert();
 
     try {
       const payload = {
-        nome: formData.name,
+        nome: formData.nome,
         email: formData.email,
-        matricula: Number(formData.registration),
-        telefone: cleanFormat(formData.phone),
+        telefone: cleanFormat(formData.telefone),
       };
 
-      await api.post("/users", payload);
-      showAlert("green", "Extensionista cadastrada com sucesso!");
-      setFormData({ name: "", email: "", registration: "", phone: "" });
+      await api.put("/users/profile", payload);
+      showAlert("green", "Dados atualizados com sucesso!");
     } catch (error: any) {
-      console.error("Error creating extensionist:", error);
-      const dataError = error.response?.data;
-      const msgBackend = dataError?.error || dataError?.message;
-      showAlert(
-        "red",
-        typeof msgBackend === "string"
-          ? msgBackend
-          : "Erro ao realizar o cadastro."
-      );
+      console.error(error);
+      const msg = error.response?.data?.message || "Erro ao atualizar perfil.";
+      showAlert("red", msg);
     } finally {
-      setFormLoading(false);
+      setLoadingSave(false);
     }
-  }
+  };
 
   return (
-    <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full relative">
+    <div className="max-w-4xl mx-auto w-full pb-10">
       <FeedbackAlert
         open={feedback.open}
         color={feedback.color}
@@ -93,40 +77,34 @@ export default function NewExtensionist() {
         onClose={closeAlert}
       />
 
-      {/* HEADER */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 mb-6">
         <button
           onClick={() => router.back()}
-          className="p-3 rounded-full hover:bg-brand-purple/10 text-brand-purple transition-colors focus:outline-none"
-          title="Voltar"
+          className="p-2 rounded-full hover:bg-brand-purple/10 text-brand-purple transition-colors"
         >
           <ArrowLeft className="w-6 h-6" />
         </button>
         <div>
           <Typography
             variant="h4"
-            className="font-bold uppercase tracking-wide text-brand-dark"
+            className="font-bold uppercase text-brand-dark"
           >
-            Nova Terapeuta
+            Meus Dados Pessoais
           </Typography>
-          <Typography
-            variant="paragraph"
-            className="text-gray-500 font-normal text-sm"
-          >
-            Preencha os dados abaixo.
+          <Typography className="text-gray-500 text-sm">
+            Mantenha suas informações atualizadas.
           </Typography>
         </div>
       </div>
 
-      {/* FORM CARD */}
       <Card className="w-full shadow-lg border-t-4 border-brand-purple bg-brand-surface">
         <CardBody className="p-6 md:p-10">
           <div className="flex items-center gap-3 mb-8 pb-4 border-b border-gray-100">
             <div className="p-2 bg-brand-purple/10 rounded-lg">
-              <UserPlus className="w-6 h-6 text-brand-purple" />
+              <User className="w-6 h-6 text-brand-purple" />
             </div>
             <Typography variant="h6" className="font-bold text-brand-dark">
-              Informações Pessoais
+              Informações da Conta
             </Typography>
           </div>
 
@@ -134,8 +112,8 @@ export default function NewExtensionist() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Input
                 label="Nome Completo"
-                name="name"
-                value={formData.name}
+                name="nome"
+                value={formData.nome}
                 onChange={handleChange}
                 required
               />
@@ -152,23 +130,28 @@ export default function NewExtensionist() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Input
                 label="Matrícula"
-                type="number"
-                name="registration"
-                value={formData.registration}
-                onChange={handleChange}
-                required
+                name="matricula"
+                value={formData.matricula}
+                readOnly
+                className="font-medium !border-b-[1px] !border-b-gray-400 text-gray-400 cursor-not-allowed select-none focus:!border-b-gray-400"
+                icon={
+                  <Tooltip content="A matrícula não pode ser alterada.">
+                    <Lock size={16} className="text-gray-400" />
+                  </Tooltip>
+                }
               />
+
               <Input
                 label="Celular"
-                name="phone"
-                value={formData.phone}
+                name="telefone"
+                value={formData.telefone}
                 onChange={handleChange}
-                placeholder="(00) 00000-0000"
                 maxLength={15}
+                placeholder="(00) 00000-0000"
               />
             </div>
 
-            <div className="flex flex-col-reverse lg:flex-row gap-4 mt-4">
+            <div className="flex flex-col-reverse lg:flex-row gap-4 mt-4 pt-4 border-t border-gray-100">
               <div className="w-full lg:w-1/2">
                 <Button
                   variant="outline"
@@ -176,12 +159,17 @@ export default function NewExtensionist() {
                   onClick={() => router.back()}
                   fullWidth
                 >
-                  CANCELAR
+                  VOLTAR
                 </Button>
               </div>
               <div className="w-full lg:w-1/2">
-                <Button type="submit" loading={formLoading} fullWidth>
-                  {formLoading ? "SALVANDO..." : "CADASTRAR EXTENSIONISTA"}
+                <Button
+                  type="submit"
+                  loading={loadingSave}
+                  fullWidth
+                  className="flex items-center justify-center gap-2"
+                >
+                  SALVAR ALTERAÇÕES
                 </Button>
               </div>
             </div>

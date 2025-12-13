@@ -39,7 +39,7 @@ export default function Home() {
       </Typography>
 
       {/* Seção 1: Lista Principal */}
-      <section className="bg-brand-surface border border-brand-pink/30 p-4 md:p-6 rounded-xl shadow-sm">
+      <section className="w-full shadow-lg border-t-4 border-brand-purple bg-brand-surface p-4 md:p-6 rounded-xl">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-bold uppercase text-brand-dark">
             Hoje, {formattedDate}
@@ -94,7 +94,7 @@ export default function Home() {
       </section>
 
       {/* Calendário */}
-      <section className="bg-brand-surface border border-brand-pink/30 p-4 md:p-6 rounded-xl shadow-sm mb-8">
+      <section className="w-full shadow-lg border-t-4 border-brand-purple bg-brand-surfac p-4 md:p-6 rounded-xl bg-brand-surface mb-8">
         <h2 className="text-lg font-bold uppercase mb-4 text-brand-dark">
           Semana {weekOfMonth}, {currentMonth}
         </h2>

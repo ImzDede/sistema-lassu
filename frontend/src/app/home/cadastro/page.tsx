@@ -19,7 +19,7 @@ export default function Cadastro() {
   // Itens restritos (Admin ou Equipe de Cadastro)
   const menuItemsSpecific = [
     { label: "PACIENTES", href: "/home/cadastro/paciente" },
-    { label: "EXTENSIONISTAS", href: "/home/cadastro/extensionista" },
+    { label: "TERAPEUTAS", href: "/home/cadastro/extensionista" },
   ];
 
   // 3. Define quem pode ver os itens restritos
@@ -43,7 +43,7 @@ export default function Cadastro() {
         CADASTRO
       </Typography>
 
-      <div className="w-full h-full bg-brand-surface border border-brand-pink/30 p-4 md:p-8 rounded-xl shadow-sm">
+      <div className="w-full shadow-lg border-t-4 border-brand-purple bg-brand-surface h-full p-4 md:p-8 rounded-xl">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 w-full max-w-5xl mx-auto">
           
           {/* Renderiza itens gerais para todos */}
