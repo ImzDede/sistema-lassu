@@ -40,7 +40,7 @@ export default function PermissionsDialog({
     >
       <DialogHeader placeholder={undefined} className="justify-center gap-2">
         <UserCog className="text-brand-purple" />
-        <Typography variant="h5" color="blue-gray">
+        <Typography variant="h5" className="text-brand-purple">
           Gerenciar Permissões
         </Typography>
       </DialogHeader>

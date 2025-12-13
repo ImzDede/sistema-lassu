@@ -21,12 +21,12 @@ export function useUsers() {
     }
   }, []);
 
-  // Retorna os dados diretamente para quem chamou, em vez de salvar no state global 'users'
+  // Retorna os dados
   const getUserById = useCallback(async (id: string) => {
     setLoading(true);
     try {
       const response = await api.get(`/users/${id}`);
-      return response.data.user;
+      return response.data; 
     } catch (err) {
       console.error("Erro ao buscar usuário", err);
       return null;

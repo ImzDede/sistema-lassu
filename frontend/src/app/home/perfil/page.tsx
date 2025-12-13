@@ -86,30 +86,24 @@ export default function Perfil() {
   return (
     <div className="flex flex-col w-full min-h-full pb-20 md:pb-0 font-sans">
       {/* Cabeçalho Mobile com botão de Voltar */}
-      <div className="mb-6 md:mb-8 flex items-center gap-2">
-        <button
-          onClick={() => router.back()}
-          className="md:hidden p-2 -ml-2 text-gray-500 hover:bg-brand-purple/10 hover:text-brand-purple rounded-full transition-colors"
-        >
-          <ChevronLeft size={28} />
-        </button>
+      <div className="mb-6 md:mb-8 flex items-center">
         <div>
           <Typography
             variant="h3"
-            className="font-bold uppercase text-xl md:text-3xl text-brand-dark"
+            className="font-bold uppercase mb-2 text-center md:text-left mt-4 md:mt-0 text-brand-dark"
           >
             Meu Perfil
           </Typography>
           <Typography
             variant="paragraph"
-            className="text-gray-400 text-sm md:text-base hidden md:block"
+            className="text-gray-400 text-sm text-center md:text-left md:text-base"
           >
             Gerencie suas informações pessoais e configurações.
           </Typography>
         </div>
       </div>
 
-      <Card className="w-full max-w-6xl mx-auto shadow-sm lg:shadow-md border border-brand-pink/30 bg-brand-surface overflow-hidden">
+      <Card className="w-full shadow-lg border-t-4 border-brand-purple bg-brand-surface max-w-6xl mx-auto lg:shadow-md overflow-hidden">
         <div className="flex flex-col lg:flex-row min-h-[500px]">
           {/* COLUNA ESQUERDA: Foto e Dados Básicos */}
           <div className="w-full lg:w-1/3 bg-brand-bg/50 lg:border-r border-brand-pink/20 p-6 lg:p-8 flex flex-col items-center">

@@ -3,7 +3,7 @@
 import React, { useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Spinner } from "@material-tailwind/react";
+import { Typography, Spinner } from "@material-tailwind/react";
 import CalendarWidget from "@/components/Calendar";
 import { useAuth } from "@/contexts/AuthContext";
 import CardListagem from "@/components/CardListagem";
@@ -24,14 +24,22 @@ export default function Home() {
     }
   }, [isTeacher, user, fetchUsers]);
 
-  const displayedList = (isTeacher && users)
-    ? users.filter((u: any) => u.user && !u.user.permAdmin)
-    : [];
+  const displayedList =
+    isTeacher && users
+      ? users.filter((u: any) => u.user && !u.user.permAdmin)
+      : [];
 
   return (
     <div className="flex flex-col gap-8">
+      <Typography
+        variant="h3"
+        className="font-bold uppercase mb-6 text-center md:text-left mt-4 md:mt-0 text-brand-dark"
+      >
+        INÍCIO
+      </Typography>
+
       {/* Seção 1: Lista Principal */}
-      <section className="bg-brand-surface border border-brand-pink/30 p-4 md:p-6 rounded-xl shadow-sm">
+      <section className="w-full shadow-lg border-t-4 border-brand-purple bg-brand-surface p-4 md:p-6 rounded-xl">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-bold uppercase text-brand-dark">
             Hoje, {formattedDate}
@@ -44,13 +52,12 @@ export default function Home() {
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            
             {/* CENÁRIO 1: PROFESSORA */}
             {isTeacher &&
               displayedList.map((item: any) => (
                 <CardListagem
                   key={item.user.id}
-                  badge={<RoleBadge user={item.user} />} 
+                  badge={<RoleBadge user={item.user} />}
                   nomePrincipal={item.user.nome} // Acessando .user
                   detalhe={
                     item.user.matricula
@@ -87,7 +94,7 @@ export default function Home() {
       </section>
 
       {/* Calendário */}
-      <section className="bg-brand-surface border border-brand-pink/30 p-4 md:p-6 rounded-xl shadow-sm mb-8">
+      <section className="w-full shadow-lg border-t-4 border-brand-purple bg-brand-surfac p-4 md:p-6 rounded-xl bg-brand-surface mb-8">
         <h2 className="text-lg font-bold uppercase mb-4 text-brand-dark">
           Semana {weekOfMonth}, {currentMonth}
         </h2>
