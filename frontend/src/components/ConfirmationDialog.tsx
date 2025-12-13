@@ -25,12 +25,12 @@ export default function ConfirmationDialog({
   isDestructive = false
 }: ConfirmationDialogProps) {
   return (
-    <Dialog open={open} handler={onClose} size="xs" className="p-4" placeholder={undefined}>
-      <DialogHeader placeholder={undefined} className="justify-center flex-col gap-2">
-        <div className={`p-3 rounded-full ${isDestructive ? "bg-red-50 text-red-500" : "bg-blue-50 text-blue-500"}`}>
+    <Dialog open={open} handler={onClose} size="xs" className="p-4">
+      <DialogHeader className="justify-center flex-col gap-2">
+        <div className={`p-3 rounded-full ${isDestructive ? "bg-red-50 text-red-500" : "bg-blue-50 text-brand-purple"}`}>
           <AlertTriangle size={32} />
         </div>
-        <Typography variant="h5" color="blue-gray" className="text-center">
+        <Typography variant="h5" className="text-center text-brand-purple">
           {title}
         </Typography>
       </DialogHeader>

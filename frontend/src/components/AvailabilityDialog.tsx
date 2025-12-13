@@ -24,7 +24,7 @@ export default function AvailabilityDialog({ open, onClose, availabilities = [] 
     <Dialog open={open} handler={onClose} size="sm" className="p-4">
       <DialogHeader className="flex items-center gap-2 border-b border-gray-100 pb-4">
         <Calendar className="text-brand-purple" />
-        <Typography variant="h5" color="blue-gray">
+        <Typography variant="h5" className="text-brand-purple">
           Horários de Atendimento
         </Typography>
       </DialogHeader>

@@ -11,6 +11,7 @@ interface UserData extends TokenPayload {
   fotoUrl?: string | null;
   matricula?: number;
   email?: string;
+  telefone?: string;
 }
 
 interface AuthContextType {

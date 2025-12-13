@@ -24,32 +24,32 @@ O sistema opera como uma **Single Page Application (SPA)** híbrida, utilizando 
 
 ## 2. Estrutura de Pastas
 
-A organização do projeto reflete as rotas e funcionalidades do sistema:
+A organização do projeto reflete as rotas e funcionalidades do sistema, incluindo agora as sub-rotas de gestão de perfil:
 
 ```bash
 src/
 ├── app/
-│   ├── page.tsx                # Tela de Login (Rota Pública)
-│   ├── primeiroAcesso/         # Wizard de Configuração Inicial (Senha/Disponibilidade)
-│   ├── home/                   # Área logada do sistema (Protegida)
-│   │   ├── layout.tsx          # Layout Principal (Sidebar, Header, Auth Check)
-│   │   ├── page.tsx            # Dashboard (Cards de Hoje, Calendário)
-│   │   ├── cadastro/           # Sub-rotas de cadastro (Pacientes, Extensionistas)
-│   │   ├── terapeutas/         # Gestão de equipe
-│   │   │   ├── page.tsx        # Listagem geral
-│   │   │   └── [id]/           # Detalhes e gestão individual (Rota Dinâmica)
-│   │   └── perfil/             # Visualização e edição de perfil pessoal
-├── components/                 # Componentes reutilizáveis (UI Kit e Lógica)
-├── contexts/                   # Estados globais (Sessão do Usuário)
-├── hooks/                      # Lógica de negócio encapsulada (Custom Hooks)
-├── services/                   # Configuração de serviços externos (API)
-├── utils/
-│   ├── api.ts                  # Configuração do Axios e Interceptors
-│   ├── auth.ts                 # Lógica de Token, Cookies e Redirecionamento
-│   ├── date.ts                 # Cálculos de datas (Idade, Diferenças)
-│   └── format.ts               # Formatações de CPF, Telefone, Horários e Mapas
-├── types/                      # Definições de Tipos TypeScript (Interfaces)
-└── middleware.ts               # Porteiro do servidor (Verificação de Cookies)
+│   ├── page.tsx                 # Tela de Login (Rota Pública)
+│   ├── primeiroAcesso/          # Wizard de Configuração Inicial (Senha/Disponibilidade)
+│   ├── home/                    # Área logada do sistema (Protegida)
+│   │   ├── layout.tsx           # Layout Principal (Sidebar, Header, Auth Check)
+│   │   ├── page.tsx             # Dashboard (Cards de Hoje, Calendário)
+│   │   ├── cadastro/            # Sub-rotas de cadastro (Hub, Pacientes, Extensionistas)
+│   │   ├── pacientes/           # Gestão de pacientes
+│   │   ├── terapeutas/          # Gestão de equipe
+│   │   │   ├── page.tsx         # Listagem geral com filtros
+│   │   │   └── [id]/            # Detalhes, disponibilidade e permissões (Rota Dinâmica)
+│   │   └── perfil/              # Hub de configurações do usuário
+│   │       ├── dados/           # Edição de dados pessoais
+│   │       ├── senha/           # Alteração de senha
+│   │       └── disponibilidade/ # Editor de grade horária pessoal
+├── components/                  # Componentes reutilizáveis (UI Kit e Lógica)
+├── contexts/                    # Estados globais (Sessão e Notificações)
+├── hooks/                       # Lógica de negócio encapsulada (Custom Hooks)
+├── services/                    # Configuração de serviços externos (API)
+├── utils/                       # Formatadores, Auth e Helpers
+├── types/                       # Definições de Tipos TypeScript (Interfaces)
+└── middleware.ts                # Porteiro do servidor (Verificação de Cookies)
 ```
 
 ## 3. Serviços e Utilitários (`src/services` & `src/utils`)
@@ -58,18 +58,16 @@ Camada responsável pela comunicação externa, segurança e formatação de dad
 
 ### 📡 `services/api.ts`
 * **Configuração:** Instância única do Axios apontando para a API.
-* **Interceptor:** Injeta o token `Bearer` automaticamente no header `Authorization` em 100% das chamadas, eliminando repetição de código e garantindo segurança.
+* **Robustez:** Implementa `transformResponse` para tratar respostas vazias ou JSONs inválidos sem quebrar a aplicação.
+* **Interceptor:** Injeta o token `Bearer` automaticamente no header `Authorization`.
 
 ### 🔐 `utils/auth.ts`
-* **`verifyUserRedirect`**: Função vital de segurança no cliente. Impede acesso cruzado: bloqueia usuários de "primeiro acesso" de ver a home, e impede usuários já configurados de voltar ao wizard inicial.
-* **Gerenciamento de Cookies:** Funções para Salvar (`saveToken`), Ler (`getToken`) e Destruir (`logout`) cookies de sessão.
+* **`verifyUserRedirect`:** Função vital de segurança no cliente. Impede acesso cruzado: bloqueia usuários de "primeiro acesso" de ver a home, e impede usuários já configurados de voltar ao wizard inicial.
+* **Cookies:** Funções para gestão de sessão via `nookies`.
 
-### 🛠 `utils/format.ts`
-* **Formatadores:** Máscaras visuais para CPF, Telefone e Horários (`formatTimeInterval`).
-* **Mapeamento:** Objetos auxiliares para tradução de dias da semana (Backend usa números 1-5, Frontend usa strings "Segunda-feira").
-
-### 📅 `utils/date.ts`
-* **Cálculos:** Funções puras para manipulação de datas, como `calculateAge` (converte data de nascimento em idade atual).
+### 🛠 `utils/format.ts` & `date.ts`
+* **Formatadores:** Máscaras visuais para CPF, Telefone e Horários.
+* **Helpers:** Mapas de conversão de Dias da Semana (Backend `int` <-> Frontend `string`).
 
 ---
 
@@ -77,26 +75,23 @@ Camada responsável pela comunicação externa, segurança e formatação de dad
 
 Camada de Gerenciamento de Estado e Lógica de Negócio.
 
-### 🌐 `AuthContext.tsx`
-* **Responsabilidade:** Manter a sessão viva e acessível.
-* **Funcionamento:** Ao iniciar, decodifica o token. Se válido, preenche o estado `user` e a flag `isTeacher`. Se inválido, realiza o logout. Provê esses dados para toda a árvore de componentes.
+### 🌐 Contextos
+* **`AuthContext.tsx`:** Gerencia a sessão do usuário. A interface `UserData` foi estendida para incluir dados de perfil completos (telefone, matrícula).
+* **`NotificationContext.tsx`:** Gerencia o *polling* de notificações em tempo real (intervalo de 30s) e contagem de não lidas.
 
 ### 🎣 Custom Hooks
-* **`useUsers.ts`**:
-    * Centraliza o CRUD de usuários (Terapeutas/Admins).
-    * Expõe: `fetchUsers`, `getUserById`, `updateUser`, `deleteUser`.
-* **`usePatients.ts`**:
-    * Centraliza o CRUD de pacientes.
-    * Gerencia a listagem e atualizações.
-* **`useProfessionalSearch.ts`**:
-    * Lógica exclusiva da tela de cadastro.
-    * Realiza busca cruzada (Dia x Hora) conectando com a rota `/users/available`.
-* **`useFeedback.ts`**:
-    * Controla a UI de alertas (Toasts) com temporizador automático via `useEffect`.
-    * Retorna um array compatível com `useState` para facilitar a migração.
-* **`usePagination.ts`**:
+* **`useUsers.ts`:**
+    * Centraliza o CRUD de usuários.
+    * Método `getUserById` retorna o objeto completo (incluindo disponibilidade) para a tela de detalhes.
+* **`usePatients.ts`:**
+    * Centraliza a listagem e filtros de pacientes.
+* **`useProfessionalSearch.ts`:**
+    * Lógica exclusiva da tela de cadastro para busca cruzada de disponibilidade (Dia x Hora).
+* **`useFeedback.ts`:**
+    * Controla a UI de alertas (Toasts).
+    * Implementa limpeza de *timers* via `useRef` para evitar conflitos em cliques rápidos.
+* **`usePagination.ts`:**
     * Gerencia a paginação no cliente (Client-Side Pagination).
-    * Expõe: `visibleCount`, `loadMore`, `hasMore` e `resetPagination`.
 
 ---
 
@@ -107,31 +102,24 @@ Os componentes foram divididos em **Base** (UI Pura) e **Negócio** (Funcionais)
 ### 🎨 Componentes Base (UI Kit)
 Componentes que "envelopam" o Material Tailwind para garantir a identidade visual (Cores Roxo/Rosa).
 
-* **`Button.tsx`**: Botão padronizado. Suporta variantes `primary` e `outline`.
-* **`Input.tsx`**: Campo de texto com estilização de borda inferior.
-* **`SelectBox.tsx`**: Dropdown estilizado.
-* **`DateInput.tsx`**: Wrapper especial para campos de data com trigger de calendário.
-* **`MTRegistry.tsx`**: Infraestrutura para injetar estilos do Material Tailwind no Next.js.
+* **`Input.tsx`:** Campo de texto com estilização inteligente. Altera automaticamente a cor da borda e cursor quando a prop `disabled` é ativa.
+* **`Button.tsx`:** Botão padronizado com variantes `primary` e `outline`.
+* **`SelectBox.tsx`** & **`DateInput.tsx`:** Inputs especializados mantendo o padrão visual.
+* **`MTRegistry.tsx`:** Infraestrutura de estilos.
 
 ### 🧩 Layout e Navegação
-* **`Sidebar.tsx`**: Menu lateral esquerdo (Desktop).
-* **`BottomNav.tsx`**: Menu fixo no rodapé (Mobile).
-* **`NavItem.tsx`** & **`ProfileMenuItem.tsx`**: Itens de menu estilizados.
+* **`Sidebar.tsx`:** Menu lateral esquerdo (Desktop).
+* **`BottomNav.tsx`:** Menu fixo no rodapé (Mobile).
+* **`NotificationBell.tsx`:** Sino de notificações com *badge* de contagem e *dropdown*.
 
 ### 📦 Componentes de Negócio
-* **`AvailabilityEditor.tsx`**: Gerenciador de grade horária (Perfil/Wizard).
-* **`AvailabilitySearchSelector.tsx`**: Seletor de filtros de busca (Cadastro).
-* **`AvailabilityDialog.tsx`**: Modal para visualização de disponibilidade de terceiros.
-* **`Calendar.tsx`**: Widget visual de calendário.
-* **`CardCadastro.tsx`**: Botão de navegação no Hub de Cadastro.
-* **`CardListagem.tsx`**: Componente versátil para listas. Suporta `onClick` e seleção visual.
-* **`ConfirmationDialog.tsx`**: Modal genérico para confirmar ações destrutivas ou de status.
-* **`PermissionsDialog.tsx`**: Modal para gestão de cargos (Cadastro/Atendimento) com Switches.
-* **`FeedbackAlert.tsx`**: Notificação flutuante (Toast).
-* **`InfoBox.tsx`**: Caixa azul de instrução.
-* **`RoleBadge.tsx`**: Etiqueta inteligente de permissões.
-* **`SearchInputWithFilter.tsx`**: Barra de Busca + Dropdown de Filtro.
-* **`TherapistProfileCard.tsx`**: Cartão de detalhes da terapeuta com estatísticas.
+* **`AvailabilityEditor.tsx`:** Editor visual da disponibilidade (Perfil/Wizard).
+* **`AvailabilityDialog.tsx`:** Modal para visualização de horários de terceiros (somente leitura).
+* **`TherapistProfileCard.tsx`:** Cartão de detalhes rico com estatísticas e tags de permissão.
+* **`PermissionsDialog.tsx`:** Modal para gestão de cargos com *Switches*.
+* **`NotificationDialog.tsx`:** Lista de notificações com parser de links (Markdown) e cores dinâmicas por tipo de aviso.
+* **`FeedbackAlert.tsx`:** Toast flutuante de sucesso/erro.
+* **`CardListagem.tsx`:** Componente versátil para listas de Terapeutas e Pacientes.
 
 ---
 
@@ -139,30 +127,26 @@ Componentes que "envelopam" o Material Tailwind para garantir a identidade visua
 
 Detalhamento das páginas e lógicas de roteamento.
 
-### 🔐 Autenticação
-* **`page.tsx` (Login):** Ponto de entrada. Gerencia redirecionamento baseado em `primeiroAcesso`.
-* **`primeiroAcesso/page.tsx`:** Wizard obrigatório para definição de senha e horário.
+### 🔐 Autenticação & Setup
+* **`page.tsx` (Login):** Gerencia login e redirecionamento condicional.
+* **`primeiroAcesso/page.tsx`:** Wizard obrigatório. Valida senhas iguais e horários lógicos (fim > início) antes de liberar o acesso.
 
-### 🏠 Dashboard (`/home`)
-* **`layout.tsx`:** Define o esqueleto da área logada.
-* **`page.tsx` (Dashboard):** Tela inicial com resumos adaptados ao cargo.
+### 🏠 Dashboard & Gestão
+* **`terapeutas/[id]/page.tsx`:** Tela completa de gestão.
+    * Permite ver disponibilidade da terapeuta via modal.
+    * Permite alterar permissões e status (Ativo/Inativo).
+    * Lista pacientes vinculados com filtros.
+ **`cadastro/paciente/page.tsx`:** Implementa fluxo de **Busca Cruzada**. O usuário define um horário preferencial e o sistema retorna apenas extensionistas disponíveis naquele slot para vínculo.
+ **`cadastro/extensionista/page.tsx`:** O usuário com permissão de cadastro ou admin cria uma conta para uma terapeuta com permissão de atendimento.
+ **`pacientes/page.tsx`:** Tela completa de gestão.
+*
 
-### 👥 Funcionalidades e Listagens
-As telas de listagem implementam **Paginação no Cliente** (`usePagination`) e **Filtros Inteligentes**.
+### 👤 Perfil (`/home/perfil`)
+O perfil atua como um Hub de configurações, consumindo a rota `PUT /users/profile`:
 
-* **`terapeutas/page.tsx`:** Listagem de usuários.
-    * Permite filtrar por Nome, Matrícula e Status (Ativo/Inativo).
-    * Ao clicar no card, navega para a rota dinâmica de detalhes.
-* **`terapeutas/[id]/page.tsx` (Detalhes):**
-    * Visão exclusiva da Administradora.
-    * Exibe perfil, estatísticas e lista de pacientes vinculados à terapeuta.
-    * **Gestão:** Permite Ativar/Desativar conta e Editar Permissões (via Modais).
-* **`pacientes/page.tsx`:** Listagem de pacientes.
-    * Implementa filtro semântico onde "Ativo" inclui status como *Triagem* e *Encaminhada*.
-* **`cadastro/page.tsx` (Hub):** Menu de botões com verificação de permissões.
-    * **`cadastro/paciente/page.tsx`:** Formulário com busca de disponibilidade (`useProfessionalSearch`).
-    * **`cadastro/extensionista/page.tsx`:** Formulário para criação de novos usuários.
-* **`perfil/page.tsx`:** Gestão de dados pessoais e agenda do usuário logado.
+* **`dados/page.tsx`:** Alteração de Nome, Email e Telefone. Campo de Matrícula exibido como *ReadOnly* com ícone de cadeado.
+* **`senha/page.tsx`:** Alteração segura de senha.
+* **`disponibilidade/page.tsx`:** Interface para o extensionista gerenciar sua própria disponibilidade.
 
 ---
 
@@ -170,6 +154,6 @@ As telas de listagem implementam **Paginação no Cliente** (`usePagination`) e 
 
 Definições TypeScript para garantir a integridade dos dados.
 
-* **`usuarios.ts`**: Interface `TokenPayload` do JWT.
-* **`disponibilidade.ts`**: Interface `TimeSlot`.
+* **`usuarios.ts`:** Interfaces de Token e UserData.
+* **`disponibilidade.ts`**: Interface `TimeSlot` para manipulação visual de horários.
 * **`paciente.ts`**: Interfaces `Patient` e `PatientResponseItem`.

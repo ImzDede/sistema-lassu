@@ -103,7 +103,7 @@ export default function Perfil() {
         </div>
       </div>
 
-      <Card className="w-full max-w-6xl mx-auto shadow-sm lg:shadow-md border border-brand-pink/30 bg-brand-surface overflow-hidden">
+      <Card className="w-full shadow-lg border-t-4 border-brand-purple bg-brand-surface max-w-6xl mx-auto lg:shadow-md overflow-hidden">
         <div className="flex flex-col lg:flex-row min-h-[500px]">
           {/* COLUNA ESQUERDA: Foto e Dados Básicos */}
           <div className="w-full lg:w-1/3 bg-brand-bg/50 lg:border-r border-brand-pink/20 p-6 lg:p-8 flex flex-col items-center">
