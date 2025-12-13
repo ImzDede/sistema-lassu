@@ -142,7 +142,7 @@ export default function NewPatient() {
             Nova Paciente
           </Typography>
           <Typography variant="paragraph" className="text-gray-500 text-sm">
-            Dados pessoais e vinculação.
+            Preencha os dados abaixo.
           </Typography>
         </div>
       </div>
@@ -169,7 +169,7 @@ export default function NewPatient() {
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Input label="CPF" name="cpf" value={formData.cpf} onChange={handleChange} placeholder="000.000.000-00" maxLength={14} required />
-                <Input label="Telefone" name="cellphone" value={formData.cellphone} onChange={handleChange} placeholder="(00) 00000-0000" maxLength={15} required />
+                <Input label="Celular" name="cellphone" value={formData.cellphone} onChange={handleChange} placeholder="(00) 00000-0000" maxLength={15} required />
               </div>
             </div>
 
@@ -201,7 +201,7 @@ export default function NewPatient() {
                   fullWidth
                   className="h-[52px] bg-brand-purple text-white hover:bg-brand-purple/90 flex items-center justify-center gap-2"
                 >
-                  <Search className="w-4 h-4" /> BUSCAR DISPONÍVEIS
+                  <Search className="w-4 h-4" /> BUSCAR PROFISSIONAIS DISPONÍVEIS
                 </Button>
               </div>
 
@@ -211,8 +211,6 @@ export default function NewPatient() {
                   {searchResults.map((item) => {
                     const prof = item.user;
                     const isSelected = selectedProfessionalId === prof.id;
-                    
-                    // CORREÇÃO: O cálculo da string deve ser feito AQUI DENTRO do map
                     const horariosString = item.availabilities
                       .map(a => formatTimeInterval(a.inicio, a.fim))
                       .join(" / ");

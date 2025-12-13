@@ -23,7 +23,7 @@ export default function PacientesPage() {
   useEffect(() => {
     if (!authLoading && user) {
       const canAccess =
-        user.permCadastro || user.permAtendimento || user.permAdmin;
+        user.permCadastro || user.permAtendimento;
       if (!canAccess) {
         router.push("/home");
       }
@@ -93,6 +93,7 @@ export default function PacientesPage() {
         onSearchChange={setSearchTerm}
         statusFilter={statusFilter}
         onFilterChange={setStatusFilter}
+        searchLabel="Procurar pacientes"
       />
 
       <div className="flex flex-col gap-4 pb-20 md:pb-0">
