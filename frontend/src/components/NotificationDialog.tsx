@@ -5,7 +5,6 @@ import {
   Dialog,
   DialogHeader,
   DialogBody,
-  DialogFooter,
   Typography,
   IconButton,
 } from "@material-tailwind/react";
@@ -30,7 +29,7 @@ export default function NotificationDialog({ open, onClose }: NotificationDialog
     if (t.includes("anamnese") || t.includes("síntese")) {
       return "bg-brand-peach border-brand-peach"; 
     }
-    if (t.includes("realocado") || t.includes("atribuída") || t.includes("vinculada")) {
+    if (t.includes("sessão marcada") || t.includes("atribuída") || t.includes("vinculada")) {
       return "bg-brand-pink border-brand-pink"; 
     }
     return "bg-gray-400 border-gray-400"; 

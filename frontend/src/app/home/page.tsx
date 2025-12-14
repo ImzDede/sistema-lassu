@@ -38,9 +38,7 @@ export default function Home() {
     return sessionDate === todayStr && ownerId === user?.id;
   }) : null;
 
-  // --- CORREÇÃO AQUI ---
   const handleDayClick = (date: Date) => {
-    // 1. Removemos o bloqueio (!isTeacher return)
     
     const dateStr = format(date, "yyyy-MM-dd");
     

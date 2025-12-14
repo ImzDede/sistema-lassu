@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
-import { useRouter } from "next/navigation";
+import React, { useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, Typography, List, Spinner } from "@material-tailwind/react";
 import {
   ChevronLeft,
@@ -19,10 +19,33 @@ import ProfileMenuItem from "@/components/ProfileMenuItem";
 import { logout } from "@/utils/auth";
 import { useAuth } from "@/contexts/AuthContext";
 import RoleBadge from "@/components/RoleBadge";
+import { useFeedback } from "@/hooks/useFeedback";
+import FeedbackAlert from "@/components/FeedbackAlert";
 
 export default function Perfil() {
   const router = useRouter();
   const { user, isTeacher, isLoading } = useAuth();
+  const searchParams = useSearchParams();
+  const { feedback, showAlert, closeAlert } = useFeedback();
+
+  useEffect(() => {
+    const successType = searchParams.get("success");
+
+    if (successType) {
+      // Dicionário de mensagens
+      const messages: Record<string, string> = {
+        dados: "Dados pessoais atualizados com sucesso!",
+        senha: "Senha alterada com sucesso!",
+        disponibilidade: "Sua disponibilidade foi alterada com sucesso!"
+      };
+
+      const messageToShow = messages[successType] || messages.default;
+
+      showAlert("green", messageToShow);
+      
+      router.replace("/home/perfil");
+    }
+  }, [searchParams, showAlert, router]);
 
   // Função de logout
   function handleLogout() {
@@ -85,6 +108,13 @@ export default function Perfil() {
 
   return (
     <div className="flex flex-col w-full min-h-full pb-20 lg:pb-0 font-sans">
+
+      <FeedbackAlert
+        open={feedback.open}
+        color={feedback.color}
+        message={feedback.message}
+        onClose={closeAlert}
+      />
 
       <div className="mb-6 lg:mb-8 flex items-center justify-center lg:justify-start">
         <div>

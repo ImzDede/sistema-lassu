@@ -54,6 +54,13 @@ export default function RegisterSession() {
       return;
     }
 
+    const todayStr = new Date().toISOString().split("T")[0];
+    
+    if (selectedDate < todayStr) {
+        showAlert("red", "Não é permitido agendar sessões para datas passadas.");
+        return;
+    }
+
     setLoadingSave(true);
     try {
       await createSession({
@@ -131,6 +138,7 @@ export default function RegisterSession() {
                 />
                 <DateInput 
                     label="Data" 
+                    // Visualmente bloqueia passados (para quem usa calendário)
                     minDate={new Date().toISOString().split("T")[0]}
                     value={selectedDate} 
                     onChange={(e) => setSelectedDate(e.target.value)} 

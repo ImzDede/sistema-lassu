@@ -48,9 +48,19 @@ export default function NewExtensionist() {
   // Funções do Form
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    if (name === "phone")
+
+    if (name === "phone") {
       setFormData((prev) => ({ ...prev, [name]: formatPhone(value) }));
-    else setFormData((prev) => ({ ...prev, [name]: value }));
+    } 
+    else if (name === "registration") {
+      const onlyNumbers = value.replace(/\D/g, ""); // Remove tudo que não é número
+      if (onlyNumbers.length <= 7) { // Trava visualmente em 7
+         setFormData((prev) => ({ ...prev, [name]: onlyNumbers }));
+      }
+    } 
+    else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   async function handleSave(e: React.FormEvent) {
@@ -152,11 +162,12 @@ export default function NewExtensionist() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Input
                 label="Matrícula"
-                type="number"
                 name="registration"
                 value={formData.registration}
                 onChange={handleChange}
                 required
+                maxLength={7} 
+                minLength={7}
               />
               <Input
                 label="Celular"
