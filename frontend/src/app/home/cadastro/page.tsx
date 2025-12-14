@@ -38,7 +38,7 @@ export default function Cadastro() {
     <div className="flex flex-col h-full w-full">
       <Typography
         variant="h3"
-        className="font-bold uppercase mb-6 text-center md:text-left mt-4 md:mt-0 text-brand-dark"
+        className="font-bold uppercase mb-6 text-center lg:text-left mt-4 md:mt-0 text-brand-dark"
       >
         CADASTRO
       </Typography>

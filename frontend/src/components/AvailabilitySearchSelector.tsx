@@ -4,17 +4,7 @@ import React from "react";
 import Select from "@/components/SelectBox";
 import { TimeSlot } from "@/types/disponibilidade";
 import { daysOptions } from "@/utils/format";
-
-// Gera as horas (Mantenha a lógica igual)
-const hoursStart = Array.from({ length: 10 }, (_, i) => {
-  const hour = i + 8;
-  return `${hour.toString().padStart(2, "0")}:00`;
-});
-
-const hoursEnd = Array.from({ length: 10 }, (_, i) => {
-  const hour = i + 9;
-  return `${hour.toString().padStart(2, "0")}:00`;
-});
+import { hoursStartStrings, hoursEndStrings } from "@/utils/constants";
 
 interface SearchSelectorProps {
   availability: TimeSlot[];
@@ -56,7 +46,7 @@ export default function AvailabilitySearchSelector({
           <div className="md:w-1/2">
             <Select
               label="De (Início)"
-              options={hoursStart}
+              options={hoursStartStrings}
               value={slot.start}
               onChange={(val: any) => updateSlot("start", val)}
             />
@@ -67,7 +57,7 @@ export default function AvailabilitySearchSelector({
           <div className="mt-4 md:w-1/2 md:mt-0">
             <Select
               label="Até (Fim)"
-              options={hoursEnd}
+              options={hoursEndStrings}
               value={slot.end}
               onChange={(val: any) => updateSlot("end", val)}
             />

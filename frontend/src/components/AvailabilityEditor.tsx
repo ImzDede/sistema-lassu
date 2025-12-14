@@ -8,16 +8,7 @@ import Select from "@/components/SelectBox";
 import InfoBox from "@/components/InfoBox";
 import { TimeSlot } from "@/types/disponibilidade";
 import { daysOptions } from "@/utils/format"; 
-
-const hoursStart = Array.from({ length: 10 }, (_, i) => {
-  const hour = i + 8;
-  return `${hour.toString().padStart(2, "0")}:00`;
-});
-
-const hoursEnd = Array.from({ length: 10 }, (_, i) => {
-  const hour = i + 9;
-  return `${hour.toString().padStart(2, "0")}:00`;
-});
+import { hoursStartStrings, hoursEndStrings } from "@/utils/constants";
 
 interface AvailabilityEditorProps {
   availability: TimeSlot[];
@@ -79,7 +70,7 @@ export default function AvailabilityEditor({
                 <div className="w-full md:w-1/2">
                   <Select
                     label="Início"
-                    options={hoursStart}
+                    options={hoursStartStrings}
                     value={slot.start}
                     onChange={(val: any) => updateSlot(slot.id, "start", val)}
                   />
@@ -90,7 +81,7 @@ export default function AvailabilityEditor({
                 <div className="w-full md:w-1/2">
                   <Select
                     label="Fim"
-                    options={hoursEnd}
+                    options={hoursEndStrings}
                     value={slot.end}
                     onChange={(val: any) => updateSlot(slot.id, "end", val)}
                   />

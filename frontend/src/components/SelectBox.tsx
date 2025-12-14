@@ -14,9 +14,10 @@ interface SelectProps {
   onChange: (value: string) => void;
   options: (string | SelectOption)[];
   className?: string;
+  required?: boolean;
 }
 
-const Select = ({ label, value, onChange, options, className = "" }: SelectProps) => {
+const Select = ({ label, value, onChange, options, required, className = "" }: SelectProps) => {
   return (
     <div className="w-full">
       <MTSelect

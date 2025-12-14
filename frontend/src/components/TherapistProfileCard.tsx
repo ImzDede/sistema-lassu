@@ -46,7 +46,7 @@ export default function TherapistProfileCard({ therapist, patientCount }: Therap
             </Typography>
           </div>
           
-          {/* Status Chip */}
+          {/* Status */}
           <Chip 
             value={therapist.ativo ? "Ativo" : "Inativo"} 
             className={`mt-2 md:mt-0 ${therapist.ativo ? "bg-green-100 text-green-700" : "bg-red-50 text-red-500"}`} 
@@ -64,7 +64,7 @@ export default function TherapistProfileCard({ therapist, patientCount }: Therap
             <Phone size={16} className="text-brand-purple" />
             {therapist.telefone || "Sem telefone"}
           </div>
-          <div className="flex items-center gap-2 font-bold text-brand-dark bg-gray-100 px-2 py-0.5 rounded-md">
+          <div className="flex items-center gap-2 font-bold text-brand-dark px-2 py-0.5 rounded-md">
             <Users size={16} />
             {patientCount} Pacientes
           </div>
