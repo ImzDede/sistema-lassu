@@ -58,7 +58,9 @@ export default function ProfileData() {
       };
 
       await api.put("/users/profile", payload);
-      showAlert("green", "Dados atualizados com sucesso!");
+      
+      router.push('/home/perfil?success=dados')
+
     } catch (error: any) {
       console.error(error);
       const msg = error.response?.data?.message || "Erro ao atualizar perfil.";

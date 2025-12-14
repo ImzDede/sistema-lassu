@@ -61,9 +61,7 @@ export default function Login() {
       showAlert("red", msg);
       setLoading(false);
     } finally {
-      if (feedback.color === "red") {
-        setPassword("");
-      }
+      setPassword("");
     }
   }
 

@@ -36,7 +36,7 @@ export default function ProfilePassword() {
     setLoading(true);
 
     try {
-      // Importante: Enviamos os dados atuais + a nova senha.
+      // Envia os dados atuais + a nova senha.
       const payload = {
         nome: user?.nome,
         email: user?.email,
@@ -46,8 +46,8 @@ export default function ProfilePassword() {
 
       await api.put("/users/profile", payload);
 
-      showAlert("green", "Senha alterada com sucesso!");
-      setPasswords({ new: "", confirm: "" });
+      router.push('/home/perfil?success=senha') 
+
     } catch (error: any) {
       console.error(error);
       const msg =

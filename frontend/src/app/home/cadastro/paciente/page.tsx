@@ -23,7 +23,6 @@ export default function NewPatient() {
   const { user, isTeacher, isLoading: authLoading } = useAuth();
   const { feedback, showAlert, closeAlert } = useFeedback();
   
-  // Hook de busca
   const {
     searchProfessionals,
     results: searchResults,
@@ -39,14 +38,12 @@ export default function NewPatient() {
     cellphone: "",
   });
   
-  // Estado do Filtro de Disponibilidade
   const [availability, setAvailability] = useState<TimeSlot[]>([
     { id: "1", day: "Segunda-feira", start: "08:00", end: "09:00" },
   ]);
   
   const [selectedProfessionalId, setSelectedProfessionalId] = useState<string | null>(null);
 
-  // Proteção de Rota
   useEffect(() => {
     if (!authLoading && user) {
       const canAccess = isTeacher || user.permCadastro;
@@ -63,7 +60,6 @@ export default function NewPatient() {
     else setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // BUSCA
   const handleSearch = async () => {
     setSelectedProfessionalId(null);
     clearResults();
@@ -72,19 +68,40 @@ export default function NewPatient() {
     const slot = availability[0];
     if (!slot) return;
 
+    // Converte "08:00" para número 8
+    const startHour = parseInt(slot.start.split(":")[0], 10);
+    const endHour = parseInt(slot.end.split(":")[0], 10);
+
+    // Validação Lógica
+    if (startHour >= endHour) {
+        showAlert("red", "O horário final deve ser maior que o horário inicial.");
+        return;
+    }
+
     await searchProfessionals(slot.day, slot.start, slot.end);
   };
 
-  // SALVAR
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoadingSave(true);
     closeAlert();
 
+    // Validação de Vínculo
     if (!selectedProfessionalId) {
       showAlert("red", "Por favor, selecione um profissional responsável.");
       setLoadingSave(false);
       return;
+    }
+
+    const birthDateObj = new Date(formData.birthDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); 
+    birthDateObj.setHours(0, 0, 0, 0);
+
+    if (birthDateObj > today) {
+        showAlert("red", "A data de nascimento não pode ser uma data futura.");
+        setLoadingSave(false);
+        return;
     }
 
     try {
@@ -129,7 +146,6 @@ export default function NewPatient() {
         onClose={closeAlert}
       />
 
-      {/* HEADER */}
       <div className="flex items-center gap-4">
         <button
           onClick={() => router.back()}
@@ -151,7 +167,6 @@ export default function NewPatient() {
         <CardBody className="p-6 md:p-10">
           <form onSubmit={handleSave} className="flex flex-col gap-10">
             
-            {/* 1. DADOS PESSOAIS */}
             <div className="flex flex-col gap-6">
               <div className="flex items-center gap-3 pb-2 border-b border-gray-100">
                 <div className="p-2 bg-brand-purple/10 rounded-lg">
@@ -164,7 +179,14 @@ export default function NewPatient() {
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Input label="Nome Completo" name="name" value={formData.name} onChange={handleChange} required />
-                <DateInput label="Data de Nascimento" name="birthDate" value={formData.birthDate} onChange={handleChange} required maxDate={new Date().toISOString().split("T")[0]}/>
+                <DateInput 
+                    label="Data de Nascimento" 
+                    name="birthDate" 
+                    value={formData.birthDate} 
+                    required 
+                    maxDate={new Date().toISOString().split("T")[0]}
+                    onChange={(e) => setFormData(prev => ({...prev, birthDate: e.target.value}))}
+                />
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -173,7 +195,6 @@ export default function NewPatient() {
               </div>
             </div>
 
-            {/* 2. VINCULAÇÃO */}
             <div className="flex flex-col gap-6">
               <div className="flex items-center gap-3 pb-2 border-b border-gray-100">
                 <div className="p-2 bg-brand-purple/10 rounded-lg">
@@ -205,7 +226,6 @@ export default function NewPatient() {
                 </Button>
               </div>
 
-              {/* RESULTADOS DA BUSCA */}
               {searchResults.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                   {searchResults.map((item) => {
@@ -239,7 +259,6 @@ export default function NewPatient() {
               )}
             </div>
 
-            {/* BOTÕES DE AÇÃO */}
             <div className="flex flex-col-reverse lg:flex-row gap-4 mt-4 pt-6 border-t border-gray-100">
               <div className="w-full lg:w-1/2">
                 <Button variant="outline" type="button" onClick={() => router.back()} fullWidth>

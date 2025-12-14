@@ -2,10 +2,11 @@
 
 import React from "react";
 import { Dialog, DialogHeader, DialogBody, Typography, IconButton, Chip } from "@material-tailwind/react";
-import { X, Calendar, User, Clock } from "lucide-react";
+import { X, Calendar, User, Clock, Armchair } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Session } from "@/types/sessao";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface SessionListModalProps {
   open: boolean;
@@ -19,6 +20,7 @@ export default function SessionListModal({ open, onClose, date, sessions }: Sess
 
   const formattedDate = format(date, "dd 'de' MMMM", { locale: ptBR });
   const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+  const { isTeacher } = useAuth();
 
   const sortedSessions = [...sessions].sort((a, b) => a.hora - b.hora);
 
@@ -48,8 +50,25 @@ export default function SessionListModal({ open, onClose, date, sessions }: Sess
                 const startHour = session.hora.toString().padStart(2, '0');
                 const endHour = (session.hora + 1).toString().padStart(2, '0');
                 const timeLabel = `${startHour}:00 - ${endHour}:00`;
+                
                 const nomeTerapeuta = session.profissionalNome || "Desconhecido";
                 const nomePaciente = session.pacienteNome || "Não informado";
+
+                let nomePrincipal, nomeSecundario, labelSecundario, IconeSecundario;
+
+                if (isTeacher) {
+                    // Visão da Professora: Terapeuta em destaque
+                    nomePrincipal = nomeTerapeuta;
+                    nomeSecundario = nomePaciente;
+                    labelSecundario = "Paciente";
+                    IconeSecundario = User;
+                } else {
+                    // Visão da Terapeuta: Paciente em destaque
+                    nomePrincipal = nomePaciente;
+                    nomeSecundario = nomeTerapeuta;
+                    labelSecundario = "Terapeuta";
+                    IconeSecundario = Armchair
+                }
 
                 return (
                   <div key={session.id} className="flex gap-4 p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors items-center">
@@ -68,9 +87,11 @@ export default function SessionListModal({ open, onClose, date, sessions }: Sess
                     {/* Coluna Detalhes */}
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-start mb-1 gap-2">
+                        {/* NOME PRINCIPAL (Negrito) */}
                         <Typography className="font-bold text-brand-dark text-sm truncate">
-                          {nomeTerapeuta}
+                          {nomePrincipal}
                         </Typography>
+                        
                         <Chip 
                             value={`Sala ${session.sala}`} 
                             size="sm" 
@@ -79,9 +100,10 @@ export default function SessionListModal({ open, onClose, date, sessions }: Sess
                         />
                       </div>
                       
+                      {/* NOME SECUNDÁRIO (Cinza com ícone) */}
                       <div className="flex items-center gap-1 text-gray-500 text-xs">
-                        <User size={12} />
-                        <span className="truncate">Paciente: {nomePaciente}</span>
+                        <IconeSecundario size={12} />
+                        <span className="truncate">{labelSecundario}: {nomeSecundario}</span>
                       </div>
                     </div>
                   </div>

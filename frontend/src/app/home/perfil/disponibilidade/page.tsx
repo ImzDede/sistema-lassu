@@ -74,7 +74,9 @@ export default function ProfileAvailability() {
       }));
 
       await api.put("/availability", payload);
-      showAlert("green", "Disponibilidade atualizada!");
+
+      router.push('/home/perfil?success=disponibilidade') 
+
     } catch (error: any) {
       console.error(error);
       const msg = error.response?.data?.message || "Erro ao salvar horários.";
