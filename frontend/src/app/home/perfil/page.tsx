@@ -84,19 +84,19 @@ export default function Perfil() {
   }
 
   return (
-    <div className="flex flex-col w-full min-h-full pb-20 md:pb-0 font-sans">
-      {/* Cabeçalho Mobile com botão de Voltar */}
-      <div className="mb-6 md:mb-8 flex items-center">
+    <div className="flex flex-col w-full min-h-full pb-20 lg:pb-0 font-sans">
+
+      <div className="mb-6 lg:mb-8 flex items-center justify-center lg:justify-start">
         <div>
           <Typography
             variant="h3"
-            className="font-bold uppercase mb-2 text-center md:text-left mt-4 md:mt-0 text-brand-dark"
+            className="font-bold uppercase mb-2 text-center lg:text-left mt-4 lg:mt-0 text-brand-dark"
           >
             Meu Perfil
           </Typography>
           <Typography
             variant="paragraph"
-            className="text-gray-400 text-sm text-center md:text-left md:text-base"
+            className="text-gray-400 text-sm text-center lg:text-left lg:text-base"
           >
             Gerencie suas informações pessoais e configurações.
           </Typography>

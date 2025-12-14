@@ -6,12 +6,12 @@ import Input from "./Input";
 interface DateInputProps
   extends Omit<React.ComponentProps<typeof Input>, "type"> {
   maxDate?: string;
+  minDate?: string;
 }
 
-const DateInput = ({ maxDate, ...props }: DateInputProps) => {
+const DateInput = ({ maxDate, minDate, ...props }: DateInputProps) => {
   const handleOpenPicker = (e: React.SyntheticEvent<HTMLInputElement>) => {
     try {
-      // Verificação de segurança
       if (typeof e.currentTarget.showPicker === "function") {
         e.currentTarget.showPicker();
       }
@@ -24,7 +24,9 @@ const DateInput = ({ maxDate, ...props }: DateInputProps) => {
     <Input
       {...props}
       type="date"
-      max={maxDate || new Date().toISOString().split("T")[0]}
+      // Se não passar maxDate, ele NÃO trava datas futuras por padrão
+      max={maxDate} 
+      min={minDate}
       onClick={(e) => {
         handleOpenPicker(e);
         if (props.onClick) props.onClick(e);

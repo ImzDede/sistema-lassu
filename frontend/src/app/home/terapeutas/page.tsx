@@ -68,7 +68,7 @@ export default function TerapeutasPage() {
 
   return (
     <div className="flex flex-col w-full h-full">
-      <div className="mb-8 text-center md:text-left">
+      <div className="mb-8 text-center lg:text-left">
         <Typography variant="h3" className="font-bold uppercase text-brand-dark">
           TERAPEUTAS
         </Typography>

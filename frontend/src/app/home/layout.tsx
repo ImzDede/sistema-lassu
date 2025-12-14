@@ -29,7 +29,7 @@ function HomeInternal({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-brand-bg flex flex-col md:flex-row font-sans">
+    <div className="min-h-screen bg-brand-bg flex flex-col lg:flex-row font-sans">
       {/* SIDEBAR DESKTOP */}
       <SidebarDesktop
         isVisible={showDesktopSidebar}
@@ -45,7 +45,7 @@ function HomeInternal({ children }: { children: React.ReactNode }) {
             {!showDesktopSidebar && (
               <IconButton
                 variant="text"
-                className="hidden md:flex text-brand-dark hover:bg-brand-purple/10"
+                className="hidden lg:flex text-brand-dark hover:bg-brand-purple/10"
                 onClick={() => setShowDesktopSidebar(true)}
               >
                 <Menu className="w-6 h-6" />
@@ -53,7 +53,7 @@ function HomeInternal({ children }: { children: React.ReactNode }) {
             )}
 
             {/* Logo no Mobile (Header) */}
-            <div className="md:hidden">
+            <div className="lg:hidden">
               <Image
                 src="/lassuLogoVerticalCor.svg"
                 alt="Logo"
@@ -64,7 +64,7 @@ function HomeInternal({ children }: { children: React.ReactNode }) {
             </div>
 
             {/* Saudação (Desktop) */}
-            <div className="hidden md:flex flex-col">
+            <div className="hidden lg:flex flex-col">
               <Typography variant="h5" className="font-bold text-brand-dark">
                 {user ? `Olá, ${user.nome.split(" ")[0]}!` : "Bem-vindo"}
               </Typography>
@@ -78,7 +78,7 @@ function HomeInternal({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Área das Páginas */}
-        <div className="p-6 md:p-10 max-w-7xl mx-auto w-full pb-24 md:pb-10">
+        <div className="p-6 lg:p-10 max-w-7xl mx-auto w-full pb-24 lg:pb-10">
           {children}
         </div>
       </main>

@@ -23,7 +23,7 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 w-full bg-[#F5F2FA] flex justify-around items-center pb-4 pt-3 z-50 border-t border-gray-200">
+    <nav className="lg:hidden fixed bottom-0 left-0 w-full bg-[#F5F2FA] flex justify-around items-center pb-4 pt-3 z-50 border-t border-gray-200">
       {navItems.map((item) => {
         const isActive = pathname === item.href || (item.href !== "/home" && pathname.startsWith(item.href));
         

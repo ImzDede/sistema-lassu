@@ -22,14 +22,13 @@ export default function SidebarDesktop({ isVisible, toggleSidebar }: SidebarDesk
   if (!isVisible) return null;
 
   return (
-    <Card className="hidden md:flex flex-col w-64 min-h-screen rounded-none shadow-xl border-r border-white/10 sticky top-0 h-screen bg-brand-purple z-50">
+    <Card className="hidden lg:flex flex-col w-64 min-h-screen rounded-none shadow-xl border-r border-white/10 sticky top-0 h-screen bg-brand-purple z-50">
       
       {/* Cabeçalho com Logo e Botão Fechar */}
       <div className="p-4 flex items-center justify-between border-b border-white/20 mb-2">
         <Link href="/home">
           <Image
             src="/lassuLogoVertical.svg"
-            // MELHORIA: Alt text descritivo
             alt="Lassu Logo"
             width={120}
             height={40}

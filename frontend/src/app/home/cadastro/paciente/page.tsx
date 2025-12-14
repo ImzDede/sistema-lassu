@@ -164,7 +164,7 @@ export default function NewPatient() {
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Input label="Nome Completo" name="name" value={formData.name} onChange={handleChange} required />
-                <DateInput label="Data de Nascimento" name="birthDate" value={formData.birthDate} onChange={handleChange} required />
+                <DateInput label="Data de Nascimento" name="birthDate" value={formData.birthDate} onChange={handleChange} required maxDate={new Date().toISOString().split("T")[0]}/>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

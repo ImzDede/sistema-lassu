@@ -109,7 +109,7 @@ export default function ProfileData() {
           </div>
 
           <form onSubmit={handleSave} className="flex flex-col gap-8">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Input
                 label="Nome Completo"
                 name="nome"
@@ -127,7 +127,7 @@ export default function ProfileData() {
               />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Input
                 label="Matrícula"
                 name="matricula"
@@ -151,8 +151,8 @@ export default function ProfileData() {
               />
             </div>
 
-            <div className="flex flex-col-reverse lg:flex-row gap-4 mt-4 pt-4 border-t border-gray-100">
-              <div className="w-full lg:w-1/2">
+            <div className="flex flex-col-reverse md:flex-row gap-4 mt-4 pt-4 border-t border-gray-100">
+              <div className="w-full md:w-1/2">
                 <Button
                   variant="outline"
                   type="button"
@@ -162,7 +162,7 @@ export default function ProfileData() {
                   VOLTAR
                 </Button>
               </div>
-              <div className="w-full lg:w-1/2">
+              <div className="w-full md:w-1/2">
                 <Button
                   type="submit"
                   loading={loadingSave}
