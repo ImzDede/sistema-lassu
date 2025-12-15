@@ -70,13 +70,6 @@ export default function Perfil() {
       showForOthers: true,
     },
     {
-      label: "NOTIFICAÇÕES",
-      icon: <Bell />,
-      href: "/home/perfil/notificacoes",
-      showForAdmin: false,
-      showForOthers: true,
-    },
-    {
       label: "DISPONIBILIDADE",
       icon: <Clock />,
       href: "/home/perfil/disponibilidade",
