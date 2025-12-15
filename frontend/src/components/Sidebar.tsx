@@ -61,12 +61,6 @@ export default function SidebarDesktop({ isVisible, toggleSidebar }: SidebarDesk
           active={pathname.startsWith("/home/cadastro")}
         />
         <NavItem
-          href="/home/calendario"
-          icon={<Calendar />}
-          label="Calendário"
-          active={pathname === "/home/calendario"}
-        />
-        <NavItem
           href="/home/perfil"
           icon={<User />}
           label="Perfil"

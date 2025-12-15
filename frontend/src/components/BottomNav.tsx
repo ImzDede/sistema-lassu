@@ -18,7 +18,6 @@ export default function BottomNav() {
       label: isTeacher ? "Terapeutas" : "Pacientes" 
     },
     { href: "/home/cadastro", icon: PlusSquare, label: "Cadastro" },
-    { href: "/home/calendario", icon: Calendar, label: "Calendário" },
     { href: "/home/perfil", icon: User, label: "Perfil" },
   ];
 
