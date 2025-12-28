@@ -1,5 +1,5 @@
 import axios from "axios";
-import { getToken } from "@/utils/auth"; 
+import { getToken, logout } from "@/utils/auth"; 
 
 const api = axios.create({
   // Tenta pegar da variável de ambiente, se não existir, usa localhost
@@ -30,5 +30,25 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// Interceptor de Resposta
+api.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    // CASO 1: Token inválido ou Conta Desativada (401)
+    if (error.response && error.response.status === 401) {
+      logout();
+    }
+
+    // CASO 2: Erro de Permissão (403)
+    if (error.response && error.response.status === 403) {
+      console.warn("Usuário tentou acessar recurso sem permissão.");
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 export default api;
