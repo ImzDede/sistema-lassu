@@ -1,10 +1,10 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { HTTP_ERRORS } from "../errors/messages";
+import { AppError } from "../errors/AppError";
 
 interface TokenPayload {
     id: string;
-    nome: string;
     permAtendimento: boolean;
     permCadastro: boolean;
     permAdmin: boolean;
@@ -17,26 +17,26 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
     const { authorization } = req.headers;
 
     if (!authorization) {
-        return res.status(401).json({ error: HTTP_ERRORS.UNAUTHORIZED.TOKEN_MISSING });
+        throw new AppError(HTTP_ERRORS.UNAUTHORIZED.TOKEN_MISSING, 401)
     }
 
     const parts = authorization.split(' ');
 
     if (parts.length !== 2) {
-        return res.status(401).json({ error: HTTP_ERRORS.UNAUTHORIZED.TOKEN_INVALID });
+        throw new AppError(HTTP_ERRORS.UNAUTHORIZED.TOKEN_INVALID, 401)
     }
 
     const [scheme, token] = parts;
 
     if (scheme !== "Bearer") {
-        return res.status(401).json({ error: HTTP_ERRORS.UNAUTHORIZED.TOKEN_INVALID });
+        throw new AppError(HTTP_ERRORS.UNAUTHORIZED.TOKEN_INVALID, 401)
     }
-
+    
     try {
         const secret = process.env.JWT_SECRET;
         
         if (!secret) {
-            throw new Error("Erro de configuração: Chave não encontrada");
+            throw new AppError(HTTP_ERRORS.INTERNAL.JWT_SECRET_MISSING, 500)
         }
 
         const decoded = jwt.verify(token, secret);
@@ -54,7 +54,7 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
         return next()
 
     } catch (error) {
-        return res.status(401).json({ error: HTTP_ERRORS.UNAUTHORIZED.TOKEN_INVALID });
+        throw new AppError(HTTP_ERRORS.UNAUTHORIZED.TOKEN_INVALID, 401)
     }
 
 }
@@ -64,15 +64,15 @@ export function is(role: 'admin' | 'cadastro') {
         const perms = req.userPerms;
 
         if (!perms) {
-            return res.status(403).json({ error: HTTP_ERRORS.FORBIDDEN.DEFAULT });
+            throw new AppError(HTTP_ERRORS.FORBIDDEN.DEFAULT, 403)
         }
 
         if (role === 'admin' && !perms.admin) {
-            return res.status(403).json({ error: HTTP_ERRORS.FORBIDDEN.ADMIN_ONLY });
+            throw new AppError(HTTP_ERRORS.FORBIDDEN.ADMIN_ONLY, 403)
         }
 
         if (role === 'cadastro' && (!perms.cadastro && !perms.admin)) {
-            return res.status(403).json({ error: HTTP_ERRORS.FORBIDDEN.REGISTRATION_PERMISSION });
+            throw new AppError(HTTP_ERRORS.FORBIDDEN.REGISTER_ONLY, 403)
         }
 
         return next();

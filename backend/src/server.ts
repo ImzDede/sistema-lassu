@@ -1,12 +1,12 @@
 import express, { Request, Response} from "express";
 import cors from "cors";
 import dotenv from 'dotenv';
-import pool from "./config/db";
-import userRoutes from './routes/user.routes';
-import availabilityRoutes from './routes/availability.routes';
-import notificationRoutes from './routes/notification.routes'
-import patientRoutes from './routes/patient.routes'
-import sessionRoutes from './routes/session.routes'
+import userRoutes from './user/user.routes';
+import availabilityRoutes from './availability/availability.routes';
+import notificationRoutes from './notification/notification.routes'
+import patientRoutes from './patient/patient.routes'
+import { handleError } from "./errors/handleError";
+//import sessionRoutes from './session/session.routes'
 
 dotenv.config();
 
@@ -17,9 +17,11 @@ app.use(express.json())
 
 app.use('/users', userRoutes)
 app.use('/availability', availabilityRoutes);
-app.use('/notification', notificationRoutes);
-app.use('/patient', patientRoutes);
-app.use('/sessions', sessionRoutes);
+app.use('/notifications', notificationRoutes);
+app.use('/patients', patientRoutes);
+//app.use('/sessions', sessionRoutes);
+
+app.use(handleError)
 
 app.get('/', (req: Request, res: Response) => {
     res.send('API Online')

@@ -2,7 +2,7 @@ CREATE TABLE usuarios (
     id UUID PRIMARY KEY,
     
     -- Dados Pessoais
-    matricula INTEGER NOT NULL UNIQUE,
+    matricula VARCHAR(7) NOT NULL UNIQUE,
     nome VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     telefone VARCHAR(20),
@@ -54,11 +54,12 @@ CREATE TABLE pacientes (
     cpf VARCHAR(14) UNIQUE,
     telefone VARCHAR(20) NOT NULL,
     
-    -- triagem ou encaminhada
-    status VARCHAR(20) DEFAULT 'triagem',
-    profissional_responsavel_id UUID NOT NULL REFERENCES usuarios(id),
+    -- atendimento ou encaminhada
+    status VARCHAR(20) DEFAULT 'atendimento',
+    terapeuta_id UUID NOT NULL REFERENCES usuarios(id),
 
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP DEFAULT NULL
 );
 
 CREATE TABLE sessoes (
@@ -73,9 +74,7 @@ CREATE TABLE sessoes (
     sala INTEGER NOT NULL,
     
     status VARCHAR(30) NOT NULL DEFAULT 'agendada' 
-        CHECK (status IN ('agendada', 'realizada', 'falta', 'cancelada_paciente', 'cancelada_profissional')),
-    
-    anotacoes TEXT,
+        CHECK (status IN ('agendada', 'realizada', 'falta', 'cancelada_paciente', 'cancelada_terapeuta')),
 
     -- Auditoria
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
