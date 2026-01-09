@@ -1,17 +1,9 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import api from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
-
-export interface Notification {
-  id: number;
-  usuarioId: string;
-  titulo: string;
-  mensagem: string;
-  lida: boolean;
-  createdAt: string;
-}
+import { notificationService } from "@/services/notificationServices";
+import { Notification } from "@/types/notification";
 
 interface NotificationContextData {
   notifications: Notification[];
@@ -31,34 +23,29 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const fetchNotifications = useCallback(async () => {
     if (!user) return;
     try {
-      const response = await api.get("/notification");
-      
-      // BLINDAGEM DO CONTEXTO:
-      // Se a resposta for um Array, usa. Se não for (vazio, string, objeto doido), usa [].
-      const dadosValidos = Array.isArray(response.data) ? response.data : [];
-      
-      setNotifications(dadosValidos);
+      const data = await notificationService.getAll();
+      setNotifications(data);
     } catch (error) {
-      console.error("Erro ao buscar notificações:", error);
-      // Em caso de erro 404 ou 500, garante que a lista fique vazia e não trave
-      setNotifications([]);
+      console.error("Erro notificações:", error);
+      setNotifications([]); // Falha silenciosa para não quebrar a UI
     }
   }, [user]);
 
   const markAsRead = async (id: number) => {
-    // Atualização Otimista
+    // 1. Atualização Otimista (Visual Imediato)
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, lida: true } : n))
     );
 
+    // 2. Chamada ao Back em Background
     try {
-      await api.patch(`/notification/${id}/read`);
-      fetchNotifications(); // Atualiza contador real
+      await notificationService.markAsRead([id]);
     } catch (error) {
       console.error("Erro ao marcar notificação:", error);
     }
   };
 
+  // Polling a cada 30s
   useEffect(() => {
     if (user) {
       fetchNotifications();
@@ -70,14 +57,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   }, [user, fetchNotifications]);
 
   return (
-    <NotificationContext.Provider
-      value={{
-        notifications,
-        unreadCount,
-        markAsRead,
-        fetchNotifications,
-      }}
-    >
+    <NotificationContext.Provider value={{ notifications, unreadCount, markAsRead, fetchNotifications }}>
       {children}
     </NotificationContext.Provider>
   );

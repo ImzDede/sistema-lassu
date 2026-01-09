@@ -26,7 +26,6 @@ const CardListagem = ({
   return (
     <div className="relative pt-4 w-full group" onClick={onClick}>
       
-      {/* Área da Etiqueta/Badge */}
       {badge && (
         <div className="absolute top-0 left-4 z-20">
           {badge}
@@ -37,7 +36,7 @@ const CardListagem = ({
         className={`
           rounded-xl transition-all duration-300 relative
           ${selected 
-            ? "p-[2px] bg-[linear-gradient(to_bottom_right,#A78FBF,#D9A3B6,#F2A9A2,#F2B694)] shadow-md scale-[1.01]" 
+            ? "p-[2px] bg-brand-gradient shadow-md scale-[1.01]" 
             : "p-0 bg-transparent"
           }
           ${onClick ? "cursor-pointer active:scale-[0.99]" : ""}
@@ -45,11 +44,11 @@ const CardListagem = ({
       >
         <Card 
           className={`
-            w-full shadow-sm rounded-xl transition-all h-full
+            w-full shadow-sm rounded-xl transition-all h-full bg-brand-surface
             ${
               selected 
-                ? "border-none bg-white" 
-                : "border border-gray-100 bg-white hover:border-brand-purple/30 group-hover:shadow-md"
+                ? "border-none" 
+                : "border border-brand-purple/10 hover:border-brand-purple/30 group-hover:shadow-md"
             }
           `}
         >
@@ -61,7 +60,7 @@ const CardListagem = ({
                 w-12 h-12 rounded-full flex items-center justify-center border transition-colors shrink-0
                 ${selected 
                     ? "bg-brand-purple text-white border-brand-purple" 
-                    : "bg-[#F3E5F5] text-brand-purple border-brand-purple/10"
+                    : "bg-brand-bg text-brand-purple border-brand-purple/10"
                 }
               `}>
                 <UserIcon size={24} />
@@ -71,7 +70,7 @@ const CardListagem = ({
               <div className="flex flex-col">
                 <Typography
                   variant="h6"
-                  className="text-brand-dark font-bold text-base leading-tight"
+                  className="text-brand-dark font-bold text-base leading-tight font-heading"
                 >
                   {nomePrincipal}
                 </Typography>
@@ -91,7 +90,7 @@ const CardListagem = ({
               {!selected && horario && (
                 <Typography
                   variant="h6"
-                  className="text-gray-700 font-bold text-sm bg-gray-50 px-2 py-1 rounded-md border border-gray-100"
+                  className="text-brand-dark font-bold text-sm bg-brand-bg px-2 py-1 rounded-md border border-brand-purple/10"
                 >
                   {horario}
                 </Typography>
@@ -102,7 +101,7 @@ const CardListagem = ({
                 <Typography
                   variant="h6"
                   className={`font-bold text-sm ${
-                    status === "Ativo" ? "text-green-600" : "text-gray-400"
+                    status.toLowerCase() === "ativo" ? "text-feedback-success-text" : "text-gray-400"
                   }`}
                 >
                   {status}

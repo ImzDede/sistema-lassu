@@ -1,40 +1,70 @@
-"use client";
-
-import React from "react";
+import React, { useEffect } from "react";
 import { Alert, Typography } from "@material-tailwind/react";
-import { CheckCircle, AlertTriangle } from "lucide-react";
+import { CheckCircle, AlertTriangle, XCircle, X } from "lucide-react";
 
 interface FeedbackAlertProps {
   open: boolean;
-  color: "green" | "red";
+  color: "green" | "red" | "orange";
   message: string;
   onClose: () => void;
 }
 
-const FeedbackAlert = ({ open, color, message, onClose }: FeedbackAlertProps) => {
-  const bgClass =
-    color === "green"
-      ? "bg-green-500 border-green-400"
-      : "bg-brand-error border-brand-error text-white";
+export default function FeedbackAlert({
+  open,
+  color,
+  message,
+  onClose,
+}: FeedbackAlertProps) {
+  useEffect(() => {
+    if (open) {
+      const timer = setTimeout(onClose, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [open, onClose]);
+
+  const colorMap = {
+    green: {
+      bg: "bg-green-100",
+      text: "text-green-900",
+      border: "border-green-200",
+      icon: <CheckCircle className="h-6 w-6" />,
+    },
+    red: {
+      bg: "bg-red-100",
+      text: "text-red-900",
+      border: "border-red-200",
+      icon: <XCircle className="h-6 w-6" />,
+    },
+    orange: {
+      bg: "bg-orange-100",
+      text: "text-orange-900",
+      border: "border-orange-200",
+      icon: <AlertTriangle className="h-6 w-6" />,
+    },
+  };
+
+  const current = colorMap[color] || colorMap.green;
 
   return (
-    <div className="fixed z-50 top-4 left-4 right-4 md:top-10 md:right-4 md:left-auto md:w-full md:max-w-sm">
+    <div className="fixed top-6 right-6 z-[9999] w-full max-w-sm px-4 md:px-0 animate-slide-in-right">
       <Alert
         open={open}
-        className={`flex items-center gap-3 shadow-xl border border-white/20 text-white ${bgClass}`}
         onClose={onClose}
-        animate={{ mount: { y: 0 }, unmount: { y: -100 } }}
-        icon={color === "green" ? <CheckCircle /> : <AlertTriangle />}
+        className={`${current.bg} ${current.border} border shadow-xl relative flex items-start gap-3`}
+        icon={<span className={current.text}>{current.icon}</span>}
+        action={
+          <button
+            className={`!absolute top-3 right-3 ${current.text} hover:opacity-70 transition-opacity p-1`}
+            onClick={onClose}
+          >
+            <X size={18} />
+          </button>
+        }
       >
-        <Typography variant="small" className="font-bold">
-          {color === "green" ? "Sucesso" : "Atenção"}
-        </Typography>
-        <Typography variant="small" className="font-normal opacity-95">
+        <Typography variant="small" className={`font-bold ${current.text} mt-1 mr-4`}>
           {message}
         </Typography>
       </Alert>
     </div>
   );
-};
-
-export default FeedbackAlert;
+}

@@ -1,159 +1,114 @@
 # 📘 Documentação Técnica do Frontend - Sistema LASSU
 
-Este documento serve como guia de referência para a arquitetura, fluxos, componentes e padrões do frontend do Sistema LASSU, desenvolvido para gerenciar extensionistas, pacientes e agendamentos do laboratório.
+Este documento serve como guia de referência para a arquitetura, padrões de código e estrutura do frontend do Sistema LASSU. O projeto foi desenvolvido como uma **Single Page Application (SPA)** utilizando **Next.js 14 (App Router)** com foco em modularidade, tipagem estrita e separação de responsabilidades.
 
 ---
 
-## 1. Visão Geral da Arquitetura
+## 1. Visão Geral e Tech Stack
 
-O sistema opera como uma **Single Page Application (SPA)** híbrida, utilizando o **Next.js 14 (App Router)**. A arquitetura prioriza a segurança e a modularidade.
-
-### Camadas de Segurança
-1.  **Middleware (Servidor/Edge):** Bloqueia requisições sem cookie antes mesmo de renderizar a página.
-2.  **AuthContext (Cliente):** Gerencia o estado da sessão e níveis de acesso na interface.
-3.  **Utils/Auth (Redirecionamento):** Controla regras de negócio críticas, como o bloqueio de navegação para usuários em "Primeiro Acesso".
-
-### Tech Stack
+### Tecnologias Principais
 * **Core:** Next.js 14, React 18, TypeScript.
-* **UI:** Tailwind CSS + Material Tailwind (Biblioteca de Componentes Base).
+* **Estilização:** Tailwind CSS + Material Tailwind (Biblioteca Base).
 * **Ícones:** Lucide React.
-* **Comunicação:** Axios (Instância configurada com interceptors).
-* **Autenticação:** JWT (JSON Web Token) armazenado em Cookies (via `nookies`) + JWT Decode.
+* **Comunicação:** Axios (com Interceptors).
+* **Autenticação:** JWT (Armazenado em Cookies via `nookies`) + JWT Decode.
+* **Gerenciamento de Estado:** React Context API + Custom Hooks.
+
+### Segurança
+1.  **Middleware (Edge):** Bloqueia requisições sem token válido antes da renderização.
+2.  **AuthContext (Client):** Gerencia a sessão e persistência do usuário.
+3.  **Redirecionamento Lógico:** Impede que usuários em "Primeiro Acesso" naveguem pelo sistema sem concluir o setup, e vice-versa.
 
 ---
 
-## 2. Estrutura de Pastas
+## 2. Arquitetura do Projeto (SoC)
 
-A organização do projeto reflete as rotas e funcionalidades do sistema, incluindo agora as sub-rotas de gestão de perfil:
+O projeto segue estritamente o padrão **Separation of Concerns (SoC)**. Cada arquivo tem uma única responsabilidade.
+
+### Regras de Ouro por Pasta
+
+| Pasta | Responsabilidade | O que é PROIBIDO? |
+| :--- | :--- | :--- |
+| **`src/types`** | **Contrato de Dados**. Interfaces TypeScript que espelham o Backend. | Conter lógica ou implementações. |
+| **`src/services`** | **Camada de API**. Apenas chamadas HTTP (Axios). | Usar Hooks (`useState`, `useEffect`) ou JSX. |
+| **`src/hooks`** | **ViewModel / Lógica**. Gerencia estado (`loading`, `error`), chama Services e formata dados. | Retornar JSX (HTML). |
+| **`src/utils`** | **Ferramentas Puras**. Formatadores (CPF, Data) e Constantes. | Depender de APIs ou Contextos. |
+| **`src/components`** | **UI Pura**. Componentes visuais reutilizáveis. | Fazer chamadas de API diretas. |
+| **`src/app`** | **View / Páginas**. Monta a tela usando componentes e hooks. | Regras de negócio complexas soltas no arquivo. |
+
+---
+
+## 3. Estrutura de Pastas
 
 ```bash
 src/
-├── app/
-│   ├── page.tsx                 # Tela de Login (Rota Pública)
-│   ├── primeiroAcesso/          # Wizard de Configuração Inicial (Senha/Disponibilidade)
-│   ├── home/                    # Área logada do sistema (Protegida)
-│   │   ├── layout.tsx           # Layout Principal (Sidebar, Header, Auth Check)
-│   │   ├── page.tsx             # Dashboard (Cards de Hoje, Calendário)
-│   │   ├── cadastro/            # Sub-rotas de cadastro (Hub, Pacientes, Extensionistas)
-│   │   ├── pacientes/           # Gestão de pacientes
-│   │   ├── terapeutas/          # Gestão de equipe
-│   │   │   ├── page.tsx         # Listagem geral com filtros
-│   │   │   └── [id]/            # Detalhes, disponibilidade e permissões (Rota Dinâmica)
-│   │   └── perfil/              # Hub de configurações do usuário
-│   │       ├── dados/           # Edição de dados pessoais
-│   │       ├── senha/           # Alteração de senha
-│   │       └── disponibilidade/ # Editor de grade horária pessoal
-├── components/                  # Componentes reutilizáveis (UI Kit e Lógica)
-├── contexts/                    # Estados globais (Sessão e Notificações)
-├── hooks/                       # Lógica de negócio encapsulada (Custom Hooks)
-├── services/                    # Configuração de serviços externos (API)
-├── utils/                       # Formatadores, Auth e Helpers
-├── types/                       # Definições de Tipos TypeScript (Interfaces)
-└── middleware.ts                # Porteiro do servidor (Verificação de Cookies)
+├── app/                     # Rotas do Next.js (App Router)
+│   ├── page.tsx             # Login
+│   ├── primeiroAcesso/      # Wizard de Setup
+│   └── home/                # Área Logada
+│       ├── cadastro/        # Cadastros (Paciente, Extensionista)
+│       ├── pacientes/       # Listagem de Pacientes
+│       ├── terapeutas/      # Gestão de Equipe
+│       └── perfil/          # Configurações do Usuário
+├── components/              # Biblioteca de Componentes (Puros)
+├── contexts/                # Estados Globais (Auth, Notifications)
+├── hooks/                   # Lógica de Negócio (usePatients, useSessions)
+├── services/                # Chamadas HTTP (api.ts, patientService.ts)
+├── types/                   # Interfaces TS (User, Patient, Session)
+├── utils/                   # Helpers (format.ts, constants.ts, auth.ts)
+└── middleware.ts            # Proteção de Rotas
 ```
 
-## 3. Serviços e Utilitários (`src/services` & `src/utils`)
+## 4. Biblioteca de Componentes (`src/components`)
 
-Camada responsável pela comunicação externa, segurança e formatação de dados.
+Os componentes visuais seguem o padrão **"Puros" (Dumb Components)**. Eles recebem dados via `props` e emitem eventos via callbacks.
 
-### 📡 `services/api.ts`
-* **Configuração:** Instância única do Axios apontando para a API.
-* **Robustez:** Implementa `transformResponse` para tratar respostas vazias ou JSONs inválidos sem quebrar a aplicação.
-* **Interceptor:** Injeta o token `Bearer` automaticamente no header `Authorization`.
-
-### 🔐 `utils/auth.ts`
-* **`verifyUserRedirect`:** Função vital de segurança no cliente. Impede acesso cruzado: bloqueia usuários de "primeiro acesso" de ver a home, e impede usuários já configurados de voltar ao wizard inicial.
-* **Cookies:** Funções para gestão de sessão via `nookies`.
-
-### 🛠 `utils/format.ts` & `date.ts`
-* **Formatadores:** Máscaras visuais para CPF, Telefone e Horários.
-* **Helpers:** Mapas de conversão de Dias da Semana (Backend `int` <-> Frontend `string`).
+### Padrões Adotados
+* **Wrappers:** Utilizamos wrappers sobre o Material Tailwind (ex: `Input.tsx`, `Button.tsx`, `SelectBox.tsx`) para garantir que os estilos da marca (bordas roxas/rosas) sejam aplicados automaticamente.
+* **Pureza:** Componentes como `Sidebar` e `Calendar` não acessam o `AuthContext` internamente. Eles recebem props como `isTeacher={true}` para decidir o que renderizar.
+* **Tipagem (`d.ts`):** O arquivo `src/types/material-tailwind.d.ts` corrige conflitos de tipagem entre React 18 e a biblioteca visual (propriedades como `onResize`, `placeholder`).
 
 ---
 
-## 4. Contextos e Hooks (`src/contexts` & `src/hooks`)
+## 5. Serviços e Utilitários
 
-Camada de Gerenciamento de Estado e Lógica de Negócio.
+### 📡 Services (`src/services`)
+* **`api.ts`:** Instância única do Axios. Injeta o Token automaticamente no header.
+* **Módulos:** Arquivos separados por entidade (`authService.ts`, `patientService.ts`) contendo apenas os métodos `get`, `post`, `put`, `delete`.
 
-### 🌐 Contextos
-* **`AuthContext.tsx`:** Gerencia a sessão do usuário. A interface `UserData` foi estendida para incluir dados de perfil completos (telefone, matrícula).
-* **`NotificationContext.tsx`:** Gerencia o *polling* de notificações em tempo real (intervalo de 30s) e contagem de não lidas.
-
-### 🎣 Custom Hooks
-* **`useUsers.ts`:**
-    * Centraliza o CRUD de usuários.
-    * Método `getUserById` retorna o objeto completo (incluindo disponibilidade) para a tela de detalhes.
-* **`usePatients.ts`:**
-    * Centraliza a listagem e filtros de pacientes.
-* **`useProfessionalSearch.ts`:**
-    * Lógica exclusiva da tela de cadastro para busca cruzada de disponibilidade (Dia x Hora).
-* **`useFeedback.ts`:**
-    * Controla a UI de alertas (Toasts).
-    * Implementa limpeza de *timers* via `useRef` para evitar conflitos em cliques rápidos.
-* **`usePagination.ts`:**
-    * Gerencia a paginação no cliente (Client-Side Pagination).
+### 🛠 Utils (`src/utils`)
+* **`constants.ts`:** Listas estáticas (Dias da semana, Horários de 08:00 às 18:00).
+* **`format.ts`:** Funções puras para máscaras de CPF, Telefone e Moeda.
+* **`date.ts`:** Manipulação de datas usando `date-fns` (pt-BR).
 
 ---
 
-## 5. Componentes (`src/components`)
+## 6. Style Guide (Design Tokens)
 
-Os componentes foram divididos em **Base** (UI Pura) e **Negócio** (Funcionais).
+Utilizamos **Tailwind CSS** com tokens customizados definidos no `tailwind.config.js`.
 
-### 🎨 Componentes Base (UI Kit)
-Componentes que "envelopam" o Material Tailwind para garantir a identidade visual (Cores Roxo/Rosa).
+### Paleta de Cores
+Não utilize hexadecimais soltos (`#A78FBF`). Use as classes semânticas:
 
-* **`Input.tsx`:** Campo de texto com estilização inteligente. Altera automaticamente a cor da borda e cursor quando a prop `disabled` é ativa.
-* **`Button.tsx`:** Botão padronizado com variantes `primary` e `outline`.
-* **`SelectBox.tsx`** & **`DateInput.tsx`:** Inputs especializados mantendo o padrão visual.
-* **`MTRegistry.tsx`:** Infraestrutura de estilos.
+* **Principal:** `bg-brand-purple`, `text-brand-purple` (Roxo Suave)
+* **Secundária:** `bg-brand-pink` (Rosa)
+* **Acento:** `bg-brand-peach` (Pêssego)
+* **Gradiente:** `bg-brand-gradient` (Utilizado em botões e cards selecionados)
 
-### 🧩 Layout e Navegação
-* **`Sidebar.tsx`:** Menu lateral esquerdo (Desktop).
-* **`BottomNav.tsx`:** Menu fixo no rodapé (Mobile).
-* **`NotificationBell.tsx`:** Sino de notificações com *badge* de contagem e *dropdown*.
+### Sistema de Feedback (Alertas)
+Padronização para Toasts e Badges:
 
-### 📦 Componentes de Negócio
-* **`AvailabilityEditor.tsx`:** Editor visual da disponibilidade (Perfil/Wizard).
-* **`AvailabilityDialog.tsx`:** Modal para visualização de horários de terceiros (somente leitura).
-* **`TherapistProfileCard.tsx`:** Cartão de detalhes rico com estatísticas e tags de permissão.
-* **`PermissionsDialog.tsx`:** Modal para gestão de cargos com *Switches*.
-* **`NotificationDialog.tsx`:** Lista de notificações com parser de links (Markdown) e cores dinâmicas por tipo de aviso.
-* **`FeedbackAlert.tsx`:** Toast flutuante de sucesso/erro.
-* **`CardListagem.tsx`:** Componente versátil para listas de Terapeutas e Pacientes.
+* ✅ **Sucesso:** `bg-feedback-success-bg` + `text-feedback-success-text`
+* ⚠️ **Aviso:** `bg-feedback-warning-bg` + `text-feedback-warning-text`
+* ❌ **Erro:** `bg-feedback-error-bg` + `text-feedback-error-text`
 
 ---
 
-## 6. Fluxos e Rotas (`src/app`)
+## 7. Fluxo de Desenvolvimento (Como Contribuir)
 
-Detalhamento das páginas e lógicas de roteamento.
+Para criar uma nova funcionalidade, siga esta ordem para manter a arquitetura:
 
-### 🔐 Autenticação & Setup
-* **`page.tsx` (Login):** Gerencia login e redirecionamento condicional.
-* **`primeiroAcesso/page.tsx`:** Wizard obrigatório. Valida senhas iguais e horários lógicos (fim > início) antes de liberar o acesso.
-
-### 🏠 Dashboard & Gestão
-* **`terapeutas/[id]/page.tsx`:** Tela completa de gestão.
-    * Permite ver disponibilidade da terapeuta via modal.
-    * Permite alterar permissões e status (Ativo/Inativo).
-    * Lista pacientes vinculados com filtros.
- **`cadastro/paciente/page.tsx`:** Implementa fluxo de **Busca Cruzada**. O usuário define um horário preferencial e o sistema retorna apenas extensionistas disponíveis naquele slot para vínculo.
- **`cadastro/extensionista/page.tsx`:** O usuário com permissão de cadastro ou admin cria uma conta para uma terapeuta com permissão de atendimento.
- **`pacientes/page.tsx`:** Tela completa de gestão.
-*
-
-### 👤 Perfil (`/home/perfil`)
-O perfil atua como um Hub de configurações, consumindo a rota `PUT /users/profile`:
-
-* **`dados/page.tsx`:** Alteração de Nome, Email e Telefone. Campo de Matrícula exibido como *ReadOnly* com ícone de cadeado.
-* **`senha/page.tsx`:** Alteração segura de senha.
-* **`disponibilidade/page.tsx`:** Interface para o extensionista gerenciar sua própria disponibilidade.
-
----
-
-## 7. Tipagem (`src/types`)
-
-Definições TypeScript para garantir a integridade dos dados.
-
-* **`usuarios.ts`:** Interfaces de Token e UserData.
-* **`disponibilidade.ts`**: Interface `TimeSlot` para manipulação visual de horários.
-* **`paciente.ts`**: Interfaces `Patient` e `PatientResponseItem`.
+1.  **Modelagem:** Crie a Interface em `src/types/`.
+2.  **API:** Crie a função de chamada em `src/services/`.
+3.  **Lógica:** Crie o Hook em `src/hooks/` para consumir o serviço e gerenciar estado.
+4.  **UI:** Crie a página em `src/app/` utilizando os componentes de `src/components/` e chamando o Hook.

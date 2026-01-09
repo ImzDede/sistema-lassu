@@ -5,7 +5,7 @@ import {
   Dialog, DialogHeader, DialogBody, DialogFooter, 
   Typography, Switch 
 } from "@material-tailwind/react";
-import { UserCog } from "lucide-react";
+import { UserCog, ShieldAlert } from "lucide-react";
 import Button from "@/components/Button";
 
 interface PermissionsDialogProps {
@@ -14,10 +14,8 @@ interface PermissionsDialogProps {
   therapist: {
     nome: string;
     permCadastro: boolean;
-    permAtendimento: boolean;
   } | null;
-  // A função de update recebe a chave da permissão que mudou
-  onUpdate: (key: "permCadastro" | "permAtendimento") => void;
+  onUpdate: (key: "permCadastro") => void;
 }
 
 export default function PermissionsDialog({ 
@@ -27,7 +25,6 @@ export default function PermissionsDialog({
   onUpdate 
 }: PermissionsDialogProps) {
   
-  // Proteção contra dados vazios
   if (!therapist) return null;
 
   return (
@@ -35,65 +32,59 @@ export default function PermissionsDialog({
       open={open} 
       handler={onClose} 
       size="xs" 
-      className="p-4" 
-      placeholder={undefined}
+      className="p-4 bg-brand-surface" 
     >
-      <DialogHeader placeholder={undefined} className="justify-center gap-2">
-        <UserCog className="text-brand-purple" />
-        <Typography variant="h5" className="text-brand-purple">
+      <DialogHeader className="justify-center gap-2 border-b border-brand-purple/10 pb-4">
+        <UserCog className="text-brand-purple" size={28} />
+        <Typography variant="h5" className="text-brand-purple font-heading">
           Gerenciar Permissões
         </Typography>
       </DialogHeader>
       
-      <DialogBody placeholder={undefined} className="flex flex-col gap-4">
-        <Typography className="text-center text-sm font-normal text-gray-600 mb-2">
-          Controle o nível de acesso de <strong>{therapist.nome}</strong>.
+      <DialogBody className="flex flex-col gap-6 pt-6">
+        <Typography className="text-center text-sm font-normal text-gray-600">
+          Controle o nível de acesso administrativo de <strong className="text-brand-dark">{therapist.nome}</strong>.
         </Typography>
 
-        <div className="flex flex-col gap-0 bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
+        <div className="flex flex-col gap-0 bg-brand-bg rounded-xl border border-brand-purple/10 overflow-hidden">
           
           {/* Switch Cadastro */}
-          <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-white">
-            <div>
-              <Typography className="font-bold text-gray-800 text-sm">
-                Cadastro
-              </Typography>
-              <Typography className="text-gray-500 text-xs">
-                Registrar novos pacientes e terapeutas
-              </Typography>
+          <div className="flex justify-between items-center p-4 bg-white">
+            <div className="flex gap-3">
+              <div className="p-2 bg-brand-purple/10 rounded-lg h-fit text-brand-purple">
+                 <ShieldAlert size={20} />
+              </div>
+              <div>
+                <Typography className="font-bold text-brand-dark text-sm">
+                  Permissão de Cadastro
+                </Typography>
+                <Typography className="text-gray-500 text-xs max-w-[200px] leading-tight mt-0.5">
+                  Permite cadastrar, editar e remover novos Pacientes e outros Terapeutas.
+                </Typography>
+              </div>
             </div>
             <Switch 
-              crossOrigin={undefined}
               color="purple" 
               checked={therapist.permCadastro} 
               onChange={() => onUpdate("permCadastro")} 
-            />
-          </div>
-
-          {/* Switch Atendimento */}
-          <div className="flex justify-between items-center p-4 bg-white">
-            <div>
-              <Typography className="font-bold text-gray-800 text-sm">
-                Atendimento
-              </Typography>
-              <Typography className="text-gray-500 text-xs">
-                Realizar sessões (Terapeuta)
-              </Typography>
-            </div>
-            <Switch 
-              crossOrigin={undefined}
-              color="purple" 
-              checked={therapist.permAtendimento} 
-              onChange={() => onUpdate("permAtendimento")} 
+              className="checked:bg-brand-purple"
+              circleProps={{
+                className: "before:hidden border-none",
+              }}
             />
           </div>
 
         </div>
+        
+        <div className="bg-brand-peach/20 p-3 rounded-lg text-xs text-brand-dark/80 text-center border border-brand-peach/50">
+           Todos os terapeutas possuem permissão de <strong>Atendimento</strong> por padrão.
+        </div>
+
       </DialogBody>
       
-      <DialogFooter placeholder={undefined} className="justify-center">
+      <DialogFooter className="justify-center pt-2">
         <Button onClick={onClose} fullWidth>
-          Concluir
+          CONCLUIR
         </Button>
       </DialogFooter>
     </Dialog>

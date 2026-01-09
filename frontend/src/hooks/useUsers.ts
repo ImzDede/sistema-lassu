@@ -1,81 +1,64 @@
 import { useState, useCallback } from "react";
-import api from "@/services/api";
+import { userService } from "@/services/userServices";
+import { User } from "@/types/usuarios";
 
 export function useUsers() {
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // LISTAR USUÁRIOS (GET /users)
-  const fetchUsers = useCallback(async () => {
+  const refreshUsers = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
-      const response = await api.get("/users");
-      setUsers(response.data); 
+      const data = await userService.getAllTherapists();
+      setUsers(data);
+      setError(null);
     } catch (err) {
-      setError("Erro ao buscar usuários.");
       console.error(err);
+      setError("Erro ao carregar usuários.");
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Retorna os dados
-  const getUserById = useCallback(async (id: string) => {
-    setLoading(true);
+  const getUserById = async (id: string) => {
     try {
-      const response = await api.get(`/users/${id}`);
-      return response.data; 
-    } catch (err) {
-      console.error("Erro ao buscar usuário", err);
-      return null;
+      setLoading(true);
+      const user = await userService.getById(id);
+      return user;
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
-  // ATUALIZAR USUÁRIO (PUT /users)
-  const updateUser = useCallback(async (id: string, data: any) => {
-    setLoading(true);
+  const updatePermissions = async (id: string, perms: Partial<User>) => {
     try {
-      await api.put(`/users/${id}`, data);
-      
-      setUsers((prev) => 
-        prev.map((item) => {
-            if (item.user && item.user.id === id) {
-                return { ...item, user: { ...item.user, ...data } };
-            }
-
-            if (item.id === id) {
-                return { ...item, ...data };
-            }
-            return item;
-        })
-      );
-      
-      return true;
-    } catch (err) {
-      console.error("Erro ao atualizar usuário", err);
-      setError("Erro ao atualizar usuário.");
-      return false;
-    } finally {
-      setLoading(false);
+      const updated = await userService.updatePermissions(id, perms);
+      setUsers((prev) => prev.map((u) => (u.id === id ? updated : u)));
+      return updated;
+    } catch (error) {
+      throw error;
     }
-  }, []);
+  };
 
-  // DELETE LÓGICO 
-  const deleteUser = useCallback(async (id: string) => {
-    return await updateUser(id, { ativo: false });
-  }, [updateUser]);
+  const toggleStatus = async (id: string, currentStatus: boolean) => {
+    try {
+      const updated = await userService.update(id, { ativo: !currentStatus });
+      setUsers((prev) => prev.map((u) => (u.id === id ? updated : u)));
+      return updated;
+    } catch (error) {
+      throw error;
+    }
+  };
 
   return {
     users,
     loading,
     error,
-    fetchUsers,
+    refreshUsers,
+    fetchUsers: refreshUsers,
     getUserById,
-    updateUser,
-    deleteUser
+    updatePermissions,
+    toggleStatus,
   };
 }

@@ -35,24 +35,17 @@ export default function NotificationDialog({ open, onClose }: NotificationDialog
     return "bg-gray-400 border-gray-400"; 
   };
 
-  // Procura padrões [Texto](link) e transforma o Texto em Roxo
   const formatMessage = (text: string) => {
-    // Regex para encontrar [Nome](qualquer-coisa)
     const parts = text.split(/(\[[^\]]+\]\([^)]+\))/g);
-
     return parts.map((part, index) => {
-      // Verifica se essa parte é o padrão [Nome](link)
       const match = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
-      
       if (match) {
-        // Se for, retorna só o Nome (match[1]) colorido de ROXO
         return (
           <span key={index} className="text-brand-purple font-bold">
             {match[1]}
           </span>
         );
       }
-      // Se for texto normal, retorna normal
       return <span key={index}>{part}</span>;
     });
   };
@@ -62,13 +55,12 @@ export default function NotificationDialog({ open, onClose }: NotificationDialog
       open={open} 
       handler={onClose} 
       size="sm" 
-      className="p-0 overflow-hidden rounded-2xl" 
-      placeholder={undefined}
+      className="p-0 overflow-hidden rounded-2xl bg-brand-bg" 
     >
       {/* HEADER */}
-      <DialogHeader placeholder={undefined} className="flex items-center justify-between p-4 border-b border-gray-50">
+      <DialogHeader className="flex items-center justify-between p-4 border-b border-brand-purple/10 bg-white">
         <div className="w-8"></div> 
-        <Typography variant="h5" color="blue-gray" className="font-bold text-center">
+        <Typography variant="h5" className="font-bold text-center text-brand-dark font-heading">
           Notificações
         </Typography>
         <div className="w-8 flex justify-end">
@@ -83,7 +75,7 @@ export default function NotificationDialog({ open, onClose }: NotificationDialog
         </div>
       </DialogHeader>
 
-      <DialogBody className="px-4 py-2 max-h-[65vh] overflow-y-auto custom-scrollbar flex flex-col gap-5 pt-6 pb-6">
+      <DialogBody className="px-4 py-2 max-h-[65vh] overflow-y-auto custom-scrollbar flex flex-col gap-4 pt-6 pb-6">
         {notifications.length > 0 ? (
           notifications.map((notif) => {
             const styleClasses = getStyleClasses(notif.titulo);
@@ -94,14 +86,13 @@ export default function NotificationDialog({ open, onClose }: NotificationDialog
                 key={notif.id}
                 onClick={() => !notif.lida && markAsRead(notif.id)}
                 className={`
-                  relative border-2 rounded-2xl p-4 pt-6 flex items-center justify-between cursor-pointer transition-all
+                  relative border rounded-2xl p-4 pt-6 flex items-center justify-between cursor-pointer transition-all
                   ${!notif.lida 
-                    ? "bg-brand-surface border-opacity-100 shadow-sm" 
-                    : "bg-gray-50 border-gray-200 opacity-60 hover:opacity-100"
+                    ? "bg-white border-brand-purple/20 shadow-sm" 
+                    : "bg-gray-50 border-gray-200 opacity-70 hover:opacity-100"
                   }
-                  hover:shadow-md group
+                  hover:shadow-md group hover:border-brand-purple/40
                 `}
-                style={{ borderColor: notif.lida ? '#E5E7EB' : undefined }} 
               >
                 {/* BADGE FLUTUANTE */}
                 <div 
@@ -114,7 +105,6 @@ export default function NotificationDialog({ open, onClose }: NotificationDialog
                 </div>
 
                 <div className="flex items-center gap-4 w-full">
-                  {/* Avatar */}
                   <div className={`
                     w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors
                     ${!notif.lida 
@@ -125,14 +115,12 @@ export default function NotificationDialog({ open, onClose }: NotificationDialog
                     <User size={20} />
                   </div>
 
-                  {/* Conteúdo */}
                   <div className="flex flex-col flex-1">
                     <Typography className={`text-sm leading-tight ${!notif.lida ? "text-brand-dark font-medium" : "text-gray-500 font-medium"}`}>
                       {formatMessage(notif.mensagem)}
                     </Typography>
                   </div>
                   
-                  {/* Seta */}
                   <ChevronRight size={18} className={`shrink-0 transition-colors ${!notif.lida ? "text-brand-purple" : "text-gray-300"}`} />
                 </div>
               </div>
@@ -147,11 +135,11 @@ export default function NotificationDialog({ open, onClose }: NotificationDialog
         )}
         
         {notifications.length > 0 && (
-           <div className="py-2 text-center">
-             <Typography className="text-gray-500 text-[10px] font-medium uppercase tracking-wider">
-               Fim das notificações
-             </Typography>
-           </div>
+            <div className="py-2 text-center">
+              <Typography className="text-gray-400 text-[10px] font-medium uppercase tracking-wider">
+                Fim das notificações
+              </Typography>
+            </div>
         )}
       </DialogBody>
     </Dialog>

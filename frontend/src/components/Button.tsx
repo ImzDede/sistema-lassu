@@ -16,6 +16,7 @@ const Button = ({
   className = "",
   fullWidth = true,
   loading = false,
+  onClick,
   ...props
 }: ButtonProps) => {
   const isPrimary = variant === "primary";
@@ -23,20 +24,19 @@ const Button = ({
   return (
     <MTButton
       variant={isPrimary ? "filled" : "outlined"}
-      // @ts-ignore
-      color={isPrimary ? "purple" : "gray"}
       fullWidth={fullWidth}
       loading={loading}
+      onClick={onClick}
       className={`
-        rounded-lg py-3 text-sm font-bold shadow-sm hover:shadow-md transition-all
+        rounded-lg py-3 text-sm font-bold shadow-none hover:shadow-md transition-all uppercase
         ${
           isPrimary
-            ? "!bg-brand-purple text-white hover:!bg-[#967bb3] shadow-brand-purple/20"
-            : "!border-brand-pink !text-brand-purple hover:!bg-brand-purple/5 focus:ring-brand-pink/50"
+            ? "!bg-brand-purple text-white hover:!bg-[#967bb3] focus:!ring-brand-purple/50"
+            : "!border-brand-purple !text-brand-purple hover:!bg-brand-purple/5 focus:!ring-brand-purple/50 bg-transparent"
         }
         ${className}
       `}
-      {...props}
+      {...props as any}
     >
       {children}
     </MTButton>

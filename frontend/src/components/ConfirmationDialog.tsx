@@ -25,25 +25,25 @@ export default function ConfirmationDialog({
   isDestructive = false
 }: ConfirmationDialogProps) {
   return (
-    <Dialog open={open} handler={onClose} size="xs" className="p-4">
-      <DialogHeader className="justify-center flex-col gap-2">
-        <div className={`p-3 rounded-full ${isDestructive ? "bg-red-50 text-red-500" : "bg-blue-50 text-brand-purple"}`}>
+    <Dialog open={open} handler={onClose} size="xs" className="p-4 bg-brand-surface">
+      <DialogHeader className="justify-center flex-col gap-3">
+        <div className={`p-4 rounded-full ${isDestructive ? "bg-feedback-error-bg text-feedback-error-text" : "bg-brand-purple/10 text-brand-purple"}`}>
           <AlertTriangle size={32} />
         </div>
-        <Typography variant="h5" className="text-center text-brand-purple">
+        <Typography variant="h5" className="text-center text-brand-dark font-heading">
           {title}
         </Typography>
       </DialogHeader>
-      <DialogBody className="text-center font-normal">
+      <DialogBody className="text-center font-normal text-gray-600">
         {message}
       </DialogBody>
-      <DialogFooter className="justify-center gap-2 pt-2">
-        <Button variant="outline" onClick={onClose} className="border-gray-300">
+      <DialogFooter className="justify-center gap-3 pt-4">
+        <Button variant="outline" onClick={onClose} className="border-gray-200 text-gray-500 hover:bg-gray-50">
           Cancelar
         </Button>
         <Button 
           onClick={() => { onConfirm(); onClose(); }}
-          className={isDestructive ? "bg-red-500 hover:bg-red-600" : "bg-brand-purple"}
+          className={isDestructive ? "!bg-feedback-error-main hover:!bg-red-500 text-white shadow-none" : "bg-brand-purple"}
         >
           {confirmText}
         </Button>

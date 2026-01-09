@@ -1,44 +1,39 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 
-type AlertColor = "green" | "red";
+type FeedbackType = "success" | "error" | "warning";
 
 interface FeedbackState {
   open: boolean;
-  color: AlertColor;
   message: string;
+  type: FeedbackType;
 }
 
 export function useFeedback() {
   const [feedback, setFeedback] = useState<FeedbackState>({
     open: false,
-    color: "green",
     message: "",
+    type: "success",
   });
 
-  // Referência para guardar o ID do timer e poder cancelar se necessário
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const showAlert = useCallback((color: AlertColor, message: string) => {
-    // Se já tiver um timer rodando, cancela ele para não fechar o novo alerta prematuramente
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-    }
+  const showFeedback = useCallback((message: string, type: FeedbackType = "success") => {
+    // Cancela timer anterior para evitar fechar o novo alerta
+    if (timerRef.current) clearTimeout(timerRef.current);
 
-    setFeedback({ open: true, color, message });
+    setFeedback({ open: true, message, type });
 
     timerRef.current = setTimeout(() => {
       setFeedback((prev) => ({ ...prev, open: false }));
     }, 4000);
   }, []);
 
-  const closeAlert = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-    }
+  const closeFeedback = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
     setFeedback((prev) => ({ ...prev, open: false }));
   }, []);
 
-  // Limpeza de memória se o componente desmontar
+  // Limpeza ao desmontar
   useEffect(() => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
@@ -47,7 +42,7 @@ export function useFeedback() {
 
   return {
     feedback,
-    showAlert,
-    closeAlert,
+    showFeedback,
+    closeFeedback,
   };
 }

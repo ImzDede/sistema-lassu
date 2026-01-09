@@ -17,17 +17,17 @@ export default function NotificationBell() {
           content={unreadCount > 0 ? unreadCount.toString() : ""}
           invisible={unreadCount === 0}
           withBorder
-          className="bg-red-500 min-w-[18px] min-h-[18px] text-xs font-bold"
+          className="bg-feedback-error-main min-w-[18px] min-h-[18px] text-xs font-bold border-white"
         >
           <IconButton
             variant="text"
             onClick={() => setIsOpen(true)}
-            className="p-5 group rounded-full h-8 w-8 text-gray-600 hover:bg-brand-purple hover:text-white transition-colors"
+            className="p-2 group rounded-full h-10 w-10 text-gray-500 hover:bg-brand-purple/10 hover:text-brand-purple transition-all"
           >
             <Bell
-              className={`w-5 h-5 transition-colors ${
+              className={`w-6 h-6 transition-colors ${
                 unreadCount > 0
-                  ? "text-brand-purple group-hover:text-white"
+                  ? "text-brand-purple fill-brand-purple/20 animate-pulse"
                   : "text-current"
               }`}
             />

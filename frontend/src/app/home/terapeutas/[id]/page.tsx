@@ -9,10 +9,7 @@ import {
   Power,
   CalendarClock,
 } from "lucide-react";
-import {
-  Typography,
-  Spinner,
-} from "@material-tailwind/react";
+import { Typography, Spinner } from "@material-tailwind/react";
 import Button from "@/components/Button";
 import CardListagem from "@/components/CardListagem";
 import FeedbackAlert from "@/components/FeedbackAlert";
@@ -25,38 +22,26 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUsers } from "@/hooks/useUsers";
 import { usePatients } from "@/hooks/usePatients";
 import { calculateAge } from "@/utils/date";
-import { formatPhone, numberToDayMap } from "@/utils/format";
+import { numberToDayMap } from "@/utils/constants";
 import { usePagination } from "@/hooks/usePagination";
 import { useFeedback } from "@/hooks/useFeedback";
+import { User } from "@/types/usuarios";
 
-interface TherapistData {
-  id: string;
-  nome: string;
-  matricula: number;
-  email: string;
-  telefone?: string;
-  ativo: boolean;
-  fotoUrl?: string;
-  permAdmin: boolean;
-  permCadastro: boolean;
-  permAtendimento: boolean;
+// Interface interna que junta User + Disponibilidade
+interface TherapistData extends User {
   disponibilidade?: any[];
 }
 
-export default function TherapistDetails({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default function TherapistDetails({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { id } = params;
   const { isTeacher, isLoading: authLoading } = useAuth();
 
-  const { getUserById, updateUser } = useUsers();
-  const { patients, fetchPatients, loading: loadingPatients } = usePatients();
+  const { getUserById, updatePermissions } = useUsers();
+  const { patients, refreshPatients, loading: loadingPatients } = usePatients();
 
   const [therapist, setTherapist] = useState<TherapistData | null>(null);
-  const { feedback, showAlert, closeAlert } = useFeedback();
+  const { feedback, showFeedback, closeFeedback } = useFeedback();
 
   // Estados dos Modais
   const [openRoleDialog, setOpenRoleDialog] = useState(false);
@@ -72,38 +57,36 @@ export default function TherapistDetails({
   // 1. CARREGAR DADOS
   const loadData = useCallback(async () => {
     if (!id) return;
-    
+
     try {
-      const response = await getUserById(id);
-      
-      if (response) {
-        // Extrai os dados da usuária do envelope 'user'
-        const userData = response.user ? response.user : response;
+      // Busca usuário via service
+      const userResponse = await getUserById(id);
 
-        // Extrai a disponibilidade
-        const rawAvailability = response.availability || response.disponibilidade || [];
-        
-        // Traduzi a disponibilidade para o Modal (1 -> "Segunda-feira")
-        const mappedAvailability = rawAvailability.map((slot: any) => ({
-          dia: numberToDayMap[Number(slot.dia)] || `Dia ${slot.dia}`,
-          inicio: slot.horaInicio ?? slot.inicio,
-          fim: slot.horaFim ?? slot.fim,
-        }));
+      if (userResponse) {
+        const rawAvailability = (userResponse as any).disponibilidade || [];
 
-        // Salva tudo "achatado" no estado
-        setTherapist({
-          ...userData, // Espalha nome, ativo, perms... na raiz
-          disponibilidade: mappedAvailability // Adiciona a lista formatada
+        // Traduz disponibilidade para o Modal (1 -> "Segunda-feira")
+        const mappedAvailability = rawAvailability.map((slot: any) => {
+          const diaNumero = slot.diaSemana ?? slot.dia;
+          return {
+            dia: numberToDayMap[Number(diaNumero)],
+            inicio: slot.horaInicio ?? slot.inicio,
+            fim: slot.horaFim ?? slot.fim,
+          };
         });
 
+        setTherapist({
+          ...userResponse,
+          disponibilidade: mappedAvailability,
+        });
       } else {
-        showAlert("red", "Terapeuta não encontrada.");
+        showFeedback("Terapeuta não encontrada.", "error");
       }
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
-      showAlert("red", "Erro de conexão.");
+      showFeedback("Erro de conexão.", "error");
     }
-  }, [id, getUserById, showAlert]);
+  }, [id, getUserById, showFeedback]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -112,44 +95,23 @@ export default function TherapistDetails({
       return;
     }
     loadData();
-    fetchPatients();
-  }, [authLoading, isTeacher, loadData, fetchPatients, router]);
+    refreshPatients();
+  }, [authLoading, isTeacher, loadData, refreshPatients, router]);
 
   // LÓGICA DE FILTRO DE PACIENTES
-  const myPatients =
-    patients?.filter(
-      (item: { patient: { profissionalResponsavelId: string } }) =>
-        item.patient.profissionalResponsavelId === id
-    ) || [];
+  const myPatients = patients?.filter((p) => p.terapeutaId === id) || [];
 
-  const filteredPatients = myPatients.filter((item: { patient: any }) => {
-    const p = item.patient;
+  const filteredPatients = myPatients.filter((p) => {
     const term = searchTerm.toLowerCase();
-
-    // Busca por nome
     const matchesSearch = p.nome.toLowerCase().includes(term);
 
-    // Filtro de Status
-    const inactiveKeywords = [
-      "arquivado",
-      "inativo",
-      "alta",
-      "desistiu",
-      "cancelado",
-    ];
-
+    const inactiveKeywords = ["arquivado", "inativo", "alta", "desistiu", "cancelado"];
     const pStatus = p.status ? p.status.toLowerCase() : "";
-    const isInactive = inactiveKeywords.some((keyword) =>
-      pStatus.includes(keyword)
-    );
+    const isInactive = inactiveKeywords.some((keyword) => pStatus.includes(keyword));
 
     let matchesStatus = true;
-
-    if (statusFilter === "ativo") {
-      matchesStatus = !isInactive;
-    } else if (statusFilter === "inativo") {
-      matchesStatus = isInactive;
-    }
+    if (statusFilter === "ativo") matchesStatus = !isInactive;
+    else if (statusFilter === "inativo") matchesStatus = isInactive;
 
     return matchesSearch && matchesStatus;
   });
@@ -158,40 +120,33 @@ export default function TherapistDetails({
 
   // 3. AÇÕES
   const handleConfirmStatusChange = async () => {
-    if (!id || !therapist) return; // Usa id da rota para segurança
+    if (!id || !therapist) return;
     const novoStatus = !therapist.ativo;
-    
-    try {
-      const success = await updateUser(id, { ativo: novoStatus });
 
-      if (success) {
-        setTherapist({ ...therapist, ativo: novoStatus });
-        showAlert(
-          novoStatus ? "green" : "red",
-          novoStatus ? "Conta reativada com sucesso!" : "Conta desativada com sucesso."
-        );
-      } else {
-        showAlert("red", "Erro ao alterar status.");
-      }
+    try {
+      await updatePermissions(id, { ativo: novoStatus } as any);
+
+      setTherapist({ ...therapist, ativo: novoStatus });
+      showFeedback(
+        novoStatus ? "Conta reativada com sucesso!" : "Conta desativada com sucesso.",
+        novoStatus ? "success" : "warning"
+      );
     } catch (e) {
-      showAlert("red", "Erro de comunicação.");
+      showFeedback("Erro ao alterar status.", "error");
     }
   };
 
   const handlePermissionChange = async (key: keyof TherapistData) => {
     if (!id || !therapist) return;
-    const newValue = !therapist[key];
-    
-    try {
-      const success = await updateUser(id, { [key]: newValue });
+    // Força cast para boolean
+    const newValue = !Boolean(therapist[key]);
 
-      if (success) {
-        setTherapist({ ...therapist, [key]: newValue });
-      } else {
-        showAlert("red", "Erro ao atualizar cargo.");
-      }
+    try {
+      await updatePermissions(id, { [key]: newValue });
+      setTherapist({ ...therapist, [key]: newValue });
+      showFeedback("Permissão atualizada.", "success");
     } catch (e) {
-      showAlert("red", "Erro de comunicação.");
+      showFeedback("Erro ao atualizar cargo.", "error");
     }
   };
 
@@ -207,9 +162,9 @@ export default function TherapistDetails({
     <div className="flex flex-col w-full h-full pb-10">
       <FeedbackAlert
         open={feedback.open}
-        color={feedback.color}
+        color={feedback.type === "error" ? "red" : "green"}
         message={feedback.message}
-        onClose={closeAlert}
+        onClose={closeFeedback}
       />
 
       {/* HEADER NAV */}
@@ -225,7 +180,6 @@ export default function TherapistDetails({
         </Typography>
       </div>
 
-      {/* PERFIL DA TERAPEUTA */}
       <TherapistProfileCard
         therapist={therapist}
         patientCount={myPatients.length}
@@ -268,10 +222,7 @@ export default function TherapistDetails({
       <div>
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-4 gap-4">
           <div className="flex items-center gap-2">
-            <Typography
-              variant="h5"
-              className="text-brand-dark font-bold uppercase tracking-wide"
-            >
+            <Typography variant="h5" className="text-brand-dark font-bold uppercase tracking-wide">
               Pacientes Vinculados
             </Typography>
             <div className="p-1.5 bg-gray-100 rounded-full text-gray-500">
@@ -280,7 +231,6 @@ export default function TherapistDetails({
           </div>
         </div>
 
-        {/* Componente de Busca */}
         <div className="mb-4">
           <SearchInputWithFilter
             searchTerm={searchTerm}
@@ -294,49 +244,22 @@ export default function TherapistDetails({
         <div>
           <div className="flex flex-col gap-3">
             {loadingPatients ? (
-              <div className="py-10 flex justify-center">
-                <Spinner className="text-brand-purple" />
-              </div>
+              <div className="py-10 flex justify-center"><Spinner className="text-brand-purple" /></div>
             ) : (
               <>
                 {paginatedPatients.length > 0 ? (
                   <>
-                    {paginatedPatients.map(
-                      (item: {
-                        patient: {
-                          id: React.Key | null | undefined;
-                          nome: string;
-                          dataNascimento: string;
-                          telefone: string;
-                          status: string | undefined;
-                        };
-                      }) => (
-                        <CardListagem
-                          key={item.patient.id}
-                          nomePrincipal={item.patient.nome}
-                          detalhe={
-                            <div className="flex flex-col gap-0.5">
-                              <span className="font-medium text-gray-700">
-                                {calculateAge(item.patient.dataNascimento)}
-                              </span>
-                              <span className="text-gray-400 text-xs">
-                                {formatPhone(item.patient.telefone)}
-                              </span>
-                            </div>
-                          }
-                          status={item.patient.status}
-                        />
-                      )
-                    )}
-
-                    {/* 4. BOTÃO CARREGAR MAIS */}
+                    {paginatedPatients.map((p) => (
+                      <CardListagem
+                        key={p.id}
+                        nomePrincipal={p.nome}
+                        detalhe={<span className="font-medium text-gray-700">{calculateAge(p.dataNascimento)}</span>}
+                        status={p.status}
+                      />
+                    ))}
                     {hasMore(filteredPatients.length) && (
                       <div className="mt-4 flex justify-center">
-                        <Button
-                          variant="outline"
-                          onClick={loadMore}
-                          className="border-brand-purple text-brand-purple hover:bg-brand-purple hover:text-white"
-                        >
+                        <Button variant="outline" onClick={loadMore} className="border-brand-purple text-brand-purple">
                           Carregar Mais Pacientes
                         </Button>
                       </div>
@@ -344,9 +267,7 @@ export default function TherapistDetails({
                   </>
                 ) : (
                   <div className="text-center p-12 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                    <Typography className="text-gray-400 text-sm">
-                      Nenhum paciente encontrado com esses filtros.
-                    </Typography>
+                    <Typography className="text-gray-400 text-sm">Nenhum paciente encontrado com esses filtros.</Typography>
                   </div>
                 )}
               </>
@@ -379,7 +300,7 @@ export default function TherapistDetails({
         <AvailabilityDialog
           open={openAvailabilityDialog}
           onClose={() => setOpenAvailabilityDialog(false)}
-          availabilities={therapist.disponibilidade}
+          availabilities={therapist.disponibilidade || []}
         />
       </div>
     </div>

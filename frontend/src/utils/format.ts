@@ -1,11 +1,13 @@
-// Remove tudo que não é número
-export const cleanFormat = (value: string) => {
+// Remove caracteres não numéricos.
+export const cleanFormat = (value: string | undefined): string => {
+  if (!value) return "";
   return value.replace(/\D/g, "");
 };
 
 // Formata CPF: 000.000.000-00
-export const formatCPF = (value: string) => {
+export const formatCPF = (value: string | undefined): string => {
   const numericValue = cleanFormat(value);
+  if (!numericValue) return "";
   
   return numericValue
     .replace(/(\d{3})(\d)/, "$1.$2")
@@ -14,52 +16,31 @@ export const formatCPF = (value: string) => {
     .replace(/(-\d{2})\d+?$/, "$1");
 };
 
-// Formata Telefone: (00) 0000-0000 ou (00) 00000-0000
-export const formatPhone = (value: string) => {
+// Formata Telefone
+export const formatPhone = (value: string | undefined): string => {
   const numericValue = cleanFormat(value);
+  if (!numericValue) return "";
   
-  // Se tiver mais de 10 digitos, assume que é celular (9 digitos)
+  // Celular (9 dígitos + DDD)
   if (numericValue.length > 10) {
     return numericValue
       .replace(/(\d{2})(\d)/, "($1) $2")
       .replace(/(\d{5})(\d)/, "$1-$2")
       .replace(/(-\d{4})\d+?$/, "$1");
   } 
-  // Senão, fixo
+  
+  // Fixo (8 dígitos + DDD)
   return numericValue
     .replace(/(\d{2})(\d)/, "($1) $2")
     .replace(/(\d{4})(\d)/, "$1-$2")
     .replace(/(-\d{4})\d+?$/, "$1");
 };
 
-// MAPAS DE DIAS DA SEMANA 
-
-export const dayMap: Record<string, number> = {
-  "Segunda-feira": 1,
-  "Terça-feira": 2,
-  "Quarta-feira": 3,
-  "Quinta-feira": 4,
-  "Sexta-feira": 5,
-};
-
-// Mapa Inverso (Número -> String) para mensagens de erro
-export const numberToDayMap: Record<number, string> = {
-  1: "Segunda-feira",
-  2: "Terça-feira",
-  3: "Quarta-feira",
-  4: "Quinta-feira",
-  5: "Sexta-feira",
-};
-
-// Helper para gerar as opções de Select
-export const daysOptions = Object.keys(dayMap);
-
-// Converte 8 -> "08:00"
-export const formatTime = (hour: number) => {
+// Helpers de Hora
+export const formatTime = (hour: number): string => {
   return `${hour.toString().padStart(2, "0")}:00`;
 };
 
-// Converte (8, 12) -> "08:00 - 12:00"
-export const formatTimeInterval = (start: number, end: number) => {
+export const formatTimeInterval = (start: number, end: number): string => {
   return `${formatTime(start)} - ${formatTime(end)}`;
 };

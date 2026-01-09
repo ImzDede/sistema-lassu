@@ -3,17 +3,7 @@
 import React, { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, Typography, List, Spinner } from "@material-tailwind/react";
-import {
-  ChevronLeft,
-  User,
-  Lock,
-  Bell,
-  Clock,
-  History,
-  Pencil,
-  LogOut,
-  ChevronRight,
-} from "lucide-react";
+import { User, Lock, Clock, History, Pencil, LogOut } from "lucide-react";
 import Button from "@/components/Button";
 import ProfileMenuItem from "@/components/ProfileMenuItem";
 import { logout } from "@/utils/auth";
@@ -24,73 +14,57 @@ import FeedbackAlert from "@/components/FeedbackAlert";
 
 export default function Perfil() {
   const router = useRouter();
-  const { user, isTeacher, isLoading } = useAuth();
+  const { user, isLoading } = useAuth();
   const searchParams = useSearchParams();
-  const { feedback, showAlert, closeAlert } = useFeedback();
+  const { feedback, showFeedback, closeFeedback } = useFeedback();
 
   useEffect(() => {
     const successType = searchParams.get("success");
-
     if (successType) {
-      // Dicionário de mensagens
       const messages: Record<string, string> = {
         dados: "Dados pessoais atualizados com sucesso!",
         senha: "Senha alterada com sucesso!",
-        disponibilidade: "Sua disponibilidade foi alterada com sucesso!"
+        disponibilidade: "Sua disponibilidade foi alterada com sucesso!",
       };
-
-      const messageToShow = messages[successType] || messages.default;
-
-      showAlert("green", messageToShow);
-      
+      const messageToShow = messages[successType] || "Operação realizada com sucesso.";
+      showFeedback(messageToShow, "success");
       router.replace("/home/perfil");
     }
-  }, [searchParams, showAlert, router]);
+  }, [searchParams, showFeedback, router]);
 
-  // Função de logout
   function handleLogout() {
     logout();
-    router.push("/");
   }
 
-  // Definição dos itens do menu
+  const canEditAvailability = (user?.permCadastro || user?.permAtendimento) && !user?.permAdmin;
+
   const menuItems = [
     {
       label: "DADOS PESSOAIS",
-      icon: <User />,
+      icon: <User size={18} />,
       href: "/home/perfil/dados",
-      showForAdmin: true,
-      showForOthers: true,
+      show: true,
     },
     {
       label: "SENHA",
-      icon: <Lock />,
+      icon: <Lock size={18} />,
       href: "/home/perfil/senha",
-      showForAdmin: true,
-      showForOthers: true,
+      show: true,
     },
     {
       label: "DISPONIBILIDADE",
-      icon: <Clock />,
+      icon: <Clock size={18} />,
       href: "/home/perfil/disponibilidade",
-      showForAdmin: false,
-      showForOthers: true,
+      show: !!canEditAvailability,
     },
     {
       label: "HISTÓRICO",
-      icon: <History />,
+      icon: <History size={18} />,
       href: "/home/perfil/historico",
-      showForAdmin: true,
-      showForOthers: true,
+      show: true,
     },
   ];
 
-  // Filtra os itens baseado na permissão (isTeacher)
-  const visibleItems = menuItems.filter((item) =>
-    isTeacher ? item.showForAdmin : item.showForOthers
-  );
-
-  // Spinner de carregamento
   if (isLoading) {
     return (
       <div className="flex items-center justify-center w-full h-full min-h-[500px]">
@@ -101,26 +75,19 @@ export default function Perfil() {
 
   return (
     <div className="flex flex-col w-full min-h-full pb-20 lg:pb-0 font-sans">
-
       <FeedbackAlert
         open={feedback.open}
-        color={feedback.color}
+        color={feedback.type === "error" ? "red" : "green"}
         message={feedback.message}
-        onClose={closeAlert}
+        onClose={closeFeedback}
       />
 
       <div className="mb-6 lg:mb-8 flex items-center justify-center lg:justify-start">
         <div>
-          <Typography
-            variant="h3"
-            className="font-bold uppercase mb-2 text-center lg:text-left mt-4 lg:mt-0 text-brand-dark"
-          >
+          <Typography variant="h3" className="font-bold uppercase mb-2 text-center lg:text-left mt-4 lg:mt-0 text-brand-dark">
             Meu Perfil
           </Typography>
-          <Typography
-            variant="paragraph"
-            className="text-gray-400 text-sm text-center lg:text-left lg:text-base"
-          >
+          <Typography variant="paragraph" className="text-gray-400 text-sm text-center lg:text-left lg:text-base">
             Gerencie suas informações pessoais e configurações.
           </Typography>
         </div>
@@ -128,86 +95,74 @@ export default function Perfil() {
 
       <Card className="w-full shadow-lg border-t-4 border-brand-purple bg-brand-surface max-w-6xl mx-auto lg:shadow-md overflow-hidden">
         <div className="flex flex-col lg:flex-row min-h-[500px]">
-          {/* COLUNA ESQUERDA: Foto e Dados Básicos */}
+          {/* COLUNA ESQUERDA */}
           <div className="w-full lg:w-1/3 bg-brand-bg/50 lg:border-r border-brand-pink/20 p-6 lg:p-8 flex flex-col items-center">
             <div className="relative mb-6 group">
               <div className="w-32 h-32 rounded-full bg-white border-4 border-white shadow-md flex items-center justify-center text-gray-300 overflow-hidden ring-1 ring-gray-100">
-                {/* fotoUrl no futuro */}
                 <User size={64} strokeWidth={1.5} />
               </div>
-              <button className="absolute bottom-1 right-1 bg-brand-purple text-white p-2.5 rounded-full shadow-md hover:bg-[#967bb3] transition-all transform hover:scale-105 border-2 border-white">
+              <button
+                onClick={() => router.push("/home/perfil/dados")}
+                className="absolute bottom-1 right-1 bg-brand-purple text-white p-2.5 rounded-full shadow-md hover:bg-[#967bb3] transition-all transform hover:scale-105 border-2 border-white"
+              >
                 <Pencil size={16} />
               </button>
             </div>
 
             <div className="text-center w-full mb-8">
-              <Typography
-                variant="h5"
-                className="font-bold uppercase text-brand-dark break-words"
-              >
+              <Typography variant="h5" className="font-bold uppercase text-brand-dark break-words">
                 {user?.nome || "Usuário"}
               </Typography>
               <Typography className="text-brand-purple font-medium text-sm mt-1">
                 Matrícula: {user?.matricula || "N/A"}
               </Typography>
-              
-              <RoleBadge user={user} />
+              <div className="mt-2 flex justify-center">
+                <RoleBadge user={user} />
+              </div>
             </div>
 
-            {/* Botão de Sair (Versão Desktop) */}
             <div className="mt-auto hidden lg:block w-full">
               <Button
                 onClick={handleLogout}
                 variant="outline"
                 fullWidth
-                className="flex items-center justify-center gap-2 !border-brand-error/50 !text-brand-error hover:!bg-brand-error/10 hover:!border-brand-error"
+                className="flex items-center justify-center gap-2 border-2 border-red-500 text-red-600 hover:bg-red-50"
               >
-                <LogOut size={18} />
-                <span>SAIR DA CONTA</span>
+                <LogOut size={18} /> <span>SAIR DA CONTA</span>
               </Button>
             </div>
           </div>
 
-          {/* COLUNA DIREITA: Menu de Opções Dinâmico */}
+          {/* COLUNA DIREITA */}
           <div className="w-full lg:w-2/3 p-6 lg:p-8 bg-brand-surface flex flex-col">
-            <Typography
-              variant="small"
-              className="font-bold text-gray-400 uppercase tracking-widest mb-6 text-xs"
-            >
+            <Typography variant="small" className="font-bold text-gray-400 uppercase tracking-widest mb-6 text-xs">
               Configurações da Conta
             </Typography>
             <div className="flex-1 w-full">
               <List className="p-0 min-w-full">
-                {visibleItems.map((item, index) => (
-                  <ProfileMenuItem
-                    key={index}
-                    label={item.label}
-                    icon={item.icon}
-                    href={item.href}
-                  />
+                {menuItems.map((item, index) => (
+                  item.show && (
+                    <ProfileMenuItem
+                      key={index}
+                      label={item.label}
+                      icon={item.icon}
+                      href={item.href}
+                    />
+                  )
                 ))}
               </List>
             </div>
 
-            {/* Botão de Sair (Versão Mobile) */}
             <div className="mt-8 lg:hidden pt-6 border-t border-gray-100">
-              <Button
+              <button
                 onClick={handleLogout}
-                variant="outline"
-                fullWidth
-                className="flex items-center justify-between p-4 !border-brand-error/50 !text-brand-error hover:!bg-brand-error/10 group"
+                className="w-full flex items-center gap-4 px-4 py-3 rounded-xl font-bold transition-all duration-200 text-red-600 border-2 border-red-500 hover:bg-red-50"
               >
-                <div className="flex items-center gap-3">
-                  <LogOut className="group-hover:text-[#e08e86]" size={20} />
-                  <span className="font-bold group-hover:text-[#e08e86]">
-                    SAIR
-                  </span>
+                <div className="p-2 rounded-lg bg-red-100 text-red-600">
+                  <LogOut size={20} />
                 </div>
-                <ChevronRight
-                  className="text-brand-error/50 group-hover:text-[#e08e86]"
-                  size={20}
-                />
-              </Button>
+                <span className="uppercase text-sm">SAIR DA CONTA</span>
+              </button>
             </div>
           </div>
         </div>

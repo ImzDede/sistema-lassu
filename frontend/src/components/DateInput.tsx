@@ -26,9 +26,13 @@ export default function DateInput({
 
   useEffect(() => {
     if (value) {
-      const parsed = parseISO(value);
-      if (isValid(parsed)) {
-        setDisplayValue(format(parsed, "dd/MM/yyyy"));
+      try {
+        const parsed = parseISO(value);
+        if (isValid(parsed)) {
+          setDisplayValue(format(parsed, "dd/MM/yyyy"));
+        }
+      } catch {
+        setDisplayValue("");
       }
     } else {
       setDisplayValue("");
@@ -83,7 +87,7 @@ export default function DateInput({
         icon={
           <CalendarIcon
             size={18}
-            className="text-gray-400"
+            className="text-brand-purple/50"
           />
         }
       />

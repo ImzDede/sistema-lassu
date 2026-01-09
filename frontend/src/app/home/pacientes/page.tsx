@@ -8,84 +8,60 @@ import { usePatients } from "@/hooks/usePatients";
 import CardListagem from "@/components/CardListagem";
 import SearchInputWithFilter from "@/components/SearchInputWithFilter";
 import { calculateAge } from "@/utils/date";
-import { formatPhone } from "@/utils/format";
 import Button from "@/components/Button";
 import { usePagination } from "@/hooks/usePagination";
+import { Patient } from "@/types/paciente";
 
 export default function PacientesPage() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
-  const { patients, loading: loadingData, fetchPatients } = usePatients();
+  const { patients, loading: loadingData, refreshPatients } = usePatients();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ativo");
   const { visibleCount, loadMore, hasMore } = usePagination(8, 8);
 
   useEffect(() => {
     if (!authLoading && user) {
-      const canAccess =
-        user.permCadastro || user.permAtendimento;
+      const canAccess = user.permCadastro || user.permAtendimento;
       if (!canAccess) {
-        router.push("/home");
+          router.push("/home");
+      } else {
+          refreshPatients();
       }
     }
-  }, [authLoading, user, router]);
+  }, [authLoading, user, router, refreshPatients]);
 
-  useEffect(() => {
-    if (user) {
-      fetchPatients();
-    }
-  }, [fetchPatients, user]);
-
-  // Lógica de Filtro
-  const filteredList = patients.filter((item) => {
-    const p = item.patient || item; 
-    
-    if (!p) return false;
-
+  const filteredList = patients.filter((p: Patient) => {
     const term = searchTerm.toLowerCase();
     
-    // Filtro de Texto
+    // 1. Busca por nome ou CPF
     const matchesSearch =
       (p.nome && p.nome.toLowerCase().includes(term)) || 
       (p.cpf && p.cpf.includes(term));
 
-    // Lista de status que consideramos "Inativos" ou "Encerrados"
-    const inactiveKeywords = ["arquivado", "inativo", "alta", "desistiu", "cancelado"];
-    
-    // Normalizamos o status para comparar
+    // 2. Lógica filtro
+    // 'atendimento' = Ativo no sistema
+    // 'encaminhada' = Inativo/Concluído no sistema
     const pStatus = p.status ? p.status.toLowerCase() : "";
-    const isInactive = inactiveKeywords.some(k => pStatus.includes(k));
-
+    
     let matchesStatus = true;
-
     if (statusFilter === "ativo") {
-      // "Ativo" mostra tudo que NÃO é inativo (triagem, encaminhada, etc)
-      matchesStatus = !isInactive;
+      matchesStatus = pStatus === "atendimento";
     } else if (statusFilter === "inativo") {
-      // "Inativo" mostra SÓ o que está na lista de inativos
-      matchesStatus = isInactive;
+      matchesStatus = pStatus === "encaminhada";
     }
-    // "todos" mantém true
 
     return matchesSearch && matchesStatus;
   });
 
   const paginatedList = filteredList.slice(0, visibleCount);
 
-  if (authLoading) {
-    return (
-      <div className="flex justify-center h-[80vh] items-center">
-        <Spinner className="h-12 w-12 text-brand-purple" />
-      </div>
-    );
-  }
+  if (authLoading) return <div className="flex justify-center h-[80vh] items-center"><Spinner className="h-12 w-12 text-brand-purple" /></div>;
 
   return (
     <div className="flex flex-col w-full h-full">
       <div className="mb-8 text-center lg:text-left">
-        <Typography variant="h3" className="font-bold uppercase text-brand-dark">
-          Meus Pacientes
-        </Typography>
+        <Typography variant="h3" className="font-bold uppercase text-brand-dark">Meus Pacientes</Typography>
       </div>
 
       <SearchInputWithFilter
@@ -98,43 +74,26 @@ export default function PacientesPage() {
 
       <div className="flex flex-col gap-4 pb-20 md:pb-0">
         {loadingData ? (
-          <div className="flex justify-center p-10">
-            <Spinner className="text-brand-purple" />
-          </div>
+          <div className="flex justify-center p-10"><Spinner className="text-brand-purple" /></div>
         ) : (
           <>
             {paginatedList.length > 0 ? (
               <>
-                {/* Renderiza a lista paginada */}
-                {paginatedList.map((item) => {
-                  const p = item.patient || item;
-                  return (
-                    <CardListagem
-                      key={p.id}
-                      nomePrincipal={p.nome}
-                      detalhe={
-                        <div className="flex flex-col gap-1">
-                          <span className="font-bold text-gray-700">
-                            Idade: {calculateAge(p.dataNascimento)}
-                          </span>
-                          <span className="text-gray-500 text-xs">
-                            Tel: {formatPhone(p.telefone)}
-                          </span>
-                        </div>
-                      }
-                      status={p.status}
-                    />
-                  );
-                })}
-
-                {/* 4. BOTÃO CARREGAR MAIS */}
+                {paginatedList.map((p: Patient) => (
+                  <CardListagem
+                    key={p.id}
+                    nomePrincipal={p.nome}
+                    detalhe={
+                      <div className="flex flex-col gap-1">
+                        <span className="font-bold text-gray-700">Idade: {calculateAge(p.dataNascimento)}</span>
+                      </div>
+                    }
+                    status={p.status}
+                  />
+                ))}
                 {hasMore(filteredList.length) && (
-                  <div className="mt-4 flex justify-center">
-                    <Button 
-                      variant="outline" 
-                      onClick={loadMore}
-                      className="border-brand-purple text-brand-purple hover:bg-brand-purple hover:text-white"
-                    >
+                   <div className="mt-4 flex justify-center">
+                    <Button variant="outline" onClick={loadMore} className="border-brand-purple text-brand-purple">
                       Carregar Mais Pacientes
                     </Button>
                   </div>
@@ -142,9 +101,7 @@ export default function PacientesPage() {
               </>
             ) : (
               <div className="text-center p-8 bg-white/50 rounded-xl border border-gray-100">
-                <Typography className="text-gray-500">
-                  Nenhum paciente encontrado.
-                </Typography>
+                <Typography className="text-gray-500">Nenhum paciente encontrado.</Typography>
               </div>
             )}
           </>

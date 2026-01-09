@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth } from "date-fns"; // 
 import { Typography, Spinner } from "@material-tailwind/react";
 import CalendarWidget from "@/components/Calendar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,37 +9,42 @@ import CardListagem from "@/components/CardListagem";
 import { useUsers } from "@/hooks/useUsers";
 import { useSessions } from "@/hooks/useSessions";
 import SessionListModal from "@/components/SessionListModal";
+import { Session } from "@/types/sessao";
 
 export default function Home() {
   const { isTeacher, user } = useAuth();
-  const { users, loading: loadingUsers, fetchUsers } = useUsers();
+  const { refreshUsers, loading: loadingUsers } = useUsers();
   const { sessions, loading: loadingSessions, fetchSessions } = useSessions();
 
   const [currentCalendarDate, setCurrentCalendarDate] = useState(new Date());
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
-  const [daySessions, setDaySessions] = useState<any[]>([]);
+  const [daySessions, setDaySessions] = useState<Session[]>([]);
 
   const today = new Date();
   const formattedDate = format(today, "dd/MM");
   
   useEffect(() => {
-    if (isTeacher && user) fetchUsers();
-    fetchSessions(currentCalendarDate);
-  }, [isTeacher, user, fetchUsers, fetchSessions, currentCalendarDate]);
+    if (isTeacher && user) refreshUsers();
+
+    const start = format(startOfMonth(currentCalendarDate), "yyyy-MM-dd");
+    const end = format(endOfMonth(currentCalendarDate), "yyyy-MM-dd");
+
+    fetchSessions({ start, end });
+
+  }, [isTeacher, user, refreshUsers, fetchSessions, currentCalendarDate]);
 
   // Card de Hoje da Terapeuta
   const myTodaySession = !isTeacher ? sessions.find(s => {
     // Blindagem para garantir comparação correta
     const sessionDate = typeof s.dia === 'string' ? s.dia.split('T')[0] : s.dia;
     const todayStr = format(today, "yyyy-MM-dd");
-    const ownerId = s.usuarioId
+    const ownerId = s.usuarioId;
     
     return sessionDate === todayStr && ownerId === user?.id;
   }) : null;
 
   const handleDayClick = (date: Date) => {
-    
     const dateStr = format(date, "yyyy-MM-dd");
     
     // 2. Filtra as sessões do dia clicado
@@ -51,7 +56,7 @@ export default function Home() {
     // 3. Se NÃO for professora, filtra para mostrar apenas as sessões DELA
     if (!isTeacher) {
         sessionsOnThisDay = sessionsOnThisDay.filter(s => {
-            const ownerId = s.usuarioId
+            const ownerId = s.usuarioId;
             return ownerId === user?.id;
         });
     }
@@ -100,10 +105,11 @@ export default function Home() {
             sessions={sessions} 
             onMonthChange={setCurrentCalendarDate} 
             onDayClick={handleDayClick}
+            isTeacher={isTeacher}
         />
       </section>
 
-      <SessionListModal open={modalOpen} onClose={() => setModalOpen(false)} date={selectedDay} sessions={daySessions} />
+      <SessionListModal open={modalOpen} onClose={() => setModalOpen(false)} date={selectedDay} sessions={daySessions} isTeacher={isTeacher} />
     </div>
   );
 }

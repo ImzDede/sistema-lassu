@@ -9,9 +9,9 @@ interface InfoBoxProps {
 
 const InfoBox = ({ children }: InfoBoxProps) => {
   return (
-    <div className="flex items-start gap-2 bg-blue-50 p-3 rounded-lg text-blue-600 text-xs border border-blue-100">
+    <div className="flex items-start gap-3 bg-brand-purple/5 p-3 rounded-lg text-brand-purple text-xs border border-brand-purple/10">
       <AlertCircle size={16} className="mt-0.5 shrink-0" />
-      <div>{children}</div>
+      <div className="font-medium">{children}</div>
     </div>
   );
 };

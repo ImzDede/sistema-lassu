@@ -9,14 +9,14 @@ import Button from "@/components/Button";
 import FeedbackAlert from "@/components/FeedbackAlert";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFeedback } from "@/hooks/useFeedback";
-import api from "@/services/api";
+import { userService } from "@/services/userServices";
 import { cleanFormat, formatPhone } from "@/utils/format";
 
 export default function NewExtensionist() {
   const router = useRouter();
   const { user, isTeacher, isLoading: authLoading } = useAuth();
   const [formLoading, setFormLoading] = useState(false);
-  const { feedback, showAlert, closeAlert } = useFeedback();
+  const { feedback, showFeedback, closeFeedback } = useFeedback();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -24,19 +24,14 @@ export default function NewExtensionist() {
     phone: "",
   });
 
-  // Proteção de Rota
   useEffect(() => {
     if (!authLoading && user) {
-      const canAccess = isTeacher || user.permCadastro;
-
-      if (!canAccess) {
-        router.push("/home/cadastro");
-      }
+      const canAccess = user.permAdmin || user.permCadastro;
+      if (!canAccess) router.push("/home/cadastro");
     }
   }, [authLoading, user, isTeacher, router]);
 
-  // Bloqueio de renderização
-  const canAccess = isTeacher || user?.permCadastro;
+  const canAccess = user?.permAdmin || user?.permCadastro;
   if (authLoading || !canAccess) {
     return (
       <div className="flex items-center justify-center w-full h-[80vh]">
@@ -45,20 +40,17 @@ export default function NewExtensionist() {
     );
   }
 
-  // Funções do Form
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
 
     if (name === "phone") {
       setFormData((prev) => ({ ...prev, [name]: formatPhone(value) }));
-    } 
-    else if (name === "registration") {
-      const onlyNumbers = value.replace(/\D/g, ""); // Remove tudo que não é número
-      if (onlyNumbers.length <= 7) { // Trava visualmente em 7
-         setFormData((prev) => ({ ...prev, [name]: onlyNumbers }));
+    } else if (name === "registration") {
+      const onlyNumbers = value.replace(/\D/g, "");
+      if (onlyNumbers.length <= 7) {
+        setFormData((prev) => ({ ...prev, [name]: onlyNumbers }));
       }
-    } 
-    else {
+    } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
   };
@@ -66,28 +58,29 @@ export default function NewExtensionist() {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setFormLoading(true);
-    closeAlert();
+    closeFeedback();
 
     try {
       const payload = {
         nome: formData.name,
         email: formData.email,
-        matricula: Number(formData.registration),
+        matricula: formData.registration,
         telefone: cleanFormat(formData.phone),
       };
 
-      await api.post("/users", payload);
-      showAlert("green", "Extensionista cadastrada com sucesso!");
+      await userService.create(payload);
+
+      showFeedback("Extensionista cadastrada com sucesso!", "success");
       setFormData({ name: "", email: "", registration: "", phone: "" });
     } catch (error: any) {
       console.error("Error creating extensionist:", error);
       const dataError = error.response?.data;
       const msgBackend = dataError?.error || dataError?.message;
-      showAlert(
-        "red",
+      showFeedback(
         typeof msgBackend === "string"
           ? msgBackend
-          : "Erro ao realizar o cadastro."
+          : "Erro ao realizar o cadastro.",
+        "error"
       );
     } finally {
       setFormLoading(false);
@@ -98,17 +91,15 @@ export default function NewExtensionist() {
     <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full relative">
       <FeedbackAlert
         open={feedback.open}
-        color={feedback.color}
+        color={feedback.type === "error" ? "red" : "green"}
         message={feedback.message}
-        onClose={closeAlert}
+        onClose={closeFeedback}
       />
 
-      {/* HEADER */}
       <div className="flex items-center gap-4">
         <button
           onClick={() => router.back()}
           className="p-3 rounded-full hover:bg-brand-purple/10 text-brand-purple transition-colors focus:outline-none"
-          title="Voltar"
         >
           <ArrowLeft className="w-6 h-6" />
         </button>
@@ -128,7 +119,6 @@ export default function NewExtensionist() {
         </div>
       </div>
 
-      {/* FORM CARD */}
       <Card className="w-full shadow-lg border-t-4 border-brand-purple bg-brand-surface">
         <CardBody className="p-6 md:p-10">
           <div className="flex items-center gap-3 mb-8 pb-4 border-b border-gray-100">
@@ -166,7 +156,7 @@ export default function NewExtensionist() {
                 value={formData.registration}
                 onChange={handleChange}
                 required
-                maxLength={7} 
+                maxLength={7}
                 minLength={7}
               />
               <Input
@@ -176,6 +166,7 @@ export default function NewExtensionist() {
                 onChange={handleChange}
                 placeholder="(00) 00000-0000"
                 maxLength={15}
+                required
               />
             </div>
 

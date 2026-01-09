@@ -7,19 +7,20 @@ import Button from "@/components/Button";
 import Select from "@/components/SelectBox";
 import InfoBox from "@/components/InfoBox";
 import { TimeSlot } from "@/types/disponibilidade";
-import { daysOptions } from "@/utils/format"; 
-import { hoursStartStrings, hoursEndStrings } from "@/utils/constants";
+import { daysOptions, hoursStartStrings, hoursEndStrings } from "@/utils/constants";
 
 interface AvailabilityEditorProps {
   availability: TimeSlot[];
   setAvailability: React.Dispatch<React.SetStateAction<TimeSlot[]>>;
   onError?: (msg: string) => void;
+  infoMessage?: string;
 }
 
 export default function AvailabilityEditor({ 
   availability, 
   setAvailability, 
-  onError
+  onError,
+  infoMessage
 }: AvailabilityEditorProps) {
 
   const addSlot = () => {
@@ -54,7 +55,7 @@ export default function AvailabilityEditor({
         {availability.map((slot) => (
           <div
             key={slot.id}
-            className="flex w-full bg-gray-50 rounded-lg border border-gray-200 transition-colors hover:border-brand-pink/50"
+            className="flex w-full bg-brand-bg rounded-lg border border-gray-200 transition-colors hover:border-brand-pink/50 group"
           >
             <div className="flex-1 p-4 flex flex-col gap-3">
               <div className="w-full"> 
@@ -62,7 +63,7 @@ export default function AvailabilityEditor({
                   label="Dia da Semana"
                   options={daysOptions}
                   value={slot.day}
-                  onChange={(val: any) => updateSlot(slot.id, "day", val)}
+                  onChange={(val: string) => updateSlot(slot.id, "day", val)}
                 />
               </div>
 
@@ -72,28 +73,30 @@ export default function AvailabilityEditor({
                     label="Início"
                     options={hoursStartStrings}
                     value={slot.start}
-                    onChange={(val: any) => updateSlot(slot.id, "start", val)}
+                    onChange={(val: string) => updateSlot(slot.id, "start", val)}
                   />
                 </div>
                 
-                <span className="hidden md:block text-gray-400 font-bold shrink-0">-</span>
+                <span className="hidden md:block text-brand-purple font-bold shrink-0">-</span>
 
                 <div className="w-full md:w-1/2">
                   <Select
                     label="Fim"
                     options={hoursEndStrings}
                     value={slot.end}
-                    onChange={(val: any) => updateSlot(slot.id, "end", val)}
+                    onChange={(val: string) => updateSlot(slot.id, "end", val)}
                   />
                 </div>
               </div>
             </div>
 
-            <div className="w-14 border-l border-gray-200 flex flex-col items-center justify-center bg-gray-100 hover:bg-red-50 transition-colors" onClick={() => removeSlot(slot.id)}>
+            <div 
+              className="w-14 border-l border-gray-200 flex flex-col items-center justify-center bg-gray-50 hover:bg-feedback-error-bg transition-colors cursor-pointer rounded-r-lg" 
+              onClick={() => removeSlot(slot.id)}
+            >
                <IconButton
                   variant="text"
-                  color="red"
-                  className="rounded-full hover:bg-red-100"
+                  className="rounded-full text-feedback-error-main hover:bg-transparent"
                   title="Remover horário"
                 >
                   <Trash2 size={20} />
@@ -114,7 +117,7 @@ export default function AvailabilityEditor({
         </Button>
         <div className="mt-4">
            <InfoBox>
-             Não se preocupe, você poderá alterar estes horários depois no seu Perfil.
+             {infoMessage || "Não se preocupe, você poderá alterar estes horários depois no seu Perfil."}
            </InfoBox>
         </div>
       </div>

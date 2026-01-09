@@ -21,23 +21,24 @@ interface AvailabilityDialogProps {
 
 export default function AvailabilityDialog({ open, onClose, availabilities = [] }: AvailabilityDialogProps) {
   return (
-    <Dialog open={open} handler={onClose} size="sm" className="p-4">
-      <DialogHeader className="flex items-center gap-2 border-b border-gray-100 pb-4">
+    <Dialog open={open} handler={onClose} size="sm" className="p-4 bg-brand-surface">
+      <DialogHeader className="flex items-center gap-2 border-b border-brand-purple/10 pb-4">
         <Calendar className="text-brand-purple" />
-        <Typography variant="h5" className="text-brand-purple">
+        <Typography variant="h5" className="text-brand-purple font-heading">
           Horários de Atendimento
         </Typography>
       </DialogHeader>
-      <DialogBody placeholder={undefined} className="max-h-[60vh] overflow-y-auto">
+      
+      <DialogBody className="max-h-[60vh] overflow-y-auto pr-2">
         {availabilities.length > 0 ? (
           <div className="flex flex-col gap-3">
             {availabilities.map((slot, index) => (
-              <div key={slot.id || index} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-100">
-                <Typography className="font-bold text-gray-700">{slot.dia}</Typography>
+              <div key={slot.id || index} className="flex justify-between items-center bg-brand-bg p-3 rounded-lg border border-brand-purple/10">
+                <Typography className="font-bold text-brand-dark">{slot.dia}</Typography>
                 <Chip 
                   value={formatTimeInterval(slot.inicio, slot.fim)} 
                   variant="ghost" 
-                  className="bg-brand-purple/10 text-brand-purple normal-case text-sm"
+                  className="bg-brand-purple/10 text-brand-purple normal-case text-sm font-bold"
                 />
               </div>
             ))}
@@ -48,6 +49,7 @@ export default function AvailabilityDialog({ open, onClose, availabilities = [] 
           </div>
         )}
       </DialogBody>
+
       <DialogFooter>
         <Button onClick={onClose} fullWidth>Fechar</Button>
       </DialogFooter>

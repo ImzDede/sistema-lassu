@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import { Card, CardBody, Typography, IconButton } from "@material-tailwind/react";
 import { ChevronLeft, ChevronRight, Armchair } from "lucide-react";
 import { Session } from "@/types/sessao";
-import { useAuth } from "@/contexts/AuthContext";
 
 const daysOfWeek = ["D", "S", "T", "Q", "Q", "S", "S"];
 const monthNames = [
@@ -16,10 +15,18 @@ interface CalendarWidgetProps {
   sessions?: Session[];
   onMonthChange?: (date: Date) => void;
   onDayClick?: (date: Date) => void;
+  isTeacher: boolean;
+  currentUserId?: string;
 }
 
-export default function CalendarWidget({ sessions = [], onMonthChange, onDayClick }: CalendarWidgetProps) {
-  const { user, isTeacher } = useAuth();
+export default function CalendarWidget({ 
+  sessions = [], 
+  onMonthChange, 
+  onDayClick,
+  isTeacher,
+  currentUserId
+}: CalendarWidgetProps) {
+  
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const year = currentDate.getFullYear();
@@ -54,14 +61,11 @@ export default function CalendarWidget({ sessions = [], onMonthChange, onDayClic
 
     if (sessionsOnDay.length === 0) return { hasSession: false, isMine: false };
 
-    // Se for Admin, qualquer sessão conta para marcar o dia
+    // Regra de Negócio Visual: Professor vê tudo
     if (isTeacher) return { hasSession: true, isMine: false };
 
-    // Se for Terapeuta, verifica se é dona da sessão usando usuarioId
-    const mySession = sessionsOnDay.find(s => {
-        const ownerId = s.usuarioId;
-        return ownerId === user?.id;
-    });
+    // Regra de Negócio Visual: Aluno/Terapeuta vê as suas
+    const mySession = sessionsOnDay.find(s => s.usuarioId === currentUserId);
     
     return { hasSession: !!mySession, isMine: true };
   };
@@ -88,8 +92,8 @@ export default function CalendarWidget({ sessions = [], onMonthChange, onDayClic
               flex items-center justify-center w-7 h-7 rounded-full text-sm font-bold transition-all mb-0.5
               ${
                 today
-                  ? "bg-brand-purple text-white shadow-md shadow-brand-pink/40"
-                  : "text-gray-600"
+                  ? "bg-brand-purple text-white shadow-md shadow-brand-purple/30"
+                  : "text-brand-dark"
               }
             `}
           >
@@ -108,10 +112,10 @@ export default function CalendarWidget({ sessions = [], onMonthChange, onDayClic
   };
 
   return (
-    <Card className="w-full shadow-sm border border-brand-pink/30 bg-brand-surface">
+    <Card className="w-full shadow-sm border border-brand-purple/10 bg-brand-surface">
       <CardBody className="p-4">
         <div className="flex items-center justify-between mb-4">
-          <Typography variant="h6" className="capitalize font-bold text-brand-dark">
+          <Typography variant="h6" className="capitalize font-bold text-brand-dark font-heading">
             {monthNames[month]} <span className="text-gray-400 font-normal">{year}</span>
           </Typography>
           <div className="flex gap-1">
@@ -123,7 +127,7 @@ export default function CalendarWidget({ sessions = [], onMonthChange, onDayClic
             </IconButton>
           </div>
         </div>
-        <div className="grid grid-cols-7 mb-2 border-b border-brand-pink/20 pb-2">
+        <div className="grid grid-cols-7 mb-2 border-b border-brand-purple/10 pb-2">
           {daysOfWeek.map((day, i) => (
             <div key={i} className="flex justify-center">
               <Typography variant="small" className="font-bold text-xs text-brand-pink uppercase">
@@ -136,7 +140,7 @@ export default function CalendarWidget({ sessions = [], onMonthChange, onDayClic
           {renderDays()}
         </div>
         
-        <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-brand-pink/20">
+        <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-brand-purple/10">
           <Armchair size={14} className="text-brand-purple" />
           <Typography variant="small" className="text-xs text-gray-400 font-medium">
             {isTeacher ? "Indica dias com agendamentos" : "Indica dias com atendimento"}

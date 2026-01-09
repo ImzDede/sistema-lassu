@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import CardCadastro from "@/components/CardCadastro";
 import { Typography, Spinner } from "@material-tailwind/react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,10 +21,8 @@ export default function Cadastro() {
     { label: "TERAPEUTAS", href: "/home/cadastro/extensionista" },
   ];
 
-  // 3. Define quem pode ver os itens restritos
-  const canSeeRestricted = isTeacher || user?.permCadastro;
+  const canSeeRestricted = user?.permAdmin || user?.permCadastro;
 
-  // Spinner enquanto carrega o contexto
   if (isLoading) {
     return (
       <div className="flex items-center justify-center w-full h-[80vh]">
@@ -45,18 +42,14 @@ export default function Cadastro() {
 
       <div className="w-full shadow-lg border-t-4 border-brand-purple bg-brand-surface h-full p-4 md:p-8 rounded-xl">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 w-full max-w-5xl mx-auto">
-          
-          {/* Renderiza itens gerais para todos */}
           {menuItemsGeneral.map((item, index) => (
             <CardCadastro key={index} label={item.label} href={item.href} />
           ))}
 
-          {/* Renderiza itens restritos só se tiver permissão */}
           {canSeeRestricted &&
             menuItemsSpecific.map((item, index) => (
               <CardCadastro key={index} label={item.label} href={item.href} />
             ))}
-            
         </div>
       </div>
     </div>

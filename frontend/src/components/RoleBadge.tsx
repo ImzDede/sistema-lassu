@@ -1,58 +1,31 @@
-"use client";
-
 import React from "react";
-
-interface UserPerms {
-  permAdmin?: boolean;
-  permCadastro?: boolean;
-  permAtendimento?: boolean;
-}
+import { User } from "@/types/usuarios";
 
 interface RoleBadgeProps {
-  user: UserPerms | null;
-  className?: string;
+  user?: User | null;
 }
 
-export default function RoleBadge({ user, className = "" }: RoleBadgeProps) {
-  
-  // Função que define Texto e Estilo baseada na hierarquia
-  const getConfig = () => {
-    if (user?.permAdmin) {
-      return { 
-        label: "Administradora", 
-        style: "bg-brand-purple/30 text-brand-purple border-brand-purple/40" 
-      };
-    }
-    if (user?.permCadastro) {
-      return { 
-        label: "Cadastro", 
-        style: "bg-brand-pink/30 text-brand-pink border-brand-pink/40" 
-      };
-    }
-    if (user?.permAtendimento) {
-      return { 
-        label: "Atendimento", 
-        style: "bg-blue-50 text-blue-600 border-blue-100" 
-      };
-    }
-    // Fallback
-    return { 
-      label: "Colaboradora", 
-      style: "bg-gray-100 text-gray-500 border-gray-200" 
-    };
-  };
+export default function RoleBadge({ user }: RoleBadgeProps) {
+  if (!user) return null;
 
-  const { label, style } = getConfig();
+  let label = "Colaboradora";
+  let colorClass = "bg-gray-100 text-gray-600";
+
+  // Prioridade: Admin > Cadastro (Cadastro) > Atendimento > Colaboradora (Padrão)
+  if (user.permAdmin) {
+    label = "Administradora";
+    colorClass = "bg-brand-purple/10 text-brand-purple border border-brand-purple/20";
+  } else if (user.permAtendimento && !user.permCadastro) {
+    label = "Atendimento";
+    colorClass = "bg-brand-peach/20 text-brand-dark border border-brand-peach/30";
+  } else if (user.permCadastro) {
+    label = "Cadastro";
+    colorClass = "bg-brand-pink/20 text-brand-dark border border-brand-pink/30";
+  }
 
   return (
     <span
-      className={`
-        inline-flex items-center justify-center 
-        px-3 py-1 rounded-full border
-        text-[10px] font-bold uppercase tracking-wider 
-        shadow-sm transition-all
-        ${style} ${className}
-      `}
+      className={`px-3 py-1 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider ${colorClass}`}
     >
       {label}
     </span>

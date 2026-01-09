@@ -10,8 +10,8 @@ interface SelectOption {
 
 interface SelectProps {
   label?: string;
-  value: string;
-  onChange: (value: string) => void;
+  value: string | number;
+  onChange: (value: any) => void;
   options: (string | SelectOption)[];
   className?: string;
   required?: boolean;
@@ -22,23 +22,22 @@ const Select = ({ label, value, onChange, options, required, className = "" }: S
     <div className="w-full">
       <MTSelect
         label={label}
-        value={value}
-        onChange={(val: string) => {
-          if (val) onChange(val);
+        value={String(value)}
+        onChange={(val: string | undefined) => {
+           if (val) onChange(val);
         }}
         size="lg"
         variant="standard"
-        color="gray"
         className={`
-          bg-transparent font-medium text-gray-700
-          !border-b-[#D9A3B6]
-          focus:!border-b-[#A78FBF]
+          bg-transparent font-medium text-brand-dark
+          !border-b-brand-pink
+          focus:!border-b-brand-purple
           !border-b-[1px] focus:!border-b-[2px]
           ${className}
         `}
         labelProps={{
           className: `
-            text-gray-500 peer-focus:text-[#A78FBF]
+            text-gray-400 peer-focus:text-brand-purple
             font-medium
             before:content-none after:content-none
           `,
@@ -53,7 +52,7 @@ const Select = ({ label, value, onChange, options, required, className = "" }: S
           const valueOpt = typeof opt === "string" ? opt : opt.value;
           
           return (
-            <Option key={index} value={String(valueOpt)} className="text-gray-700 hover:bg-brand-purple/10 hover:text-brand-purple">
+            <Option key={index} value={String(valueOpt)} className="text-gray-700 hover:bg-brand-purple/10 hover:text-brand-purple font-medium">
               {labelOpt}
             </Option>
           );

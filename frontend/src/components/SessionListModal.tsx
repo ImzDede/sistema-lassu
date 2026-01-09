@@ -6,42 +6,41 @@ import { X, Calendar, User, Clock, Armchair } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Session } from "@/types/sessao";
-import { useAuth } from "@/contexts/AuthContext";
 
 interface SessionListModalProps {
   open: boolean;
   onClose: () => void;
   date: Date | null;
   sessions: Session[];
+  isTeacher: boolean;
 }
 
-export default function SessionListModal({ open, onClose, date, sessions }: SessionListModalProps) {
+export default function SessionListModal({ open, onClose, date, sessions, isTeacher }: SessionListModalProps) {
   if (!date) return null;
 
   const formattedDate = format(date, "dd 'de' MMMM", { locale: ptBR });
   const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-  const { isTeacher } = useAuth();
 
   const sortedSessions = [...sessions].sort((a, b) => a.hora - b.hora);
 
   return (
-    <Dialog open={open} handler={onClose} size="sm" className="rounded-xl overflow-hidden">
-      <DialogHeader className="flex items-center justify-between border-b border-gray-100 p-4 bg-brand-bg">
+    <Dialog open={open} handler={onClose} size="sm" className="rounded-xl overflow-hidden bg-white">
+      <DialogHeader className="flex items-center justify-between border-b border-brand-purple/10 p-4 bg-brand-bg">
         <div className="flex items-center gap-2">
           <Calendar className="text-brand-purple" size={20} />
-          <Typography variant="h6" color="blue-gray" className="capitalize">
+          <Typography variant="h6" className="capitalize text-brand-dark font-heading">
             {formattedDate}
           </Typography>
         </div>
-        <IconButton variant="text" color="blue-gray" onClick={onClose} className="rounded-full">
+        <IconButton variant="text" onClick={onClose} className="rounded-full text-gray-400 hover:bg-brand-purple/10 hover:text-brand-purple">
           <X size={20} />
         </IconButton>
       </DialogHeader>
 
-      <DialogBody className="p-0 max-h-[60vh] overflow-y-auto">
+      <DialogBody className="p-0 max-h-[60vh] overflow-y-auto custom-scrollbar">
         {isWeekend ? (
           <div className="flex flex-col items-center justify-center py-10 text-center px-4">
-            <Typography variant="h6" className="text-gray-400 mb-2">Fim de Semana</Typography>
+            <Typography variant="h6" className="text-brand-purple/50 mb-2">Fim de Semana</Typography>
             <Typography className="text-gray-400 text-sm">O laboratório não funciona aos sábados e domingos.</Typography>
           </div>
         ) : sortedSessions.length > 0 ? (
@@ -71,10 +70,10 @@ export default function SessionListModal({ open, onClose, date, sessions }: Sess
                 }
 
                 return (
-                  <div key={session.id} className="flex gap-4 p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors items-center">
+                  <div key={session.id} className="flex gap-4 p-4 border-b border-gray-100 hover:bg-brand-bg/50 transition-colors items-center group">
                     
                     {/* Coluna Horário */}
-                    <div className="flex flex-col items-center justify-center min-w-[7rem] p-2 bg-brand-purple/5 rounded-lg border border-brand-purple/10 h-fit">
+                    <div className="flex flex-col items-center justify-center min-w-[7rem] p-2 bg-brand-purple/5 rounded-lg border border-brand-purple/10 h-fit group-hover:bg-brand-purple/10 transition-colors">
                       <div className="flex items-center gap-1 mb-1">
                         <Clock size={14} className="text-brand-purple" />
                         <span className="text-[10px] uppercase font-bold text-brand-purple/70">Horário</span>
@@ -96,7 +95,7 @@ export default function SessionListModal({ open, onClose, date, sessions }: Sess
                             value={`Sala ${session.sala}`} 
                             size="sm" 
                             variant="ghost" 
-                            className="rounded-full text-[10px] h-6 px-2 shrink-0" 
+                            className="rounded-full text-[10px] h-6 px-2 shrink-0 bg-brand-pink/10 text-brand-pink" 
                         />
                       </div>
                       
@@ -112,7 +111,7 @@ export default function SessionListModal({ open, onClose, date, sessions }: Sess
           </div>
         ) : (
           <div className="py-12 text-center">
-            <Typography className="text-gray-400 font-medium">
+            <Typography className="text-gray-400 font-medium text-sm">
               Nenhuma sessão marcada para este dia.
             </Typography>
           </div>

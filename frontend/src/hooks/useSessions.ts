@@ -1,7 +1,6 @@
 import { useState, useCallback } from "react";
-import api from "@/services/api";
-import { Session, CreateSessionDTO } from "@/types/sessao";
-import { startOfMonth, endOfMonth, format } from "date-fns";
+import { sessionService } from "@/services/sessionServices";
+import { Session, CreateSessionDTO, UpdateSessionDTO } from "@/types/sessao";
 
 export function useSessions() {
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -9,89 +8,63 @@ export function useSessions() {
   const [error, setError] = useState<string | null>(null);
 
   // 1. LISTAR (GET)
-  const fetchSessions = useCallback(async (date: Date) => {
+  const fetchSessions = useCallback(async (params?: { start?: string; end?: string }) => {
     setLoading(true);
-    setError(null);
     try {
-      const startDate = format(startOfMonth(date), "yyyy-MM-dd");
-      const endDate = format(endOfMonth(date), "yyyy-MM-dd");
-
-      const response = await api.get(`/sessions?start=${startDate}&end=${endDate}`);
-      setSessions(Array.isArray(response.data) ? response.data : []);
-    } catch (err) {
-      console.error("Erro ao buscar sessões:", err);
-      setError("Erro ao carregar agenda.");
+      const data = await sessionService.getAll(params);
+      setSessions(data);
+      setError(null);
+    } catch (err: any) {
+      console.error(err);
+      setError("Erro ao buscar sessões.");
     } finally {
       setLoading(false);
     }
   }, []);
 
   // 2. CRIAR (POST)
-  const createSession = useCallback(async (data: CreateSessionDTO) => {
+  const createSession = async (data: CreateSessionDTO) => {
     setLoading(true);
     try {
-      await api.post("/sessions", data);
-      return true;
+      const newSession = await sessionService.create(data);
+      // Atualiza a lista localmente sem precisar buscar tudo de novo do back
+      setSessions((prev) => [...prev, newSession]);
+      return newSession;
     } catch (err: any) {
-      console.error("Erro ao criar sessão:", err);
-      const msg = err.response?.data?.message || err.response?.data?.error || "Erro ao agendar sessão.";
-      throw new Error(msg);
+      throw err;
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
-  // 3. ATUALIZAR DADOS (PUT) - Hora, Sala, Anotações
-  const updateSession = useCallback(async (id: number, data: Partial<CreateSessionDTO>) => {
+  // 3. ATUALIZAR (PATCH/PUT)
+  const updateSession = async (id: number, data: UpdateSessionDTO) => {
     setLoading(true);
     try {
-      await api.put(`/sessions/${id}`, data);
-      
-      // Atualização otimista local
-      setSessions(prev => prev.map(s => s.id === id ? { ...s, ...data } : s));
-      return true;
+      const updatedSession = await sessionService.update(id, data);
+      setSessions((prev) => 
+        prev.map((s) => (s.id === id ? updatedSession : s))
+      );
+      return updatedSession;
     } catch (err: any) {
-      console.error("Erro ao atualizar sessão:", err);
-      const msg = err.response?.data?.message || "Erro ao atualizar dados.";
-      throw new Error(msg);
+      throw err;
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
-  // 4. ATUALIZAR STATUS (PATCH) - "realizada", "cancelada"
-  const updateSessionStatus = useCallback(async (id: number, status: string) => {
+  // 4. DELETAR (DELETE)
+  const deleteSession = async (id: number) => {
     setLoading(true);
     try {
-      await api.patch(`/sessions/${id}/status`, { status });
-      
-      // Atualização otimista local
-      setSessions(prev => prev.map(s => s.id === id ? { ...s, status } : s));
-      return true;
+      await sessionService.delete(id);
+      setSessions((prev) => prev.filter((s) => s.id !== id));
     } catch (err: any) {
-      console.error("Erro ao mudar status:", err);
-      throw new Error("Erro ao atualizar status.");
+      throw err;
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  // 5. DELETAR (DELETE)
-  const deleteSession = useCallback(async (id: number) => {
-    setLoading(true);
-    try {
-      await api.delete(`/sessions/${id}`);
-      
-      // Remove da lista localmente
-      setSessions(prev => prev.filter(s => s.id !== id));
-      return true;
-    } catch (err: any) {
-      console.error("Erro ao deletar sessão:", err);
-      throw new Error("Erro ao excluir agendamento.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  };
 
   return {
     sessions,
@@ -100,7 +73,6 @@ export function useSessions() {
     fetchSessions,
     createSession,
     updateSession,
-    updateSessionStatus,
-    deleteSession
+    deleteSession,
   };
 }

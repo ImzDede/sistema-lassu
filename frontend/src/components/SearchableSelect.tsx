@@ -75,16 +75,17 @@ export default function SearchableSelect({
           {/* Botão X para remover */}
           <div 
             onClick={handleClear}
-            className="absolute top-2 right-2 z-20 bg-brand-purple hover:bg-brand-dark text-white rounded-full p-1 cursor-pointer transition-all"
+            className="absolute top-2 right-2 z-20 bg-brand-purple hover:bg-brand-dark text-white rounded-full p-1 cursor-pointer transition-all shadow-md"
             title="Remover seleção"
           >
-            <X size={16} />
+            <X size={14} />
           </div>
 
           <CardListagem
             nomePrincipal={selectedOption.label}
             detalhe={selectedOption.subLabel || "Selecionado"}
             onClick={() => setIsOpen(true)}
+            selected={true}
           />
         </div>
       ) : (
@@ -110,7 +111,7 @@ export default function SearchableSelect({
           />
 
           {isOpen && (
-            <Card className="absolute z-50 w-full mt-1 max-h-60 overflow-y-auto shadow-xl border border-brand-purple/20 rounded-lg">
+            <Card className="absolute z-50 w-full mt-1 max-h-60 overflow-y-auto shadow-xl border border-brand-purple/20 rounded-lg bg-white">
               <List className="p-1">
                 {filteredOptions.length > 0 ? (
                   filteredOptions.map((opt) => (
@@ -119,7 +120,7 @@ export default function SearchableSelect({
                       onClick={() => handleSelect(opt)}
                       className="text-sm font-medium rounded-md px-3 py-2 hover:bg-brand-purple/5 hover:text-brand-purple flex flex-col items-start gap-0.5"
                     >
-                      <span className="font-bold">{opt.label}</span>
+                      <span className="font-bold text-brand-dark">{opt.label}</span>
                       {opt.subLabel && <span className="text-xs text-gray-400 font-normal">{opt.subLabel}</span>}
                     </ListItem>
                   ))

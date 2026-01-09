@@ -2,67 +2,109 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { TokenPayload } from "@/types/usuarios";
-import { verifyUserRedirect } from "@/utils/auth"; 
-import api from "@/services/api";
+import { destroyCookie, parseCookies } from "nookies";
+import { User, LoginDTO } from "@/types/usuarios";
+import { authService } from "@/services/authServices";
+import { saveToken } from "@/utils/auth";
 
-// Estendemos o tipo para incluir dados que podem vir do /profile
-interface UserData extends TokenPayload {
-  fotoUrl?: string | null;
-  matricula?: number;
-  email?: string;
-  telefone?: string;
-}
-
-interface AuthContextType {
-  user: UserData | null;
+interface AuthContextData {
+  user: User | null;
+  isAuthenticated: boolean;
   isLoading: boolean;
   isTeacher: boolean;
+  signIn: (data: LoginDTO) => Promise<void>;
+  signOut: () => void;
+  refreshProfile: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType>({} as AuthContextType);
+const AuthContext = createContext({} as AuthContextData);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<UserData | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
   const router = useRouter();
   const pathname = usePathname();
 
+  // Função auxiliar para normalizar o usuário vindo da API
+  const normalizeUser = (data: any): User => {
+    return data.user ? data.user : data;
+  };
+
+  // 1. Carga inicial
   useEffect(() => {
-    const initAuth = async () => {
-      // Usa sua função verifyUserRedirect para checar cookie/rota instantaneamente
-      const userFromToken = verifyUserRedirect(router, pathname);
+    const { "lassu.token": token } = parseCookies();
 
-      // Se a função retornou null, ela já redirecionou pro login.
-      if (!userFromToken) {
-        if (pathname === "/") setIsLoading(false);
-        return;
-      }
-
-      // Carrega os dados do token na hora
-      setUser((prev) => ({ ...prev, ...userFromToken }));
+    if (token) {
+      authService
+        .getProfile()
+        .then((response) => {
+          const userData = normalizeUser(response);
+          setUser(userData);
+        })
+        .catch(() => {
+          signOut();
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    } else {
       setIsLoading(false);
+    }
+  }, []);
 
-      // Busca dados frescos do servidor
-      try {
-        const response = await api.get("/users/profile");
-        
-        if (response.data.user) {
-          setUser(response.data.user);
-        }
-      } catch (error) {
-        console.error("Erro ao validar sessão no servidor:", error);
+  // 2. Login
+  async function signIn({ email, senha }: LoginDTO) {
+    try {
+      const response = await authService.login({ email, senha });
+      const { token } = response;
+      
+      // Normaliza o usuário que vem no login
+      const userResponse = normalizeUser(response);
+
+      saveToken(token);
+      setUser(userResponse);
+
+      if (userResponse.primeiroAcesso) {
+        router.push("/primeiroAcesso");
+      } else {
+        router.push("/home");
       }
-    };
+    } catch (error) {
+      throw error;
+    }
+  }
 
-    initAuth();
-  }, [pathname, router]);
+  // 3. Logout
+  function signOut() {
+    destroyCookie(null, "lassu.token");
+    setUser(null);
+    router.push("/");
+  }
 
-  const isTeacher = !!user?.permAdmin;
+  // 4. Atualizar perfil
+  async function refreshProfile() {
+    try {
+      const response = await authService.getProfile();
+      setUser(normalizeUser(response));
+    } catch (error) {
+      console.error("Erro ao atualizar perfil", error);
+    }
+  }
+
+  const isTeacher = !!(user?.permAdmin || user?.permCadastro || user?.permAtendimento);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, isTeacher }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        isLoading,
+        isTeacher,
+        signIn,
+        signOut,
+        refreshProfile,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -10,21 +10,23 @@ import Button from "@/components/Button";
 import FeedbackAlert from "@/components/FeedbackAlert";
 import AvailabilityEditor from "@/components/AvailabilityEditor";
 import { saveToken, verifyUserRedirect } from "@/utils/auth";
-import { dayMap, numberToDayMap } from "@/utils/format"; 
+import { dayMap, numberToDayMap } from "@/utils/constants";
 import { TimeSlot } from "@/types/disponibilidade";
 import { useFeedback } from "@/hooks/useFeedback";
-import api from "@/services/api";
+import { authService } from "@/services/authServices";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function FirstAccess() {
   const router = useRouter();
   const pathname = usePathname();
+  const { user: contextUser } = useAuth();
 
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [userName, setUserName] = useState("");
 
-  const { feedback, showAlert, closeAlert } = useFeedback();
+  const { feedback, showFeedback, closeFeedback } = useFeedback();
 
   const [passwords, setPasswords] = useState({ new: "", confirm: "" });
   const [showNew, setShowNew] = useState(false);
@@ -34,20 +36,39 @@ export default function FirstAccess() {
   ]);
 
   useEffect(() => {
-    const user = verifyUserRedirect(router, pathname);
-    if (user) {
-      setUserName(user.nome);
+    // Verificação dupla (Cookie + Contexto) para garantir segurança
+    const userFromToken = verifyUserRedirect(router, pathname);
+    const finalUser = userFromToken || contextUser;
+
+    if (finalUser) {
+      if (finalUser.nome) setUserName(finalUser.nome);
+
+      // Se já passou do primeiro acesso, expulsa para home
+      if (finalUser.primeiroAcesso === false) {
+        router.replace("/home");
+        return;
+      }
+
       setIsAuthorized(true);
     }
-  }, [router, pathname]);
+  }, [router, pathname, contextUser]);
 
   const handleGoToStep2 = () => {
-    if (passwords.new.length < 6) {
-      showAlert("red", "A senha deve ter pelo menos 6 caracteres.");
+    if (passwords.new.length < 8) {
+      showFeedback("A senha deve ter pelo menos 8 caracteres.", "error");
       return;
     }
+
+    // Verificação de letra maiúscula e caractere especial
+    const strongPasswordRegex = /^(?=.*[A-Z])(?=.*[!@#$&*]).+$/;
+
+    if (!strongPasswordRegex.test(passwords.new)) {
+      showFeedback("A senha deve conter uma letra maiúscula e um caractere especial.", "error");
+      return;
+    }
+
     if (passwords.new !== passwords.confirm) {
-      showAlert("red", "As senhas não coincidem.");
+      showFeedback("As senhas não coincidem.", "error");
       return;
     }
     setStep(2);
@@ -58,6 +79,7 @@ export default function FirstAccess() {
   };
 
   const handleFinalize = async () => {
+    // Validação de horários
     const hasInvalidTime = availability.some(
       (slot) =>
         parseInt(slot.start.split(":")[0], 10) >=
@@ -65,51 +87,54 @@ export default function FirstAccess() {
     );
 
     if (hasInvalidTime) {
-      showAlert("red", "Horário final deve ser maior que inicial.");
+      showFeedback("Horário final deve ser maior que inicial.", "error");
       return;
     }
 
     setLoading(true);
 
     try {
+      // Formata para o Backend (String "Segunda" -> Int 1)
       const disponibilidadeFormatada = availability.map((slot) => ({
-        dia: dayMap[slot.day],
+        diaSemana: dayMap[slot.day],
         horaInicio: parseInt(slot.start.split(":")[0], 10),
         horaFim: parseInt(slot.end.split(":")[0], 10),
       }));
 
-      const payload = {
-        senha: passwords.new,
-        disponibilidade: disponibilidadeFormatada,
-      };
+      // Chama o Service
+      const { token } = await authService.completeFirstAccess(passwords.new, disponibilidadeFormatada);
 
-      const response = await api.patch("/users/first-acess", payload);
+      if (!token) throw new Error("Token não retornado pela API.");
 
-      const newToken = response.data.token;
-      if (!newToken) throw new Error("Erro: Token não retornado.");
-
-      saveToken(newToken);
-
-      showAlert("green", "Cadastro finalizado! Entrando...");
-
+      saveToken(token);
+      showFeedback("Cadastro finalizado! Entrando...", "success");
       setTimeout(() => router.push("/home"), 1500);
+
     } catch (error: any) {
-      console.error(error);
-      let msg =
-        error.response?.data?.error ||
-        error.response?.data?.message ||
-        "Erro ao salvar.";
+      console.error("Erro no cadastro:", error);
+      let msg = "Erro ao salvar.";
 
-      msg = msg.replace(/\b([1-5])\b/g, (match: string) => {
-        const numero = parseInt(match, 10);
-        return numberToDayMap[numero] || match;
-      });
-
-      if (typeof msg === "string" && msg.includes("diferente da anterior")) {
-        setStep(1);
+      // Tenta extrair mensagem de erro
+      if (error.response?.data?.error) {
+        const errData = error.response.data.error;
+        if (typeof errData === "string") msg = errData;
+        else if (errData.message) msg = errData.message;
+      }
+      
+      // Traduz números de dias na mensagem de erro se houver
+      if (typeof msg === "string") {
+        try {
+           msg = msg.replace(/\b([0-6])\b/g, (match) => {
+             const n = parseInt(match, 10);
+             return numberToDayMap[n] || match;
+           });
+        } catch (e) {}
+        
+        // Se deu erro de disponibilidade, volta pro step 2, senão step 1
+        if (!msg.includes("senha")) setStep(2); 
       }
 
-      showAlert("red", msg);
+      showFeedback(msg, "error");
     } finally {
       setLoading(false);
     }
@@ -129,9 +154,9 @@ export default function FirstAccess() {
 
       <FeedbackAlert
         open={feedback.open}
-        color={feedback.color}
+        color={feedback.type === "error" ? "red" : "green"}
         message={feedback.message}
-        onClose={closeAlert}
+        onClose={closeFeedback}
       />
 
       <div className="w-full max-w-2xl flex flex-col gap-6 relative z-10">
@@ -144,16 +169,14 @@ export default function FirstAccess() {
             className="mx-auto my-6"
           />
           <Typography className="text-xl md:text-3xl text-brand-dark font-bold uppercase break-words px-4 leading-tight">
-            Olá, {userName.split(" ")[0]}!
+            Olá, {userName ? userName.split(" ")[0] : "Usuário"}!
           </Typography>
-          <Typography
-            className="text-gray-500 font-normal text-sm md:text-base"
-            placeholder={undefined}
-          >
+          <Typography className="text-gray-500 font-normal text-sm md:text-base">
             Como é seu primeiro acesso, precisamos configurar algumas coisas.
           </Typography>
         </div>
 
+        {/* Stepper */}
         <div className="flex items-center justify-center gap-4 mb-4">
           <div className={`flex items-center gap-2 ${step >= 1 ? "text-brand-purple" : "text-gray-300"}`}>
             <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 font-bold ${step >= 1 ? "border-brand-purple bg-brand-purple text-white" : "border-gray-300"}`}>1</div>
@@ -206,7 +229,9 @@ export default function FirstAccess() {
                 </div>
 
                 <div className="flex justify-end mt-4">
-                  <Button onClick={handleGoToStep2} className="flex items-center gap-2">PRÓXIMO <ArrowRight size={18} /></Button>
+                  <Button onClick={handleGoToStep2} className="flex items-center gap-2">
+                    PRÓXIMO <ArrowRight size={18} />
+                  </Button>
                 </div>
               </div>
             )}
@@ -214,14 +239,20 @@ export default function FirstAccess() {
             {step === 2 && (
               <div className="flex flex-col gap-6 animate-fade-in">
                 <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
-                  <div className="p-2 bg-brand-purple/10 rounded-lg"><Clock className="w-6 h-6 text-brand-purple" /></div>
+                  <div className="p-2 bg-brand-purple/10 rounded-lg">
+                    <Clock className="w-6 h-6 text-brand-purple" />
+                  </div>
                   <div>
                     <Typography variant="h6" className="text-brand-dark font-bold">Definir Disponibilidade</Typography>
                     <Typography variant="small" className="text-gray-400">Informe seus horários livres.</Typography>
                   </div>
                 </div>
 
-                <AvailabilityEditor availability={availability} setAvailability={setAvailability} onError={(msg) => showAlert("red", msg)} />
+                <AvailabilityEditor
+                  availability={availability}
+                  setAvailability={setAvailability}
+                  onError={(msg) => showFeedback(msg, "error")}
+                />
 
                 <div className="flex flex-col-reverse md:flex-row justify-between gap-4 mt-4 pt-4 border-t border-gray-100">
                   <div className="w-full md:w-1/3">
