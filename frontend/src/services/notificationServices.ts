@@ -1,15 +1,23 @@
 import api from "@/services/apiServices";
 import { Notification } from "@/types/notification";
+import { ApiResponse } from "@/types/api";
 
 export const notificationService = {
-  // Buscar todas
-  async getAll(): Promise<Notification[]> {
-    const response = await api.get("/notifications");
-    const data = response.data.data || response.data;
-    return Array.isArray(data) ? data : (data.notifications || []);
+  // Busca todas as notificações
+  async getAll(page = 1, limit = 10): Promise<ApiResponse<Notification[]>> {
+    const response = await api.get("/notifications", { 
+        params: { page, limit } 
+    });
+    
+    const notificationsList = response.data.data?.notifications || [];
+
+    return { 
+        ...response.data, 
+        data: notificationsList 
+    };
   },
 
-  // Marcar como lida
+  // Marca como lida
   async markAsRead(ids: number[]): Promise<void> {
     await api.patch("/notifications/read", { ids });
   }

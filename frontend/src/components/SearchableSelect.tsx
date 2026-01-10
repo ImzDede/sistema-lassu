@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { ChevronDown, Search, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { Spinner, Card, List, ListItem } from "@material-tailwind/react";
 import Input from "@/components/Input";
 import CardListagem from "@/components/CardListagem";
@@ -17,6 +17,7 @@ interface SearchableSelectProps {
   options: Option[];
   value: string | null;
   onChange: (id: string | null) => void;
+  onSearch?: (term: string) => void;
   isLoading?: boolean;
   placeholder?: string;
   required?: boolean;
@@ -27,6 +28,7 @@ export default function SearchableSelect({
   options,
   value,
   onChange,
+  onSearch,
   isLoading = false,
   placeholder = "Digite para buscar...",
   required = false,
@@ -34,8 +36,12 @@ export default function SearchableSelect({
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const wrapperRef = useRef<HTMLDivElement>(null);
+  
+  // Ref para controlar o tempo de digitação
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
-  const selectedOption = options.find((opt) => opt.id === value);
+  // Encontra a opção selecionada
+  const selectedOption = options.find((opt) => opt.id === value) || (value ? { label: "Paciente Selecionado", subLabel: "Carregado", id: value } as Option : undefined);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -47,17 +53,37 @@ export default function SearchableSelect({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Limpa o termo se o valor for resetado externamente
   useEffect(() => {
     if (!value) setSearchTerm("");
   }, [value]);
 
-  const filteredOptions = options.filter((opt) =>
-    opt.label.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Só busca quando o usuário para de digitar
+  useEffect(() => {
+    if (!onSearch) return;
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    debounceRef.current = setTimeout(() => {
+        // Se estiver aberto ou tiver termo, dispara a busca
+        if (isOpen || searchTerm) {
+            onSearch(searchTerm);
+        }
+    }, 500); // 500ms de atraso
+
+    return () => {
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [searchTerm, onSearch, isOpen]);
+
+  const filteredOptions = onSearch 
+      ? options 
+      : options.filter((opt) => opt.label.toLowerCase().includes(searchTerm.toLowerCase()));
 
   const handleSelect = (option: Option) => {
     onChange(option.id);
     setSearchTerm("");
+    if (onSearch) onSearch(""); // Limpa a busca no back para restaurar a lista padrão
     setIsOpen(false);
   };
 
@@ -65,6 +91,7 @@ export default function SearchableSelect({
     e?.stopPropagation();
     onChange(null);
     setSearchTerm("");
+    if (onSearch) onSearch("");
     setIsOpen(true);
   };
 
@@ -72,7 +99,6 @@ export default function SearchableSelect({
     <div className="relative w-full" ref={wrapperRef}>
       {selectedOption && !isOpen ? (
         <div className="relative animate-fade-in group">
-          {/* Botão X para remover */}
           <div 
             onClick={handleClear}
             className="absolute top-2 right-2 z-20 bg-brand-purple hover:bg-brand-dark text-white rounded-full p-1 cursor-pointer transition-all shadow-md"
@@ -126,7 +152,7 @@ export default function SearchableSelect({
                   ))
                 ) : (
                   <div className="p-3 text-center text-sm text-gray-400 italic">
-                    {searchTerm ? "Nenhum resultado encontrado." : "Digite para buscar..."}
+                    {isLoading ? "Buscando..." : "Nenhum resultado encontrado."}
                   </div>
                 )}
               </List>
