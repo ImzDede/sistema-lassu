@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Users } from "lucide-react";
 import { Card, CardBody, Typography, Spinner } from "@material-tailwind/react";
@@ -19,19 +19,31 @@ import { sessionHourOptions, roomOptions } from "@/utils/constants";
 export default function RegisterSession() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
-  const { patients, refreshPatients, loading: loadingPatients } = usePatients();
+  const { patients, fetchPatients, loading: loadingPatients } = usePatients();
   const { createSession } = useSessions();
   const { feedback, showFeedback, closeFeedback } = useFeedback();
   const [loadingSave, setLoadingSave] = useState(false);
-  
   const [selectedPatient, setSelectedPatient] = useState<string | null>(null);
   const [selectedRoom, setSelectedRoom] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedHour, setSelectedHour] = useState("");
 
+  // Carrega a lista inicial (os primeiros 10 pacientes ativos)
   useEffect(() => {
-    if (user) refreshPatients();
-  }, [user, refreshPatients]);
+    if (user) {
+        fetchPatients({ page: 1, limit: 10, status: 'atendimento' });
+    }
+  }, [user, fetchPatients]);
+
+  // Função de busca que será passada para o Select
+  const handleSearchPatient = useCallback((term: string) => {
+      fetchPatients({ 
+          nome: term, 
+          page: 1, 
+          limit: 10,
+          status: 'atendimento'
+      });
+  }, [fetchPatients]);
 
   const patientOptions = patients
     .filter((p) => p && p.id && p.nome)
@@ -105,11 +117,13 @@ export default function RegisterSession() {
 
           <form className="flex flex-col gap-8">
             <div className="w-full">
+                {/* AQUI ESTÁ A MUDANÇA: onSearch conectado */}
                 <SearchableSelect 
                     label="Paciente"
                     options={patientOptions}
                     value={selectedPatient}
                     onChange={setSelectedPatient}
+                    onSearch={handleSearchPatient} // <--- O PULO DO GATO
                     isLoading={loadingPatients}
                     required
                 />

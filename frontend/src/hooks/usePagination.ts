@@ -1,22 +1,61 @@
 import { useState } from "react";
 
-export function usePagination(initialCount = 10, increment = 10) {
-  const [visibleCount, setVisibleCount] = useState(initialCount);
+export interface PaginationMetadata {
+  totalItems: number;
+  itemCount: number;
+  itemsPerPage: number;
+  totalPages: number;
+  currentPage: number;
+}
 
-  const loadMore = () => {
-    setVisibleCount((prev) => prev + increment);
+export function usePagination(initialPage = 1) {
+  const [page, setPage] = useState(initialPage);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+
+  // Avançar página
+  const nextPage = () => {
+    if (page < totalPages) {
+      setPage((prev) => prev + 1);
+    }
   };
 
-  const hasMore = (totalItems: number) => visibleCount < totalItems;
+  // Voltar página
+  const prevPage = () => {
+    if (page > 1) {
+      setPage((prev) => prev - 1);
+    }
+  };
 
-  const resetPagination = () => {
-    setVisibleCount(initialCount);
+  // Ir para página específica
+  const goToPage = (pageNumber: number) => {
+    if (pageNumber >= 1 && pageNumber <= totalPages) {
+      setPage(pageNumber);
+    }
+  };
+
+  // Atualiza tudo quando a API responde
+  const setMetadata = (meta: PaginationMetadata) => {
+    if (meta) {
+      setTotalPages(meta.totalPages);
+      setTotalItems(meta.totalItems);
+      if (meta.currentPage && meta.currentPage !== page) {
+         setPage(meta.currentPage);
+      }
+    }
   };
 
   return {
-    visibleCount,
-    loadMore,
-    hasMore,
-    resetPagination
+    page,
+    totalPages,
+    totalItems,
+    setPage,
+    nextPage,
+    prevPage,
+    goToPage,
+    setMetadata,
+    // Helpers visuais para desabilitar botões
+    hasNext: page < totalPages,
+    hasPrev: page > 1,
   };
 }

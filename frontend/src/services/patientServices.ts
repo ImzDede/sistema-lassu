@@ -1,16 +1,31 @@
 import api from "./apiServices";
 import { CreatePatientDTO, Patient, UpdatePatientDTO } from "@/types/paciente";
+import { ApiResponse } from "@/types/api";
+
+interface PatientQueryParams {
+  page?: number;
+  limit?: number;
+  nome?: string;
+  status?: string; // 'atendimento' ou 'encaminhada'
+  userTargetId?: string;
+}
 
 export const patientService = {
-  // Listar todos
-  async getAll(): Promise<Patient[]> {
-    const response = await api.get("/patients");
-    const result = response.data.data || response.data;
+  //Listar
+  async getAll(params?: PatientQueryParams): Promise<ApiResponse<Patient[]>> {
+    const response = await api.get("/patients", { params });
+    const rawData = response.data.data;
     
-    return Array.isArray(result) ? result : [];
+    const cleanData = Array.isArray(rawData) 
+        ? rawData.map((item: any) => item.patient ? item.patient : item) 
+        : [];
+
+    return {
+        ...response.data,
+        data: cleanData
+    };
   },
 
-  // Buscar por ID
   async getById(id: string): Promise<Patient> {
     const response = await api.get(`/patients/${id}`);
     return response.data.data || response.data;

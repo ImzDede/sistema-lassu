@@ -20,6 +20,12 @@ export const authService = {
     return response.data.data || response.data;
   },
 
+  // Refresh Token
+  async refreshToken(): Promise<{ token: string }> {
+    const response = await api.post("/users/refresh");
+    return response.data.data;
+  },
+
   // Atualiza dados cadastrais
   async updateProfile(data: Partial<UpdateProfileDTO>): Promise<User> {
     const response = await api.put("/users/profile", data);

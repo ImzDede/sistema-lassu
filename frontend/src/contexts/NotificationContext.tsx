@@ -18,16 +18,19 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  const unreadCount = notifications.filter((n) => !n.lida).length;
+  // Conta apenas as que tem lida === false
+  const unreadCount = notifications.filter((n) => n.lida === false).length;
 
   const fetchNotifications = useCallback(async () => {
     if (!user) return;
     try {
-      const data = await notificationService.getAll();
-      setNotifications(data);
+      // Busca as 10 últimas
+      const response = await notificationService.getAll(1, 10);
+      
+      setNotifications(response.data || []);
+      
     } catch (error) {
-      console.error("Erro notificações:", error);
-      setNotifications([]); // Falha silenciosa para não quebrar a UI
+      console.error("Erro ao buscar notificações:", error);
     }
   }, [user]);
 
@@ -45,7 +48,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   };
 
-  // Polling a cada 30s
+  // Polling: Busca a cada 30 segundos
   useEffect(() => {
     if (user) {
       fetchNotifications();

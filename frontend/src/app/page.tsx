@@ -1,58 +1,41 @@
 "use client";
 
 import React, { useState, FormEvent, ChangeEvent } from "react";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Eye, EyeOff } from "lucide-react";
 import Input from "@/components/Input";
 import Button from "@/components/Button";
 import FeedbackAlert from "@/components/FeedbackAlert";
 import { Checkbox, Typography } from "@material-tailwind/react";
-import { saveToken } from "@/utils/auth";
 import { useFeedback } from "@/hooks/useFeedback";
-import { authService } from "@/services/authServices";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [keepConnected, setKeepConnected] = useState(false);
-
+  const [showPassword, setShowPassword] = useState(false);
   const { feedback, showFeedback, closeFeedback } = useFeedback();
-  const router = useRouter();
+  const { signIn, isLoading } = useAuth(); 
 
   async function handleLogin(event: FormEvent) {
     event.preventDefault();
     closeFeedback();
-    setLoading(true);
 
     try {
-      // 1. LOGIN via Service
-      const response = await authService.login({ email, senha: password });
-      const { token, user } = response;
-
-      if (!token) throw new Error("Token não recebido.");
-
-      // 2. SALVA O TOKEN
-      saveToken(token, keepConnected);
-
+      // Salva o token, atualiza o usuário e redireciona.
+      await signIn({ email, senha: password });
+      
       showFeedback("Autenticado! Redirecionando...", "success");
-
-      // 3. DECISÃO DE ROTA
-      setTimeout(() => {
-        if (user.primeiroAcesso) {
-          router.push("/primeiroAcesso");
-        } else {
-          router.push("/home");
-        }
-      }, 1000);
 
     } catch (err: any) {
       console.error("Erro Login:", err);
-      const msg = err.response?.data?.error || "Credenciais inválidas ou erro de conexão.";
+      // Tratamento de erro robusto
+      const msg = err.response?.data?.error || 
+                  err.response?.data?.message || 
+                  "Credenciais inválidas ou erro de conexão.";
+      
       showFeedback(typeof msg === "string" ? msg : "Erro ao entrar.", "error");
-      setLoading(false);
     }
   }
 
@@ -70,7 +53,7 @@ export default function Login() {
         <div className="mb-4 md:mb-8 z-10">
           <Image
             src="/lassuLogo.svg"
-            alt="Logo LSSSU"
+            alt="Logo LASSU"
             width={300}
             height={300}
             priority
@@ -78,7 +61,7 @@ export default function Login() {
           />
           <Image
             src="/lassuLogoCor.svg"
-            alt="Logo LSSSU"
+            alt="Logo LASSU"
             width={300}
             height={300}
             priority
@@ -132,17 +115,11 @@ export default function Login() {
             </div>
 
             <div className="mt-2">
-              <Button type="submit" fullWidth loading={loading}>
-                {loading ? "ENTRANDO..." : "ACESSAR SISTEMA"}
+              <Button type="submit" fullWidth loading={isLoading}>
+                {isLoading ? "ENTRANDO..." : "ACESSAR SISTEMA"}
               </Button>
             </div>
           </form>
-
-          <div className="text-center mt-4">
-            <a href="#" className="text-sm text-gray-400 hover:text-brand-purple hover:underline transition-colors font-medium">
-              Esqueceu sua senha?
-            </a>
-          </div>
         </div>
       </div>
     </main>

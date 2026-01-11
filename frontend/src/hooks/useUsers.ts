@@ -7,56 +7,71 @@ export function useUsers() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refreshUsers = useCallback(async () => {
+  // Busca lista de terapeutas
+  const fetchUsers = useCallback(async (filters?: { page?: number; limit?: number; ativo?: boolean }) => {
     setLoading(true);
     try {
-      const data = await userService.getAllTherapists();
-      setUsers(data);
+      let ativoParam: 'true' | 'false' | undefined = undefined;
+      if (filters?.ativo === true) ativoParam = 'true';
+      if (filters?.ativo === false) ativoParam = 'false';
+
+      const response = await userService.getAllTherapists({
+        page: filters?.page || 1,
+        limit: filters?.limit || 8,
+        ativo: ativoParam,
+        orderBy: 'nome'
+      });
+
+      setUsers(response.data || []);
       setError(null);
+      
+      return response.meta;
     } catch (err) {
       console.error(err);
       setError("Erro ao carregar usuários.");
+      return null;
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const getUserById = async (id: string) => {
+  // Alias para compatibilidade com código legado
+  const refreshUsers = useCallback(() => fetchUsers(), [fetchUsers]);
+
+  // Busca um usuário específico pelo ID
+  const getUserById = useCallback(async (id: string) => {
     try {
       setLoading(true);
-      const user = await userService.getById(id);
-      return user;
-    } finally {
-      setLoading(false);
+      return await userService.getById(id);
+    } finally { 
+      setLoading(false); 
     }
-  };
+  }, []);
 
-  const updatePermissions = async (id: string, perms: Partial<User>) => {
+  // Atualiza as permissões de um usuário
+  const updatePermissions = useCallback(async (id: string, perms: Partial<User>) => {
     try {
       const updated = await userService.updatePermissions(id, perms);
       setUsers((prev) => prev.map((u) => (u.id === id ? updated : u)));
       return updated;
-    } catch (error) {
-      throw error;
-    }
-  };
+    } catch (error) { throw error; }
+  }, []);
 
-  const toggleStatus = async (id: string, currentStatus: boolean) => {
+  // Alterna o status (Ativo/Inativo) de um usuário
+  const toggleStatus = useCallback(async (id: string, currentStatus: boolean) => {
     try {
       const updated = await userService.update(id, { ativo: !currentStatus });
       setUsers((prev) => prev.map((u) => (u.id === id ? updated : u)));
       return updated;
-    } catch (error) {
-      throw error;
-    }
-  };
+    } catch (error) { throw error; }
+  }, []);
 
   return {
     users,
     loading,
     error,
     refreshUsers,
-    fetchUsers: refreshUsers,
+    fetchUsers,
     getUserById,
     updatePermissions,
     toggleStatus,
