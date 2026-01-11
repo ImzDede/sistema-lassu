@@ -106,7 +106,10 @@ export class PatientService {
         if (!perms.admin && patientRow.terapeuta_id !== userId) {
             throw new AppError(HTTP_ERRORS.FORBIDDEN.PATIENT.NOT_YOURS, 403);
         }
-        return { patientRow }
+
+        const therapistName = await userRepository.getName(patientRow.terapeuta_id) as string
+
+        return { patientRow, therapistName }
     }
 
     async update(userId: string, patientId: string, data: PatientUpdateDTO, perms: UserPermDTO) {

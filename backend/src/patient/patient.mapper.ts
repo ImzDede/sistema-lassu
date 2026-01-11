@@ -1,4 +1,4 @@
-import { PatientListResponseDTO, PatientListRow, PatientResponseDTO, PatientRow, PatientUpdateResponseDTO, PatientUpdateRow } from "./patient.type";
+import { PatientGetResponseDTO, PatientListResponseDTO, PatientListRow, PatientResponseDTO, PatientRow, PatientUpdateResponseDTO, PatientUpdateRow } from "./patient.type";
 
 export class PatientMapper {
     static toComplete(data: { patientRow: PatientRow }): PatientResponseDTO {
@@ -13,6 +13,25 @@ export class PatientMapper {
                 terapeutaId: patientRow.terapeuta_id,
                 status: patientRow.status,
                 createdAt: patientRow.created_at
+            }
+        }
+    }
+
+    static toGet(data: { patientRow: PatientRow, therapistName: string }): PatientGetResponseDTO {
+        const { patientRow, therapistName } = data
+        return {
+            patient: {
+                id: patientRow.id,
+                nome: patientRow.nome,
+                dataNascimento: patientRow.data_nascimento,
+                cpf: patientRow.cpf,
+                telefone: patientRow.telefone,
+                status: patientRow.status,
+                createdAt: patientRow.created_at
+            },
+            therapist: {
+                id: patientRow.terapeuta_id,
+                nome: therapistName
             }
         }
     }

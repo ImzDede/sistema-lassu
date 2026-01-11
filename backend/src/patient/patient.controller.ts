@@ -62,7 +62,7 @@ export class PatientController {
 		const perms = userPermsSchema.parse(req.userPerms);
 		const { targetId } = req.validated.params
 		const result = await patientService.getById(userId, targetId, perms)
-		const data = PatientMapper.toComplete(result)
+		const data = PatientMapper.toGet(result)
 		res.status(200).json(response(data));
 	}
 

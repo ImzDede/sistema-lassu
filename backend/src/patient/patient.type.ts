@@ -36,6 +36,22 @@ export type PatientResponseDTO = {
     }
 }
 
+export type PatientGetResponseDTO = {
+    patient: {
+        id: string,
+        nome: string,
+        dataNascimento: string,
+        cpf: string,
+        telefone: string,
+        status: string,
+        createdAt: string
+    },
+    therapist: {
+        id: string
+        nome: string
+    }
+}
+
 export type PatientUpdateResponseDTO = {
     patient: {
         id: string,
