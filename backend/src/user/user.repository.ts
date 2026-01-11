@@ -59,6 +59,7 @@ export class UserRepository {
             orderBy: 'nome' | 'created_at' | 'ativo';
             direction: 'ASC' | 'DESC';
             ativo?: boolean;
+            nome?: string;
         }): Promise<{ userRows: UserListRow[], total: number }> {
         const values: any[] = [];
         let whereClause = 'WHERE perm_admin != true';
@@ -68,25 +69,33 @@ export class UserRepository {
             values.push(params.ativo);
         }
 
+        if (params.nome !== undefined) {
+            whereClause += ` AND nome ILIKE $${values.length + 1}`;
+            values.push(`%${params.nome}%`);
+        }
+
         const queryCount = `SELECT COUNT(*) as total FROM usuarios ${whereClause}`;
-        const sortColumn = params.orderBy;
+        const countValues = [...values];
 
         const limitParamIndex = values.length + 1;
         const offsetParamIndex = values.length + 2;
         values.push(params.limit, params.offset);
 
+        const validSortColumns = ['nome', 'created_at', 'ativo'];
+        if (!validSortColumns.includes(params.orderBy)) throw new Error("Invalid sort column");
+
         const queryData = `
             SELECT id, nome, created_at, matricula, foto_url, ativo, perm_cadastro, perm_atendimento
             FROM usuarios 
             ${whereClause}
-            ORDER BY ${sortColumn} ${params.direction} 
+            ORDER BY ${params.orderBy} ${params.direction} 
             LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}
         `;
 
-        const resultData = await pool.query(queryData, values);
-
-        const countValues = params.ativo !== undefined ? [params.ativo] : [];
-        const resultCount = await pool.query(queryCount, countValues)
+        const [resultData, resultCount] = await Promise.all([
+            pool.query(queryData, values),
+            pool.query(queryCount, countValues)
+        ]);
 
         return {
             userRows: resultData.rows,

@@ -193,7 +193,7 @@ export class UserService {
     }
 
     async listAll(params: UserListDTO) {
-        const { page, limit, orderBy, direction, ativo } = params;
+        const { page, limit, orderBy, direction, ativo, nome } = params;
         const offset = (page - 1) * limit;
 
         const ativoBoolean = ativo === 'true' ? true : (ativo === 'false' ? false : undefined);
@@ -203,6 +203,7 @@ export class UserService {
             offset,
             orderBy,
             direction,
+            nome,
             ativo: ativoBoolean
         });
 
@@ -216,6 +217,7 @@ export class UserService {
             itemsPerPage: limit,
             sortBy: orderBy,
             sortDirection: direction,
+            filterName: nome,
             filterActive: ativoBoolean
         };
     }

@@ -203,7 +203,7 @@ export class PatientService {
         const patient = await repository.getById(patientId);
         if (!patient) throw new AppError(HTTP_ERRORS.NOT_FOUND.PATIENT, 404);
 
-        if (!perms.admin && patient.terapeuta_id !== userId) {
+        if (!perms.cadastro && patient.terapeuta_id !== userId) {
             throw new AppError("Permissão negada para excluir esta paciente.", 403);
         }
 
@@ -217,7 +217,7 @@ export class PatientService {
         const patient = await repository.getById(patientId);
         if (!patient) throw new AppError(HTTP_ERRORS.NOT_FOUND.PATIENT, 404);
 
-        if (!perms.admin && patient.terapeuta_id !== userId) {
+        if (!perms.cadastro && patient.terapeuta_id !== userId) {
             throw new AppError("Permissão negada para restaurar esta paciente.", 403);
         }
 

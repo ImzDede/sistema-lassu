@@ -20,9 +20,9 @@ router.put('/:targetId', validate(patientTargetIdParamSchema, 'params'), validat
 router.patch('/:targetId/refer', validate(patientTargetIdParamSchema, 'params'), patientController.refer);
 router.delete('/:targetId', validate(patientTargetIdParamSchema), patientController.delete);
 router.patch('/:targetId/restore', validate(patientTargetIdParamSchema), patientController.restore);
+router.patch('/:targetId/transfer', is('cadastro'),validate(patientTargetIdParamSchema, 'params'), validate(patientTransferSchema), patientController.transfer);
 
 router.use(is('admin'));
 router.patch('/:targetId/unrefer', validate(patientTargetIdParamSchema, 'params'), patientController.unrefer);
-router.patch('/:targetId/transfer', validate(patientTargetIdParamSchema, 'params'), validate(patientTransferSchema), patientController.transfer);
 
 export default router;
