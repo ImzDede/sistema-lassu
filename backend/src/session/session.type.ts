@@ -1,41 +1,116 @@
-//-------
-// Banco 
-//-------
+//------------------
+// Retorno do Banco  
+//------------------
 
 export type SessionRow = {
-    id: string,
+    id: number,
     paciente_id: string,
     usuario_id: string,
-    dia: number,
+    dia: string,
     hora: number,
     sala: number,
     status: 'agendada' | 'realizada' | 'falta' | 'cancelada_paciente' | 'cancelada_terapeuta',
-    created_at: string,
-    deleted_at: string
+    updated_at: Date | null,
+    created_at: Date,
 }
 
-//------------
-// Repository
-//------------
+export type SessionGetRow =
+    SessionRow & {
+        paciente_nome: string,
+        terapeuta_nome: string
+    }
 
-export type SessionCreateDB = {
-    pacienteId: string,
-    dia: number,
-    hora: number,
-    sala: number,
-    status: 'agendada' | 'realizada' | 'falta' | 'cancelada_paciente' | 'cancelada_terapeuta',
+//--------------
+// Response DTO 
+//--------------
+
+export type SessionGetResponseDTO = {
+    session: {
+        id: number,
+        dia: string,
+        hora: number,
+        sala: number,
+        status: string,
+        updatedAt: Date | null,
+        createdAt: Date
+    },
+    therapist: {
+        id: string
+        nome: string
+    },
+    patient: {
+        id: string
+        nome: string
+    }
 }
 
-//--------
-// Mapper
-//--------
+export type SessionListResponseDTO = {
+    session: {
+        id: number,
+        dia: string,
+        hora: number,
+        sala: number,
+        status: string
+    },
+    therapist: {
+        id: string
+        nome: string
+    },
+    patient: {
+        id: string
+        nome: string
+    }
+}[]
 
-export type SessionResponseDTO = {
-    id: string,
-    pacienteId: string,
-    usuarioId: string,
-    dia: number,
-    hora: number,
-    sala: number,
-    status: string,
+export type SessionCreateResponseDTO = {
+    session: {
+        id: number,
+        dia: string,
+        hora: number,
+        sala: number,
+        status: string,
+        createdAt: Date
+    },
+    patient: {
+        id: string
+        nome: string
+    }
+}
+
+export type SessionUpdateStatusResponseDTO = {
+    session: {
+        id: number,
+        status: string,
+        updatedAt: Date | null
+    }
+}
+
+export type SessionUpdateResponseDTO = {
+    session: {
+        id: number,
+        dia: string,
+        hora: number,
+        sala: number,
+        status: string,
+        updatedAt: Date | null
+    }
+}
+
+export type SessionRescheduleResponseDTO = {
+    session: {
+        id: number,
+        dia: string,
+        hora: number,
+        sala: number,
+        status: string,
+        createdAt: Date
+    },
+    canceledSession: {
+        id: number,
+        dia: string,
+        hora: number,
+        sala: number,
+        status: string,
+        updatedAt: Date | null
+    }
 }

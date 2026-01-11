@@ -1,235 +1,174 @@
-import { Session } from "../types/Session";
-import pool from "../config/db";
 import { AppError } from "../errors/AppError";
 import { HTTP_ERRORS } from "../errors/messages";
-import { NotificationService } from "./notification.services";
-import { NOTIFICATION } from "../types/Notification";
+import { NOTIFICATION_MESSAGE } from "../notification/notification.messages";
+import { NotificationService } from "../notification/notification.service";
+import { PatientRepository } from "../patient/patient.repository";
+import { UserRepository } from "../user/user.repository";
+import { UserPermDTO } from "../user/user.schema";
+import { SessionRepository } from "./session.repository";
+import { SessionCreateDTO, SessionListDTO, SessionRescheduleDTO, SessionUpdateDTO, SessionUpdateStatusDTO } from "./session.schema";
 
+const repository = new SessionRepository()
 const notificationService = new NotificationService();
+const patientRepository = new PatientRepository()
+const userRepository = new UserRepository()
 
 export class SessionService {
-
-    private mapSession(sessionDb: any) {
-        return {
-            id: sessionDb.id,
-            pacienteId: sessionDb.paciente_id,
-            usuarioId: sessionDb.usuario_id,
-            dia: sessionDb.dia,
-            hora: sessionDb.hora,
-            sala: sessionDb.sala,
-            status: sessionDb.status,
-            anotacoes: sessionDb.anotacoes,
-            pacienteNome: sessionDb.paciente_nome,
-            profissionalNome: sessionDb.profissional_nome
-        };
-    }
-
-    async checkConflict(dia: string, hora: number, userId: string, excludeSessionId?: number) {
-        let conflictQuery = `
-            SELECT id 
-            FROM sessoes 
-            WHERE dia = $1 
-            AND hora = $2
-            AND status = 'agendada'
-            AND deleted_at IS NULL
-            AND usuario_id = $3
-        `;
-
-        const params: any[] = [dia, hora, userId];
-
-        // Lógica "Ignorar a si mesmo" para edição
-        if (excludeSessionId) {
-            conflictQuery += ` AND id != $4`;
-            params.push(excludeSessionId);
-        }
-
-        const conflict = await pool.query(conflictQuery, params);
-
-        if (conflict.rows.length > 0) {
-            throw new AppError("A terapeuta já possui um agendamento neste horário.", 409);
-        }
-    }
-
-    async create(sessionData: Session, userId: string) {
-        if (!sessionData.pacienteId || !sessionData.dia || !sessionData.hora || !sessionData.sala) {
-            throw new AppError(HTTP_ERRORS.BAD_REQUEST.MISSING_FIELDS, 400);
-        }
-
+    async create(userId: string, data: SessionCreateDTO) {
+        const { pacienteId: patientId } = data
         // Verifica se a paciente é da terapeuta
-        const patientQuery = `SELECT profissional_responsavel_id FROM pacientes WHERE id = $1`;
-        const patientResult = await pool.query(patientQuery, [sessionData.pacienteId]);
+        const therapistId = await patientRepository.getTherapistId(patientId)
+        if (!therapistId) throw new AppError(HTTP_ERRORS.NOT_FOUND.PATIENT, 404);
 
-        //Caso não ache a paciente
-        if (patientResult.rows.length == 0) throw new AppError(HTTP_ERRORS.NOT_FOUND.PATIENT, 404);
-
-        const responsavelId = patientResult.rows[0].profissional_responsavel_id;
-
-        if (!userId == responsavelId) {
+        if (userId != therapistId) {
             throw new AppError("Permissão negada para agendar este paciente.", 403);
         }
 
-        // Verifica Conflito (Só do profissional)
-        await this.checkConflict(sessionData.dia, sessionData.hora, userId);
+        // Verifica Conflito
+        const sameRoom = await repository.verifyConflictRoom(data)
+        if (sameRoom) {
+            throw new AppError("Já existe uma sessão agendada para essa sala nesse horário", 409)
+        }
+
+        const sameHour = await repository.verifyConflictHour(userId, data)
+        if (sameHour) {
+            throw new AppError("Você já tem uma sessão para esse horário", 409)
+        }
 
         // Inserção
-        const insertQuery = `
-            INSERT INTO sessoes (paciente_id, usuario_id, dia, hora, sala, status, anotacoes)
-            VALUES ($1, $2, $3, $4, $5, 'agendada', $6)
-            RETURNING *;
-        `;
-
-        const result = await pool.query(insertQuery, [
-            sessionData.pacienteId,
-            userId,
-            sessionData.dia,
-            sessionData.hora,
-            sessionData.sala,
-            sessionData.anotacoes || ""
-        ]);
+        const sessionRow = await repository.create(userId, data)
 
         // Notificações
-        const userDb = await pool.query(`SELECT nome FROM usuarios WHERE id = $1`, [userId]);
-        const userName = userDb.rows[0].nome;
-        const patientDb = await pool.query(`SELECT nome FROM pacientes WHERE id = $1`, [sessionData.pacienteId]);
-        const patientName = patientDb.rows[0].nome;
-        const sessionId = result.rows[0].id;
+        const patientName = await patientRepository.getName(patientId) as string
+        const userName = await userRepository.getName(userId) as string
+        const { id: sessionId, dia: day, hora: hour, sala: room } = sessionRow
 
-        await notificationService.notifyAdmins(NOTIFICATION.ADMIN.NEW_SESSION(userName, userId, patientName, sessionData.pacienteId, sessionId, sessionData.dia, sessionData.hora, sessionData.sala));
-        await notificationService.create(userId, NOTIFICATION.USER.NEW_SESSION(patientName, sessionData.pacienteId, sessionId, sessionData.dia, sessionData.hora, sessionData.sala));
+        await notificationService.notifyAdmins(NOTIFICATION_MESSAGE.ADMIN.NEW_SESSION({ userName, userId, patientName, patientId, sessionId, day, hour, room }));
+        await notificationService.notifyUser(userId, NOTIFICATION_MESSAGE.USER.NEW_SESSION({ patientName, patientId, sessionId, day, hour, room }));
 
-        return this.mapSession(result.rows[0]);
+        return {
+            sessionRow,
+            patientName
+        }
     }
 
-    async list(userId: string, perms: any, filters: { start?: string, end?: string }) {
-        let query = `
-            SELECT s.*, p.nome as paciente_nome, u.nome as profissional_nome
-            FROM sessoes s
-            JOIN pacientes p ON s.paciente_id = p.id
-            JOIN usuarios u ON s.usuario_id = u.id
-            WHERE s.deleted_at IS NULL
-        `;
+    async list(userId: string, userPerms: UserPermDTO, data: SessionListDTO) {
+        const { admin } = userPerms
+        const { start, end, status, userTargetId, patientTargetId } = data
 
-        const values: any[] = [];
-        let count = 1;
+        let filterUserId: string | undefined = undefined;
+        let filterPatientId: string | undefined = undefined;
 
-        if (!perms.admin) {
-            query += ` AND s.usuario_id = $${count}`;
-            values.push(userId);
-            count++;
+        if (admin) {
+            filterUserId = userTargetId
+            filterPatientId = patientTargetId
+        } else {
+            filterUserId = userId
+            if (patientTargetId) {
+                // Verifica se a paciente é da terapeuta
+                const therapistId = await patientRepository.getTherapistId(patientTargetId)
+                if (!therapistId) throw new AppError(HTTP_ERRORS.NOT_FOUND.PATIENT, 404);
+
+                if (userId != therapistId) {
+                    throw new AppError("Permissão negada para visualizar o histórico deste paciente.", 403);
+                }
+
+                filterPatientId = patientTargetId
+            }
         }
 
-        // Filtro de Data (Otimização)
-        if (filters.start && filters.end) {
-            query += ` AND s.dia >= $${count} AND s.dia <= $${count + 1}`;
-            values.push(filters.start, filters.end);
-            count += 2;
+        const sessionRows = await repository.list({
+            start,
+            end,
+            status,
+            filterPatientId,
+            filterUserId
+        })
+
+        return {
+            sessionRows,
+            totalItems: sessionRows.length
         }
 
-        query += ` ORDER BY s.dia ASC, s.hora ASC`;
-
-        const result = await pool.query(query, values);
-        return result.rows.map(row => this.mapSession(row));
     }
 
-    async getById(sessionId: number, userId: string, perms: any) {
-        const query = `SELECT * FROM sessoes WHERE id = $1 AND deleted_at IS NULL`;
-        const result = await pool.query(query, [sessionId]);
+    async getById(userId: string, userPerms: UserPermDTO, sessionId: number) {
 
-        if (result.rows.length === 0) throw new AppError("Sessão não encontrada.", 404);
-        const session = result.rows[0];
+        const sessionRow = await repository.getById(sessionId);
+
+        if (!sessionRow) throw new AppError("Sessão não encontrada.", 404);
 
         // Só vê se for Admin ou se for a dona da sessão
-        if (!perms.admin && session.usuario_id !== userId) {
+        if (!userPerms.admin && sessionRow.usuario_id !== userId) {
             throw new AppError("Acesso negado.", 403);
         }
 
-        return this.mapSession(session);
+        return { sessionRow }
     }
 
-    async update(sessionId: number, updateData: { dia?: string, hora?: number, sala?: number, anotacoes?: string }, userId: string, perms: any) {
-        // Busca sessão atual
-        const currentQuery = `SELECT * FROM sessoes WHERE id = $1 AND deleted_at IS NULL`;
-        const currentResult = await pool.query(currentQuery, [sessionId]);
-        if (currentResult.rows.length === 0) throw new AppError("Sessão não encontrada.", 404);
-        const currentSession = currentResult.rows[0];
+    async updateStatus(userId: string, sessionId: number, data: SessionUpdateStatusDTO) {
+        const therapist = await repository.getTherapist(sessionId)
+        if (!therapist) throw new AppError('Sessão não encontrada', 404)
+        if (therapist != userId) throw new AppError('Sem permissão para alterar essa sessão', 403)
 
-        // Permissão: Admin ou Dona
-        if (!perms.admin && currentSession.usuario_id !== userId) {
-            throw new AppError("Permissão negada.", 403);
-        }
+        const sessionRow = await repository.update(sessionId, data)
+        if (!sessionRow) throw new AppError('Sessão não encontrada', 404)
 
-        // Verifica se mudou algo crítico (Dia ou Hora)
-        const novoDia = updateData.dia || currentSession.dia;
-        const novaHora = updateData.hora || currentSession.hora;
-
-        if (novoDia !== currentSession.dia || novaHora !== currentSession.hora) {
-            // Verifica conflito ignorando a sessão atual (Paradoxo da Edição)
-            await this.checkConflict(
-                novoDia,
-                novaHora,
-                currentSession.usuario_id,
-                sessionId // <--- ID para ignorar
-            );
-        }
-
-        const query = `
-            UPDATE sessoes 
-            SET dia = COALESCE($1, dia),
-                hora = COALESCE($2, hora),
-                sala = COALESCE($3, sala),
-                anotacoes = COALESCE($4, anotacoes)
-            WHERE id = $5
-            RETURNING *;
-        `;
-
-        const result = await pool.query(query, [
-            updateData.dia,
-            updateData.hora,
-            updateData.sala,
-            updateData.anotacoes,
-            sessionId
-        ]);
-
-        return this.mapSession(result.rows[0]);
+        return { sessionRow }
     }
 
-    async registerEvolution(sessionId: number, status: string, userId: string) {
-        const allowedStatus = ['agendada', 'realizada', 'falta', 'cancelada_paciente', 'cancelada_profissional'];
+    //Atualiza uma sessão
+    async update(userId: string, sessionId: number, data: SessionUpdateDTO) {
+        const therapist = await repository.getTherapist(sessionId)
+        if (!therapist) throw new AppError('Sessão não encontrada', 404)
+        if (therapist != userId) throw new AppError('Sem permissão para alterar essa sessão', 403)
 
-        if (!allowedStatus.includes(status)) {
-            throw new AppError("Status inválido.", 400);
+        if (data.dia || data.hora || data.sala) {
+            const currentSession = await repository.getById(sessionId);
+            if (!currentSession) throw new AppError('Sessão não encontrada', 404);
+
+            const checkData = {
+                dia: data.dia ?? currentSession.dia,
+                hora: data.hora ?? currentSession.hora,
+                sala: data.sala ?? currentSession.sala
+            }
+
+            const conflictRoom = await repository.verifyConflictRoom(checkData, sessionId);
+            if (conflictRoom) throw new AppError("Sala já ocupada neste horário.", 409);
+
+            const conflictHour = await repository.verifyConflictHour(userId, checkData, sessionId);
+            if (conflictHour) throw new AppError("Você já tem atendimento neste horário.", 409);
         }
 
-        const queryCheck = `SELECT usuario_id FROM sessoes WHERE id = $1`;
-        const check = await pool.query(queryCheck, [sessionId]);
+        const sessionRow = await repository.update(sessionId, data)
+        if (!sessionRow) throw new AppError('Sessão não encontrada', 404)
 
-        if (check.rows.length === 0) throw new AppError("Sessão não encontrada.", 404);
-        if (check.rows[0].usuario_id !== userId) throw new AppError("Apenas a responsável pode registrar evolução.", 403);
-
-        const query = `
-            UPDATE sessoes
-            SET status = $1
-            WHERE id = $2
-            RETURNING *;
-        `;
-
-        const result = await pool.query(query, [status, sessionId]);
-        return this.mapSession(result.rows[0]);
+        return { sessionRow }
     }
 
-    async delete(sessionId: number, userId: string, perms: any) {
-        const checkQuery = `SELECT usuario_id, status FROM sessoes WHERE id = $1`;
-        const check = await pool.query(checkQuery, [sessionId]);
+    //Cancela a anterior com status e cria uma nova
+    async reschedule(userId: string, sessionId: number, data: SessionRescheduleDTO) {
+        const { dia, hora, sala, statusCancelamento } = data
 
-        if (check.rows.length === 0) throw new AppError("Sessão não encontrada.", 404);
-        const session = check.rows[0];
+        const therapist = await repository.getTherapist(sessionId)
+        if (!therapist) throw new AppError('Sessão não encontrada', 404)
+        if (therapist != userId) throw new AppError('Sem permissão para alterar essa sessão', 403)
 
-        // Admin pode deletar tudo, Usuário só deleta o seu
-        if (!perms.admin && session.usuario_id !== userId) throw new AppError("Permissão negada.", 403);
+        const sessionCanceledRow = await repository.update(sessionId, { status: statusCancelamento })
+        if (!sessionCanceledRow) throw new AppError('Sessão não encontrada', 404)
 
-        // Trava de segurança
-        if (session.status === 'realizada') throw new AppError("Não pode excluir sessão já realizada.", 400);
+        const { sessionRow } = await this.create(userId, { dia, hora, sala, pacienteId: sessionCanceledRow.paciente_id })
 
-        await pool.query(`UPDATE sessoes SET deleted_at = NOW() WHERE id = $1`, [sessionId]);
+        return { sessionCanceledRow, sessionRow }
+    }
+
+    async delete(userId: string, sessionId: number) {
+        const therapist = await repository.getTherapist(sessionId)
+        if (!therapist) throw new AppError('Sessão não encontrada', 404)
+        if (therapist != userId) throw new AppError('Sem permissão para alterar essa sessão', 403)
+
+        await repository.delete(sessionId)
+
+        return
     }
 }

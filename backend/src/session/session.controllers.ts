@@ -1,85 +1,71 @@
 import { Request, Response } from "express";
 import { SessionService } from "./session.services";
-import { handleError } from "../errors/handleError";
+import { SessionMapper } from "./session.mapper";
+import { response } from "../utils/response";
+import { userPermsSchema } from "../user/user.schema";
 
 const sessionService = new SessionService()
 
 export class SessionControllers {
     async create(req: Request, res: Response) {
-        try {
-            const userId = req.userId as string
-            const newSession = await sessionService.create(req.body, userId)
-            res.status(201).json(newSession);
-        } catch(error) {
-            return handleError(res, error)
-        }
+        const userId = req.validated.userId
+        const body = req.validated.body
+        const result = await sessionService.create(userId, body)
+        const data = SessionMapper.toCreate(result)
+        res.status(201).json(response(data));
     }
 
-        async list(req: Request, res: Response) {
-        try {
-            const userId = req.userId as string;
-            const perms = req.userPerms;
-            const { start, end } = req.query;
-
-            const list = await sessionService.list(userId, perms, { 
-                start: start as string, 
-                end: end as string 
-            });
-            res.status(200).json(list);
-        } catch (error) {
-            return handleError(res, error);
-        }
+    async list(req: Request, res: Response) {
+        const userId = req.validated.userId
+        const query = req.validated.query
+        const userPerms = userPermsSchema.parse(req.userPerms)
+        const result = await sessionService.list(userId, userPerms, query)
+        const data = SessionMapper.toList(result)
+        const { sessionRows, ...metaData } = result
+        res.status(200).json(response(data, metaData));
     }
 
     async getById(req: Request, res: Response) {
-        try {
-            const userId = req.userId as string;
-            const perms = req.userPerms;
-            const { id } = req.params;
-            
-            const session = await sessionService.getById(Number(id), userId, perms);
-            res.status(200).json(session);
-        } catch (error) {
-            return handleError(res, error);
-        }
+        const userId = req.validated.userId
+        const { targetId } = req.validated.params
+        const userPerms = userPermsSchema.parse(req.userPerms)
+        const result = await sessionService.getById(userId, userPerms, targetId)
+        const data = SessionMapper.toGet(result)
+        res.status(200).json(response(data));
+    }
+
+    async updateStatus(req: Request, res: Response) {
+        const userId = req.validated.userId
+        const { targetId } = req.validated.params
+        const body = req.validated.body
+        const result = await sessionService.updateStatus(userId, targetId, body)
+        const data = SessionMapper.toUpdateStatus(result)
+        res.status(200).json(response(data));
     }
 
     async update(req: Request, res: Response) {
-        try {
-            const userId = req.userId as string;
-            const { id } = req.params;
-            const perms = req.userPerms
-            
-            const updated = await sessionService.update(Number(id), req.body, userId, perms);
-            res.status(200).json(updated);
-        } catch (error) {
-            return handleError(res, error);
-        }
+        const userId = req.validated.userId
+        const { targetId } = req.validated.params
+        const body = req.validated.body
+        const result = await sessionService.update(userId, targetId, body)
+        const data = SessionMapper.toUpdate(result)
+        res.status(200).json(response(data));
     }
 
-    async evolution(req: Request, res: Response) {
-        try {
-            const userId = req.userId as string;
-            const { id } = req.params;
-            const { status } = req.body;
-
-            const result = await sessionService.registerEvolution(Number(id), status, userId);
-            res.status(200).json(result);
-        } catch (error) {
-            return handleError(res, error);
-        }
+    async reschedule(req: Request, res: Response) {
+        const userId = req.validated.userId
+        const { targetId } = req.validated.params
+        const body = req.validated.body
+        const result = await sessionService.reschedule(userId, targetId, body)
+        const data = SessionMapper.toReschedule(result)
+        res.status(200).json(response(data));
     }
 
     async delete(req: Request, res: Response) {
-        try {
-            const userId = req.userId as string;
-            const { id } = req.params;
-            const perms = req.userPerms
-
-            await sessionService.delete(Number(id), userId, perms);
-            res.status(204).send();
-        } catch (error) {
-            return handleError(res, error);
-        }
+        const userId = req.validated.userId
+        const { targetId } = req.validated.params
+        await sessionService.delete(userId, targetId)
+        res.status(204).send();
     }
+
 }

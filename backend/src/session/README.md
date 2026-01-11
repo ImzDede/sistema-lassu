@@ -1,9 +1,9 @@
 # 📅 Módulo Sessions
 
-O módulo Sessions gerencia os agendamentos, o histórico de atendimentos e a evolução do tratamento. É o coração operacional da clínica.
+O módulo Sessions é responsável exclusivamente pela Gestão de Agenda e marcação de sessões.
 
 ## 🗄️ Persistência no Banco de Dados
-#### ``Tabela: sessoes``
+#### `Tabela: sessoes`
 
 | Coluna | Tipo | Nulo | Observações |
 | :--- | :--- | :--- | :--- |
@@ -14,218 +14,249 @@ O módulo Sessions gerencia os agendamentos, o histórico de atendimentos e a ev
 | hora | integer | ❌ | Hora cheia (Ex: 8, 14, 16) |
 | sala | integer | ❌ | Número da sala física |
 | status | varchar | ❌ | Enum de Status |
-| anotacoes | text | ✅ | Campo livre para evolução/obs |
-| created_at | timestamp | ❌ | Data de criação |
-| deleted_at | timestamp | ✅ | Soft Delete (se nulo, está ativo) |
+| updated_at | timestamp | ✅ | Data da última atualização |
+| created_at | timestamp | ❌ | Data de criação (Default NOW) |
 
-## 🧠 Comportamento dos Campos
+## 🧠 Regras de Negócio
 
-### ``dia`` e ``hora``
+### `dia` e `hora`
 - **Dia:** String no formato ISO `YYYY-MM-DD`.
 - **Hora:** Número inteiro representando a hora de início (ex: `14` para 14:00).
-- **Regra de Conflito:** O sistema impede que uma mesma terapeuta tenha duas sessões ativas (status != cancelada) no mesmo `dia` e `hora`.
+- **Regra de Conflito:** O sistema impede:
+    1. Mesma **Sala** ocupada no mesmo horário.
+    2. Mesma **Terapeuta** ocupada no mesmo horário.
 
-### ``status``
-- Controla o ciclo de vida do agendamento.
+### `status`
 - **Valores Permitidos:**
-    - `agendada`: Estado inicial.
-    - `realizada`: Sessão ocorreu com sucesso (Gera pagamento/histórico).
-    - `falta`: Paciente não compareceu.
-    - `cancelada_paciente`: Paciente avisou com antecedência.
-    - `cancelada_terapeuta`: Terapeuta precisou desmarcar.
-
-### ``sala``
-- Número da sala física.
-- Útil para gestão de espaço na clínica escola.
-
-### ``anotacoes``
-- Texto livre para a terapeuta registrar a evolução breve ou lembretes sobre a sessão.
-- **Privacidade:** Apenas a terapeuta responsável e admins podem ler.
-
----
-
-## 🧩 Responsabilidades do Módulo
-
-- **Agendamento:** Garantir que não existam choques de horário (Conflitos).
-- **Integridade:** Garantir que uma terapeuta só agende pacientes vinculados a ela.
-- **Auditoria:** Manter histórico de status (se o paciente faltou, se foi remarcado).
-- **Notificações:** Avisar Admins sobre novos agendamentos.
+    - `agendada` (Padrão ao criar)
+    - `realizada`
+    - `falta`
+    - `cancelada_paciente`
+    - `cancelada_terapeuta`
 
 ---
 
 ## Rotas
 
 ### 1. 📅 Listar Sessões (Agenda)
-#### ``GET /sessions``
-Retorna a lista de sessões, geralmente filtrada por período.
+#### `GET /sessions`
+Retorna a lista de sessões filtrada.
 
-#### 🎯 Objetivo da Rota
-- Alimentar o calendário do frontend.
-- Permitir filtros por data (início/fim) para carregar a semana ou mês.
-
-#### 🔐 Autorização
-- Requer autenticação.
-- **Regra:**
-    - **Admin:** Vê tudo (pode filtrar por `userId` específico).
-    - **Terapeuta:** Vê apenas suas próprias sessões.
-
-#### 📥 Query Parameters
-| Parâmetro | Tipo | Padrão | Descrição |
+#### 📥 Query Parameters (`SessionListDTO`)
+| Parâmetro | Tipo | Obrigatório | Descrição |
 | :--- | :--- | :--- | :--- |
-| ``dataInicio`` | string | - | (Opcional) YYYY-MM-DD. |
-| ``dataFim`` | string | - | (Opcional) YYYY-MM-DD. |
-| ``pacienteId`` | uuid | - | (Opcional) Filtrar histórico de um paciente. |
-| ``status`` | string | - | (Opcional) Filtrar por status. |
+| `start` | string | ✅ | Início (YYYY-MM-DD) |
+| `end` | string | ✅ | Fim (YYYY-MM-DD) |
+| `status` | string | ❌ | Filtro de status |
+| `patientTargetId` | uuid | ❌ | Filtrar por paciente |
+| `userTargetId` | uuid | ❌ | (Admin) Filtrar por terapeuta |
 
 #### 📤 Response — Sucesso (200)
-````JSON
+````json
 {
   "data": [
     {
-      "id": 105,
-      "pacienteId": "uuid-paciente",
-      "pacienteNome": "Maria Souza",
-      "usuarioId": "uuid-terapeuta",
-      "dia": "2025-10-20",
-      "hora": 14,
-      "sala": 2,
-      "status": "agendada",
-      "anotacoes": null
+      "session": {
+        "id": 105,
+        "dia": "2025-10-20",
+        "hora": 14,
+        "sala": 2,
+        "status": "agendada"
+      },
+      "therapist": {
+        "id": "uuid-terapeuta",
+        "nome": "Dra. Ana"
+      },
+      "patient": {
+        "id": "uuid-paciente",
+        "nome": "Maria Souza"
+      }
     }
   ],
-  "meta": {
-    "totalItems": 15,
-    "filterStart": "2025-10-01",
-    "filterEnd": "2025-10-31"
-  },
+  "meta": { "totalItems": 1 },
   "error": null
 }
 ````
 
-#### ❌ Possíveis Erros
-- **400 Bad Request:** Datas inválidas.
-
 ---
 
-### 2. ➕ Criar Sessão (Agendar)
-#### ``POST /sessions``
-Cria um novo agendamento.
+### 2. 🔍 Ver Detalhes
+#### `GET /sessions/:targetId`
+Retorna os dados completos de uma sessão específica.
 
-#### 🎯 Objetivo da Rota
-- Validar disponibilidade da terapeuta (conflito de horário).
-- Validar vínculo (Terapeuta x Paciente).
-
-#### 🔐 Autorização
-- Requer autenticação.
-- Só pode agendar para pacientes vinculados a si mesma (salvo Admin).
-
-#### 📥 Request Body
-````JSON
-{
-  "pacienteId": "uuid-paciente",
-  "dia": "2025-10-20",
-  "hora": 14,
-  "sala": 2,
-  "anotacoes": "Primeira sessão de acolhimento"
-}
-````
-
-#### 📤 Response — Sucesso (201)
-````JSON
+#### 📤 Response — Sucesso (200)
+````json
 {
   "data": {
-      "id": 106,
-      "status": "agendada",
-      "dia": "2025-10-20",
-      "hora": 14,
-      "sala": 2
+      "session": {
+        "id": 105,
+        "dia": "2025-10-20",
+        "hora": 14,
+        "sala": 2,
+        "status": "cancelada_paciente",
+        "updatedAt": "2025-10-19T10:00:00Z",
+        "createdAt": "2025-10-01T10:00:00Z"
+      },
+      "therapist": {
+        "id": "uuid-terapeuta",
+        "nome": "Dra. Ana"
+      },
+      "patient": {
+        "id": "uuid-paciente",
+        "nome": "Maria Souza"
+      }
   },
   "meta": {},
   "error": null
 }
 ````
 
-#### ❌ Possíveis Erros
-- **400 Bad Request:** Campos inválidos ou data no passado.
-- **403 Forbidden:** Paciente não pertence a esta terapeuta.
-- **409 Conflict:** Terapeuta já possui agendamento neste dia/hora.
+---
+
+### 3. ➕ Criar Sessão (Agendar)
+#### `POST /sessions`
+
+#### 📥 Request Body (`SessionCreateDTO`)
+````json
+{
+  "pacienteId": "uuid-paciente",
+  "dia": "2025-10-20",
+  "hora": 14,
+  "sala": 2
+}
+````
+
+#### 📤 Response — Sucesso (201)
+````json
+{
+  "data": {
+    "session": {
+      "id": 106,
+      "dia": "2025-10-20",
+      "hora": 14,
+      "sala": 2,
+      "status": "agendada",
+      "createdAt": "2025-10-05T14:30:00Z"
+    },
+    "patient": {
+      "id": "uuid-paciente",
+      "nome": "Maria Souza"
+    }
+  },
+  "meta": {},
+  "error": null
+}
+````
 
 ---
 
-### 3. 📝 Evolução (Mudar Status)
-#### ``PATCH /sessions/:id/status``
-Atualiza o status da sessão (confirmar presença, marcar falta, etc).
+### 4. 📝 Atualizar Status
+#### `PATCH /sessions/:targetId/status`
 
-#### 🎯 Objetivo da Rota
-- Registrar o que aconteceu na sessão.
-- Finalizar o fluxo do atendimento.
-
-#### 📥 Request Body
-````JSON
+#### 📥 Request Body (`SessionUpdateStatusDTO`)
+````json
 {
-  "status": "realizada",
-  "anotacoes": "Paciente relatou melhora no quadro..."
+  "status": "realizada"
 }
 ````
 
 #### 📤 Response — Sucesso (200)
-Retorna a sessão atualizada.
-
-#### ❌ Possíveis Erros
-- **400 Bad Request:** Status inválido ou transição proibida.
+````json
+{
+  "data": {
+    "session": {
+      "id": 105,
+      "status": "realizada",
+      "updatedAt": "2025-10-20T14:05:00Z"
+    }
+  },
+  "meta": {},
+  "error": null
+}
+````
 
 ---
 
-### 4. ✏️ Remarcar / Editar
-#### ``PUT /sessions/:id``
-Altera dados críticos da sessão (Dia, Hora, Sala).
+### 5. 🔄 Remarcar (Reschedule)
+#### `PUT /sessions/:targetId/reschedule`
+Cancela a sessão atual e cria uma nova imediatamente (Atômico).
 
-#### 🎯 Objetivo da Rota
-- Remarcar atendimentos.
-- **Atenção:** Ao mudar dia/hora, o sistema deve verificar conflitos novamente (ignorando a própria sessão atual).
-
-#### 📥 Request Body (Parcial)
-````JSON
+#### 📥 Request Body (`SessionRescheduleDTO`)
+````json
 {
-  "dia": "2025-10-21",
+  "dia": "2025-10-25",
+  "hora": 16,
+  "sala": 2,
+  "statusCancelamento": "cancelada_paciente"
+}
+````
+
+#### 📤 Response — Sucesso (200)
+*Retorna a nova sessão criada e a antiga cancelada.*
+
+````json
+{
+  "data": {
+    "session": {
+      "id": 107,
+      "dia": "2025-10-25",
+      "hora": 16,
+      "sala": 2,
+      "status": "agendada",
+      "createdAt": "2025-10-20T18:00:00Z"
+    },
+    "canceledSession": {
+       "id": 105,
+       "dia": "2025-10-20",
+       "hora": 14,
+       "sala": 2,
+       "status": "cancelada_paciente",
+       "updatedAt": "2025-10-20T18:00:00Z"
+    }
+  },
+  "meta": {},
+  "error": null
+}
+````
+
+---
+
+### 6. ✏️ Edição (Dia/Hora/Sala)
+#### `PUT /sessions/:targetId`
+Atualiza dados da sessão existente (sem criar nova). Valida conflitos.
+
+#### 📥 Request Body (`SessionUpdateDTO`)
+*Campos opcionais (Partial)*
+````json
+{
+  "sala": 5,
   "hora": 15
 }
 ````
 
 #### 📤 Response — Sucesso (200)
-````JSON
+````json
 {
   "data": {
-     "id": 106,
-     "dia": "2025-10-21",
-     "hora": 15,
-     "status": "agendada"
+    "session": {
+      "id": 105,
+      "dia": "2025-10-20",
+      "hora": 15,
+      "sala": 5,
+      "status": "agendada",
+      "updatedAt": "2025-10-10T09:00:00Z"
+    }
   },
   "meta": {},
   "error": null
 }
 ````
-
-#### ❌ Possíveis Erros
-- **409 Conflict:** Novo horário já está ocupado.
 
 ---
 
-### 5. 🗑️ Cancelar (Excluir)
-#### ``DELETE /sessions/:id``
-Realiza a exclusão lógica (Soft Delete) do agendamento.
+### 7. 🗑️ Excluir
+#### `DELETE /sessions/:targetId`
+Remove a sessão do banco (Hard Delete).
 
-#### 🎯 Objetivo da Rota
-- Remover da agenda caso tenha sido criado por engano.
-- Para cancelamentos oficiais, prefira usar a rota de Status (`cancelada_...`).
-
-#### 📤 Response — Sucesso (200 ou 204)
-````JSON
-{
-  "data": {
-     "message": "Sessão removida."
-  },
-  "meta": {},
-  "error": null
-}
-````
+#### 📤 Response — Sucesso (204)
+*Sem corpo de resposta (No Content).*

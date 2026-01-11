@@ -1,4 +1,3 @@
-import { PatientListDTO } from "./patient.schema";
 import { PatientListResponseDTO, PatientListRow, PatientResponseDTO, PatientRow, PatientUpdateResponseDTO, PatientUpdateRow } from "./patient.type";
 
 export class PatientMapper {

@@ -9,15 +9,15 @@ export const HTTP_ERRORS = {
             UUID: "Identificador inválido (não é um UUID).",
             DATE_FORMAT: "Data inválida. Use o formato AAAA-MM-DD.",
             INTEGER: "O valor deve ser um número inteiro.",
+            PHONE: {
+                LENGTH: "O telefone deve ter entre 8 e 20 dígitos.",
+                INVALID: "O telefone deve conter apenas números."
+            },
         },
 
         // Módulo: Usuário
         USER: {
             NAME: "O nome completo é obrigatório.",
-            PHONE: {
-                LENGTH: "O telefone deve ter entre 8 e 20 dígitos.",
-                INVALID: "O telefone deve conter apenas números."
-            },
             REGISTRATION: {
                 LENGTH: "A matrícula deve ter exatamente 7 caracteres.",
                 NUMBER: "A matrícula deve conter apenas números."
@@ -45,7 +45,7 @@ export const HTTP_ERRORS = {
             STATUS_NOT_REFER: "Não é possível desfazer: esta paciente não está marcada como 'encaminhada'.",
             RESTORE_ERROR: "Não foi possível restaurar. Verifique se a paciente realmente estava na lixeira."
         },
-        
+
         // Módulo: Disponibilidade
         AVAILABILITY: {
             DAY_INVALID: "Dia da semana inválido.",
@@ -72,7 +72,7 @@ export const HTTP_ERRORS = {
         DEFAULT: "Acesso negado.",
         ADMIN_ONLY: "Acesso restrito a administradores.",
         REGISTER_ONLY: "Acesso restrito a reponsável de cadastro.",
-        
+
         PATIENT: {
             NOT_YOURS: "Acesso negado. Apenas a terapeuta responsável pode realizar esta ação.",
             DELETE: "Você não tem permissão para excluir esta paciente.",

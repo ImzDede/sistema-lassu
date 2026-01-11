@@ -115,14 +115,14 @@ export class UserService {
         //Transforma senha nova em hash
         const passwordHash = await bcrypt.hash(data.senha, 10);
 
+        //Lança Disponibilidade
+        const { availabilityRows } = await availabilityService.save(userId, data.disponibilidade)
+
         //Atualiza usuário
         const userRow = await repository.completeFirstAccess(userId, passwordHash, data.fotoUrl);
         if (!userRow) {
             throw new AppError(HTTP_ERRORS.NOT_FOUND.USER, 404)
         }
-
-        //Lança Disponibilidade
-        const { availabilityRows } = await availabilityService.save(userId, data.disponibilidade)
 
         const token = this.generateToken(userRow)
 

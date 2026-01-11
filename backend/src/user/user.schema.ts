@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { availabilityListSchema, diaSchema, horaFimSchema, horaInicioSchema, validateHoursSchema } from '../availability/availability.schema';
 import { HTTP_ERRORS } from '../errors/messages';
-import { paginationSchema } from '../utils/schemas';
+import { paginationSchema, telefoneSchema } from '../utils/schemas';
 
 export const UserTargetIdParamSchema = z.object({
     targetId: z.uuid()
@@ -24,7 +24,6 @@ const senhaCreateSchema = z.string().min(8, HTTP_ERRORS.BAD_REQUEST.USER.PASSWOR
     .regex(/[0-9]/, HTTP_ERRORS.BAD_REQUEST.USER.PASSWORD.NUMBER)
     .regex(/[^A-Za-z0-9]/, HTTP_ERRORS.BAD_REQUEST.USER.PASSWORD.SPECIAL);
 const matriculaSchema = z.string().length(7, HTTP_ERRORS.BAD_REQUEST.USER.REGISTRATION.LENGTH).regex(/^[0-9]+$/, HTTP_ERRORS.BAD_REQUEST.USER.REGISTRATION.NUMBER)
-const telefoneSchema = z.string().min(8, HTTP_ERRORS.BAD_REQUEST.USER.PHONE.LENGTH).max(20, HTTP_ERRORS.BAD_REQUEST.USER.PHONE.LENGTH).regex(/^[0-9]+$/, HTTP_ERRORS.BAD_REQUEST.USER.PHONE.INVALID)
 const fotoSchema = z.string().url().nullable()
 
 export const createUserSchema = z.object({

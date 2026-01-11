@@ -1,3 +1,4 @@
+import { UUID } from "crypto";
 import pool from "../config/db";
 import { PatientIdRow, PatientListRow, PatientRow, PatientUpdateRow } from "./patient.type";
 
@@ -13,6 +14,16 @@ export class PatientRepository {
 
         const result = await pool.query(query, values)
         return result.rows[0] ?? null;
+    }
+
+    async getName(id: string): Promise<string | null> {
+        const result = await pool.query('SELECT nome FROM pacientes WHERE id = $1', [id])
+        return result.rows[0].nome ?? null;
+    }
+
+    async getTherapistId(patientId: string): Promise<string | null> {
+        const result = await pool.query('SELECT terapeuta_id FROM pacientes WHERE id = $1', [patientId]);
+        return result.rows[0].terapeuta_id ?? null;
     }
 
     async getById(patientId: string): Promise<PatientRow | null> {

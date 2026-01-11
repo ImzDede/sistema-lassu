@@ -1,13 +1,11 @@
 import z from "zod";
-import { paginationSchema } from "../utils/schemas";
+import { dateFormateSchema, paginationSchema, telefoneSchema } from "../utils/schemas";
 import { userIdSchema } from "../user/user.schema";
 import { HTTP_ERRORS } from "../errors/messages";
 
 const nomeSchema = z.string().min(1, HTTP_ERRORS.BAD_REQUEST.VALIDATION.REQUIRED);
 
-const dataNascimentoSchema = z.string()
-    .length(10, HTTP_ERRORS.BAD_REQUEST.VALIDATION.DATE_FORMAT)
-    .regex(/^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/, HTTP_ERRORS.BAD_REQUEST.VALIDATION.DATE_FORMAT)
+const dataNascimentoSchema = dateFormateSchema
 
 const cpfSchema = z.string().regex(/^[0-9]{11}$/).refine((cpf) => {
     //Validação de números conhecidos
@@ -48,10 +46,6 @@ const cpfSchema = z.string().regex(/^[0-9]{11}$/).refine((cpf) => {
         message: HTTP_ERRORS.BAD_REQUEST.PATIENT.CPF_INVALID
     }
 )
-
-const telefoneSchema = z.string()
-    .max(20, HTTP_ERRORS.BAD_REQUEST.USER.PHONE.LENGTH)
-    .regex(/^[0-9]+$/, HTTP_ERRORS.BAD_REQUEST.USER.PHONE.INVALID)
 
 const terapeutaIdSchema = z.string().uuid(HTTP_ERRORS.BAD_REQUEST.VALIDATION.UUID)
 

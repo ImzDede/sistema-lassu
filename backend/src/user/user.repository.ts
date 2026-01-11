@@ -39,7 +39,7 @@ export class UserRepository {
 
     async getName(id: string): Promise<string | null> {
         const result = await pool.query('SELECT nome FROM usuarios WHERE id = $1', [id])
-        return result.rows[0] ?? null;
+        return result.rows[0].nome ?? null;
     }
 
     async getByEmail(email: string): Promise<UserLoginRow | null> {

@@ -77,6 +77,6 @@ CREATE TABLE sessoes (
         CHECK (status IN ('agendada', 'realizada', 'falta', 'cancelada_paciente', 'cancelada_terapeuta')),
 
     -- Auditoria
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP DEFAULT NULL
+    updated_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

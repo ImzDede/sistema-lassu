@@ -58,12 +58,12 @@ export class PatientService {
 
     async list(userId: string, userPerms: UserPermDTO, params: PatientListDTO) {
         const { page, limit, orderBy, direction, status, userTargetId, nome, deleted } = params;
-        const { admin } = userPerms
+        const { cadastro } = userPerms
         const offset = (page - 1) * limit;
 
         let filterUserId: string | undefined = undefined;
 
-        if (admin) {
+        if (cadastro) {
             filterUserId = userTargetId
         } else {
             filterUserId = userId

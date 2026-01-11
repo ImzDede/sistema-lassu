@@ -10,19 +10,25 @@ export const handleError: ErrorRequestHandler = (
     next: NextFunction
 ) => {
     if (err instanceof ZodError) {
-        const fields: Record<string, string> = {};
+        const details: Record<string, string[]> = {};
 
-        for (const issue of err.issues) {
-            const field = issue.path.join(".");
-            fields[field] = issue.message;
-        }
+        err.issues.forEach((issue) => {
+            const field = String(issue.path[0]);
+
+            if (!details[field]) {
+                details[field] = [];
+            }
+
+            details[field].push(issue.message);
+        });
 
         return res.status(400).json({
             data: null,
             meta: {},
             error: {
-                type: "VALIDATION_ERROR",
-                fields
+                type: 'VALIDATION_ERROR',
+                message: "Dados inválidos. Verifique os campos em destaque.",
+                details: details
             }
         });
     }
@@ -33,7 +39,8 @@ export const handleError: ErrorRequestHandler = (
             meta: {},
             error: {
                 type: "APP_ERROR",
-                message: err.message
+                message: err.message,
+                details: null
             }
         });
     }
