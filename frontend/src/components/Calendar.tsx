@@ -35,6 +35,14 @@ export default function CalendarWidget({
   const firstDayOfMonth = new Date(year, month, 1).getDay();
 
   useEffect(() => {
+    console.log("📅 [CalendarWidget] Recebeu sessões:", sessions.length);
+    if (sessions.length > 0) {
+        console.log("📅 [CalendarWidget] Datas das sessões recebidas:");
+        sessions.forEach(s => console.log("   - ", s.dia));
+    }
+  }, [sessions]);
+
+  useEffect(() => {
     if (onMonthChange) onMonthChange(currentDate);
   }, [currentDate, onMonthChange]);
 
@@ -51,23 +59,28 @@ export default function CalendarWidget({
   };
 
   const getSessionStatus = (day: number) => {
+    // Formata a data atual do loop para YYYY-MM-DD
     const dayStr = `${year}-${(month + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
     
-    // Filtra sessões do dia
-    const sessionsOnDay = sessions.filter(s => {
+    // Verifica se existe alguma sessão nesta data
+    const hasAnySession = sessions.some(s => {
+        // Tenta pegar a data de forma segura
         const sDate = typeof s.dia === 'string' ? s.dia.split('T')[0] : s.dia;
+        
+        // LOG 4: Se achar uma data igual, avisa!
+        if (sDate === dayStr) {
+            // console.log(`🎉 MATCH FOUND! Dia: ${dayStr}, Sessão ID: ${s.id}`);
+        }
+        
         return sDate === dayStr;
     });
 
-    if (sessionsOnDay.length === 0) return { hasSession: false, isMine: false };
+    if (!hasAnySession) return { hasSession: false, isMine: false };
 
-    // Regra de Negócio Visual: Professor vê tudo
-    if (isTeacher) return { hasSession: true, isMine: false };
-
-    // Regra de Negócio Visual: Aluno/Terapeuta vê as suas
-    const mySession = sessionsOnDay.find(s => s.usuarioId === currentUserId);
-    
-    return { hasSession: !!mySession, isMine: true };
+    // Se houver sessão:
+    // 1. Se sou professor, mostro o ponto (pode ser de qualquer um).
+    // 2. Se sou aluno, a API já filtrou só as minhas, então se tem sessão, É MINHA.
+    return { hasSession: true, isMine: !isTeacher };
   };
 
   const renderDays = () => {
@@ -143,7 +156,7 @@ export default function CalendarWidget({
         <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-brand-purple/10">
           <Armchair size={14} className="text-brand-purple" />
           <Typography variant="small" className="text-xs text-gray-400 font-medium">
-            {isTeacher ? "Indica dias com agendamentos" : "Indica dias com atendimento"}
+            {isTeacher ? "Indica dias com agendamentos" : "Indica seus dias de atendimento"}
           </Typography>
         </div>
       </CardBody>

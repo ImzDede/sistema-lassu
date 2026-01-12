@@ -2,7 +2,7 @@
 export interface Session {
   id: number;
   pacienteId: string;
-  usuarioId: string; 
+  usuarioId: string;
   dia: string;       
   hora: number;      
   sala: number;
@@ -12,6 +12,15 @@ export interface Session {
   // Campos "populados" (Joins)
   pacienteNome: string;
   profissionalNome: string;
+}
+
+// Interface para os Filtros de Busca (Query Params)
+export interface SessionFilters {
+  start?: string;          // YYYY-MM-DD
+  end?: string;            // YYYY-MM-DD
+  status?: string;         // Filtro de status
+  patientTargetId?: string; // Filtrar por paciente
+  userTargetId?: string;    // (Admin) Filtrar por terapeuta
 }
 
 // DTO para Criar

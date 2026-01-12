@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { format, startOfMonth, endOfMonth } from "date-fns"; // 
+import { format, startOfMonth, endOfMonth } from "date-fns"; 
 import { Typography, Spinner } from "@material-tailwind/react";
 import CalendarWidget from "@/components/Calendar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,53 +15,48 @@ export default function Home() {
   const { isTeacher, user } = useAuth();
   const { refreshUsers, loading: loadingUsers } = useUsers();
   const { sessions, loading: loadingSessions, fetchSessions } = useSessions();
-
   const [currentCalendarDate, setCurrentCalendarDate] = useState(new Date());
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [daySessions, setDaySessions] = useState<Session[]>([]);
-
   const today = new Date();
   const formattedDate = format(today, "dd/MM");
   
   useEffect(() => {
+    // Carrega lista de usuários apenas se for professor (para filtros futuros)
     if (isTeacher && user) refreshUsers();
 
+    // 1. Define intervalo do mês visível no calendário
     const start = format(startOfMonth(currentCalendarDate), "yyyy-MM-dd");
     const end = format(endOfMonth(currentCalendarDate), "yyyy-MM-dd");
 
-    fetchSessions({ start, end });
+    // 2. Prepara filtros básicos
+    const filters: any = { start, end };
+    
+    fetchSessions(filters);
 
   }, [isTeacher, user, refreshUsers, fetchSessions, currentCalendarDate]);
 
-  // Card de Hoje da Terapeuta
-  const myTodaySession = !isTeacher ? sessions.find(s => {
-    // Blindagem para garantir comparação correta
+  // Encontra a sessão de "Hoje" para o card de destaque
+  const myTodaySession = sessions.find(s => {
+    // Normaliza a data para YYYY-MM-DD para evitar erros de hora/fuso
     const sessionDate = typeof s.dia === 'string' ? s.dia.split('T')[0] : s.dia;
     const todayStr = format(today, "yyyy-MM-dd");
-    const ownerId = s.usuarioId;
     
-    return sessionDate === todayStr && ownerId === user?.id;
-  }) : null;
+    // Se a API já filtrou (aluno), qualquer sessão hoje é válida.
+    // Se for professor, mostra qualquer uma (ou a primeira) do dia.
+    return sessionDate === todayStr;
+  });
 
   const handleDayClick = (date: Date) => {
     const dateStr = format(date, "yyyy-MM-dd");
     
-    // 2. Filtra as sessões do dia clicado
-    let sessionsOnThisDay = sessions.filter(s => {
+    // Filtra as sessões do dia clicado
+    const sessionsOnThisDay = sessions.filter(s => {
         const sDate = typeof s.dia === 'string' ? s.dia.split('T')[0] : s.dia;
         return sDate === dateStr;
     });
-
-    // 3. Se NÃO for professora, filtra para mostrar apenas as sessões DELA
-    if (!isTeacher) {
-        sessionsOnThisDay = sessionsOnThisDay.filter(s => {
-            const ownerId = s.usuarioId;
-            return ownerId === user?.id;
-        });
-    }
     
-    // 4. Abre o modal com a lista filtrada
     setSelectedDay(date);
     setDaySessions(sessionsOnThisDay);
     setModalOpen(true);
@@ -81,14 +76,15 @@ export default function Home() {
           <div className="flex justify-center p-8"><Spinner className="text-brand-purple" /></div>
         ) : (
           <div className="flex flex-col gap-3">
-            {isTeacher && <div className="text-center py-6 text-gray-400 text-sm">Selecione um dia no calendário para ver os detalhes.</div>}
+            {isTeacher && <div className="text-center py-6 text-gray-400 text-sm">Selecione um dia no calendário para ver os detalhes da clínica.</div>}
+            
             {!isTeacher && (
               myTodaySession ? (
                 <CardListagem
                     nomePrincipal={myTodaySession.pacienteNome || "Paciente"}
                     detalhe={`Sala ${myTodaySession.sala}`}
                     horario={`${myTodaySession.hora}:00`}
-                    status="Agendada"
+                    status={myTodaySession.status}
                 />
               ) : (
                 <div className="text-center py-6 text-gray-400 text-sm">Você não possui atendimentos hoje.</div>
@@ -106,10 +102,17 @@ export default function Home() {
             onMonthChange={setCurrentCalendarDate} 
             onDayClick={handleDayClick}
             isTeacher={isTeacher}
+            currentUserId={user?.id}
         />
       </section>
 
-      <SessionListModal open={modalOpen} onClose={() => setModalOpen(false)} date={selectedDay} sessions={daySessions} isTeacher={isTeacher} />
+      <SessionListModal 
+        open={modalOpen} 
+        onClose={() => setModalOpen(false)} 
+        date={selectedDay} 
+        sessions={daySessions} 
+        isTeacher={isTeacher} 
+      />
     </div>
   );
 }

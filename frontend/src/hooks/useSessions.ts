@@ -1,17 +1,20 @@
 import { useState, useCallback } from "react";
 import { sessionService } from "@/services/sessionServices";
-import { Session, CreateSessionDTO, UpdateSessionDTO } from "@/types/sessao";
+import { Session, CreateSessionDTO, UpdateSessionDTO, SessionFilters } from "@/types/sessao";
 
 export function useSessions() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 1. LISTAR (GET)
-  const fetchSessions = useCallback(async (params?: { start?: string; end?: string }) => {
+  // 1. LISTAR (GET) - ATUALIZADO
+  const fetchSessions = useCallback(async (filters?: SessionFilters) => {
     setLoading(true);
+
+    console.log("🔍 [useSessions] Enviando filtros para API:", filters);
+
     try {
-      const data = await sessionService.getAll(params);
+      const data = await sessionService.getAll(filters);
       setSessions(data);
       setError(null);
     } catch (err: any) {
@@ -27,7 +30,6 @@ export function useSessions() {
     setLoading(true);
     try {
       const newSession = await sessionService.create(data);
-      // Atualiza a lista localmente sem precisar buscar tudo de novo do back
       setSessions((prev) => [...prev, newSession]);
       return newSession;
     } catch (err: any) {
