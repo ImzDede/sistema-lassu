@@ -8,13 +8,14 @@ import {
   UserCog,
   Power,
   CalendarClock,
+  Mail,
+  Phone,
+  Users,
 } from "lucide-react";
-import { Typography, Spinner } from "@material-tailwind/react";
+import { Typography, Spinner, Chip } from "@material-tailwind/react";
 import Button from "@/components/Button";
 import CardListagem from "@/components/CardListagem";
-import FeedbackAlert from "@/components/FeedbackAlert";
 import SearchInputWithFilter from "@/components/SearchInputWithFilter";
-import TherapistProfileCard from "@/components/TherapistProfileCard";
 import ConfirmationDialog from "@/components/ConfirmationDialog";
 import AvailabilityDialog from "@/components/AvailabilityDialog";
 import PermissionsDialog from "@/components/PermissionsDialog";
@@ -25,8 +26,9 @@ import { usePatients } from "@/hooks/usePatients";
 import { calculateAge } from "@/utils/date";
 import { numberToDayMap } from "@/utils/constants";
 import { usePagination } from "@/hooks/usePagination";
-import { useFeedback } from "@/hooks/useFeedback";
+import { useFeedback } from "@/contexts/FeedbackContext";
 import { User } from "@/types/usuarios";
+import ProfileCard from "@/components/ProfileCard";
 
 interface TherapistData extends User {
   disponibilidade?: any[];
@@ -40,17 +42,13 @@ export default function TherapistDetails({
   const router = useRouter();
   const { id } = params;
   const { isTeacher, isLoading: authLoading } = useAuth();
-
   const { getUserById, updatePermissions } = useUsers();
   const { patients, fetchPatients, loading: loadingPatients } = usePatients();
-
   const [therapist, setTherapist] = useState<TherapistData | null>(null);
-  const { feedback, showFeedback, closeFeedback } = useFeedback();
-
+  const { showFeedback } = useFeedback();
   const [openRoleDialog, setOpenRoleDialog] = useState(false);
   const [openStatusDialog, setOpenStatusDialog] = useState(false);
   const [openAvailabilityDialog, setOpenAvailabilityDialog] = useState(false);
-
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ativo");
   const pagination = usePagination();
@@ -175,12 +173,6 @@ export default function TherapistDetails({
 
   return (
     <div className="flex flex-col w-full h-full pb-10">
-      <FeedbackAlert
-        open={feedback.open}
-        color={feedback.type === "error" ? "red" : "green"}
-        message={feedback.message}
-        onClose={closeFeedback}
-      />
 
       <div className="flex items-center mb-6">
         <button
@@ -194,12 +186,48 @@ export default function TherapistDetails({
         </Typography>
       </div>
 
-      <TherapistProfileCard
-        therapist={therapist}
-        patientCount={pagination.totalItems || patients.length || 0}
-      />
+      <ProfileCard
+            name={therapist.nome}
+            subtitle={`Matrícula: ${therapist.matricula || "--"}`}
+            avatarUrl={therapist.fotoUrl}
+            status={therapist.ativo ? "Ativo" : "Inativo"}
+            statusColor={therapist.ativo ? "green" : "red"}
+            footer={
+                <div className="flex flex-col gap-2">
+                    <div className="flex justify-between items-center">
+                        <Typography variant="small" className="font-bold text-gray-500 uppercase text-xs">
+                            Permissões de Acesso
+                        </Typography>
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                        {therapist.permAdmin && <Chip value="Admin" className="bg-purple-50 text-purple-900 border border-purple-100" size="sm" variant="ghost" />}
+                        {therapist.permCadastro && <Chip value="Cadastro" className="bg-pink-50 text-pink-900 border border-pink-100" size="sm" variant="ghost" />}
+                        {therapist.permAtendimento && <Chip value="Atendimento" className="bg-orange-50 text-orange-900 border border-orange-100" size="sm" variant="ghost" />}
+                        {!therapist.permAdmin && !therapist.permCadastro && !therapist.permAtendimento && (
+                            <span className="text-gray-400 text-sm">Nenhuma permissão especial atribuída.</span>
+                        )}
+                    </div>
+                </div>
+            }
+        >
+            {/* Dados de Contato (Slots Filhos) */}
+            <div className="flex items-center gap-2 text-gray-600 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100">
+                <Mail size={16} className="text-brand-purple" />
+                <span className="text-sm">{therapist.email}</span>
+            </div>
+            
+            <div className="flex items-center gap-2 text-gray-600 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100">
+                <Phone size={16} className="text-brand-purple" />
+                <span className="text-sm">{therapist.telefone || "--"}</span>
+            </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-8">
+            <div className="flex items-center gap-2 text-blue-800 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-100">
+                <Users size={16} className="text-blue-600" />
+                <span className="text-sm font-medium">{pagination.totalItems || patients.length || 0} Pacientes</span>
+            </div>
+        </ProfileCard>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 my-6">
         <Button
           variant="outline"
           onClick={() => setOpenRoleDialog(true)}
@@ -271,6 +299,7 @@ export default function TherapistDetails({
                           </span>
                         }
                         status={p.status}
+                        onClick={() => router.push(`/home/pacientes/${p.id}`)}
                       />
                     ))}
                     <PaginationControls

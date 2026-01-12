@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import MTRegistry from "@/components/MTRegistry";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { FeedbackProvider } from "@/contexts/FeedbackContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,7 +21,9 @@ export default function RootLayout({
     <html lang="pt-br">
       <body className={inter.className} suppressHydrationWarning={true}>
         <AuthProvider>
-          <MTRegistry>{children}</MTRegistry>
+          <FeedbackProvider>
+            <MTRegistry>{children}</MTRegistry>
+          </FeedbackProvider>
         </AuthProvider>
       </body>
     </html>

@@ -7,22 +7,24 @@ import { Card, CardBody, Typography, Spinner } from "@material-tailwind/react";
 import Input from "@/components/Input";
 import DateInput from "@/components/DateInput";
 import Button from "@/components/Button";
-import FeedbackAlert from "@/components/FeedbackAlert";
 import InfoBox from "@/components/InfoBox";
+import AvailabilitySearchSelector from "@/components/AvailabilitySearchSelector";
+import CardListagem from "@/components/CardListagem";
 import { useAuth } from "@/contexts/AuthContext";
-import { useFeedback } from "@/hooks/useFeedback";
+import { useFeedback } from "@/contexts/FeedbackContext";
+import { useFormHandler } from "@/hooks/useFormHandler";
+
 import { formatCPF, formatPhone, cleanFormat, formatTimeInterval } from "@/utils/format";
 import { TimeSlot } from "@/types/disponibilidade";
 import { useProfessionalSearch } from "@/hooks/useProfessionalSearch";
 import { usePatients } from "@/hooks/usePatients";
-import AvailabilitySearchSelector from "@/components/AvailabilitySearchSelector";
-import CardListagem from "@/components/CardListagem";
 
 export default function NewPatient() {
   const router = useRouter();
   const { user, isTeacher, isLoading: authLoading } = useAuth();
-  const { feedback, showFeedback, closeFeedback } = useFeedback();
   const { createPatient } = usePatients();
+  const { showFeedback } = useFeedback();
+  const { loading: loadingSave, handleSubmit } = useFormHandler();
 
   const {
     searchProfessionals,
@@ -31,7 +33,6 @@ export default function NewPatient() {
     clearResults,
   } = useProfessionalSearch();
 
-  const [loadingSave, setLoadingSave] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     birthDate: "",
@@ -62,8 +63,7 @@ export default function NewPatient() {
   const handleSearch = async () => {
     setSelectedProfessionalId(null);
     clearResults();
-    closeFeedback();
-
+    
     const slot = availability[0];
     if (!slot) return;
 
@@ -80,12 +80,10 @@ export default function NewPatient() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoadingSave(true);
-    closeFeedback();
 
+    // Validações Locais
     if (!selectedProfessionalId) {
       showFeedback("Por favor, selecione um profissional responsável.", "error");
-      setLoadingSave(false);
       return;
     }
 
@@ -96,11 +94,10 @@ export default function NewPatient() {
 
     if (birthDateObj > today) {
       showFeedback("A data de nascimento não pode ser uma data futura.", "error");
-      setLoadingSave(false);
       return;
     }
 
-    try {
+    await handleSubmit(async () => {
       await createPatient({
         nome: formData.name,
         dataNascimento: formData.birthDate,
@@ -111,17 +108,11 @@ export default function NewPatient() {
 
       showFeedback("Paciente cadastrada e vinculada com sucesso!", "success");
 
+      // Reset do Form
       setFormData({ name: "", birthDate: "", cpf: "", cellphone: "" });
       setSelectedProfessionalId(null);
       clearResults();
-      
-    } catch (error: any) {
-      console.error("Erro cadastro:", error);
-      const msg = error.response?.data?.error || "Erro ao realizar cadastro.";
-      showFeedback(typeof msg === 'string' ? msg : "Erro desconhecido", "error");
-    } finally {
-      setLoadingSave(false);
-    }
+    });
   };
 
   if (authLoading || (!isTeacher && !user?.permCadastro)) {
@@ -134,12 +125,6 @@ export default function NewPatient() {
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full relative pb-20">
-      <FeedbackAlert
-        open={feedback.open}
-        color={feedback.type === "error" ? "red" : "green"}
-        message={feedback.message}
-        onClose={closeFeedback}
-      />
 
       <div className="flex items-center gap-4">
         <button onClick={() => router.back()} className="p-3 rounded-full hover:bg-brand-purple/10 text-brand-purple transition-colors focus:outline-none">

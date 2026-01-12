@@ -1,5 +1,5 @@
 import api from "./apiServices";
-import { CreatePatientDTO, Patient, UpdatePatientDTO } from "@/types/paciente";
+import { CreatePatientDTO, Patient, UpdatePatientDTO, PatientAggregatedResponse } from "@/types/paciente";
 import { ApiResponse } from "@/types/api";
 
 interface PatientQueryParams {
@@ -26,9 +26,11 @@ export const patientService = {
     };
   },
 
-  async getById(id: string): Promise<Patient> {
+  async getById(id: string): Promise<PatientAggregatedResponse> {
     const response = await api.get(`/patients/${id}`);
-    return response.data.data || response.data;
+    const payload = response.data.data || response.data;
+
+    return payload;
   },
 
   // Criar

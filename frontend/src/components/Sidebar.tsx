@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { List, Card, IconButton } from "@material-tailwind/react";
-import { Menu, LayoutDashboard, Users, UserPlus, User } from "lucide-react";
+import { Menu, Users, User, PlusSquare, Home } from "lucide-react";
 import { User as UserType } from "@/types/usuarios";
 
 interface SidebarDesktopProps {
@@ -60,7 +60,7 @@ export default function SidebarDesktop({ isVisible, toggleSidebar, user }: Sideb
         
         <NavItem
           href="/home"
-          icon={<LayoutDashboard size={20} />}
+          icon={<Home size={20} />}
           label="Início"
           active={pathname === "/home"}
         />
@@ -89,7 +89,7 @@ export default function SidebarDesktop({ isVisible, toggleSidebar, user }: Sideb
 
         <NavItem
           href="/home/cadastro"
-          icon={<UserPlus size={20} />}
+          icon={<PlusSquare size={20} />}
           label="Cadastro"
           active={pathname.startsWith("/home/cadastro")}
         />

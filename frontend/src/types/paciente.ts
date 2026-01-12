@@ -6,7 +6,7 @@ export interface Patient {
   cpf?: string; 
   telefone?: string;
   terapeutaId: string; // ID do responsável
-  status: "Ativo" | "Inativo"; // Tipagem mais estrita
+  status: string;
   observacoes?: string;
   createdAt?: string;
 }
@@ -28,4 +28,12 @@ export interface UpdatePatientDTO extends Partial<CreatePatientDTO> {
 // Resposta específica de listagem
 export interface PatientResponseItem {
   patient: Patient;
+}
+
+export interface PatientAggregatedResponse {
+  patient: Patient;
+  therapist?: {
+    id: string;
+    nome: string;
+  };
 }

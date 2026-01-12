@@ -6,17 +6,17 @@ import { ArrowLeft, User, Lock } from "lucide-react";
 import { Card, CardBody, Typography, Tooltip } from "@material-tailwind/react";
 import Input from "@/components/Input";
 import Button from "@/components/Button";
-import FeedbackAlert from "@/components/FeedbackAlert";
 import { useAuth } from "@/contexts/AuthContext";
-import { useFeedback } from "@/hooks/useFeedback";
+import { useFeedback } from "@/contexts/FeedbackContext";
+import { useFormHandler } from "@/hooks/useFormHandler";
 import { authService } from "@/services/authServices";
 import { formatPhone, cleanFormat } from "@/utils/format";
 
 export default function ProfileData() {
   const router = useRouter();
   const { user, refreshProfile } = useAuth();
-  const { feedback, showFeedback, closeFeedback } = useFeedback();
-  const [loadingSave, setLoadingSave] = useState(false);
+  const { showFeedback } = useFeedback();
+  const { loading: loadingSave, handleSubmit } = useFormHandler();
 
   const [formData, setFormData] = useState({
     nome: "",
@@ -47,11 +47,8 @@ export default function ProfileData() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoadingSave(true);
-    closeFeedback();
-
-    try {
-      // Usa o service para atualizar
+    
+    await handleSubmit(async () => {
       await authService.updateProfile({
         nome: formData.nome,
         email: formData.email,
@@ -62,23 +59,11 @@ export default function ProfileData() {
       await refreshProfile();
 
       router.push("/home/perfil?success=dados");
-    } catch (error: any) {
-      console.error(error);
-      const msg = error.response?.data?.message || "Erro ao atualizar perfil.";
-      showFeedback(msg, "error");
-    } finally {
-      setLoadingSave(false);
-    }
+    });
   };
 
   return (
     <div className="max-w-4xl mx-auto w-full pb-10">
-      <FeedbackAlert
-        open={feedback.open}
-        color={feedback.type === "error" ? "red" : "green"}
-        message={feedback.message}
-        onClose={closeFeedback}
-      />
 
       <div className="flex items-center gap-4 mb-6">
         <button onClick={() => router.back()} className="p-2 rounded-full hover:bg-brand-purple/10 text-brand-purple transition-colors">
@@ -99,8 +84,21 @@ export default function ProfileData() {
 
           <form onSubmit={handleSave} className="flex flex-col gap-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Input label="Nome Completo" name="nome" value={formData.nome} onChange={handleChange} required />
-              <Input label="E-mail" type="email" name="email" value={formData.email} onChange={handleChange} required />
+              <Input 
+                label="Nome Completo" 
+                name="nome" 
+                value={formData.nome} 
+                onChange={handleChange} 
+                required 
+              />
+              <Input 
+                label="E-mail" 
+                type="email" 
+                name="email" 
+                value={formData.email} 
+                onChange={handleChange} 
+                required 
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -116,7 +114,14 @@ export default function ProfileData() {
                   </Tooltip>
                 }
               />
-              <Input label="Celular" name="telefone" value={formData.telefone} onChange={handleChange} maxLength={15} placeholder="(00) 00000-0000" />
+              <Input 
+                label="Celular" 
+                name="telefone" 
+                value={formData.telefone} 
+                onChange={handleChange} 
+                maxLength={15} 
+                placeholder="(00) 00000-0000" 
+              />
             </div>
 
             <div className="flex flex-col-reverse md:flex-row gap-4 mt-4 pt-4 border-t border-gray-100">

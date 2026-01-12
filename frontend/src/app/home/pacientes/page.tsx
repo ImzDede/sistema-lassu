@@ -102,6 +102,7 @@ export default function PacientesPage() {
                       </div>
                     }
                     status={p.status}
+                    onClick={() => router.push(`/home/pacientes/${p.id}`)}
                   />
                 ))}
 

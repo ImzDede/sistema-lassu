@@ -5,21 +5,20 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Save, Clock } from "lucide-react";
 import { Card, CardBody, Typography, Spinner } from "@material-tailwind/react";
 import Button from "@/components/Button";
-import FeedbackAlert from "@/components/FeedbackAlert";
 import AvailabilityEditor from "@/components/AvailabilityEditor";
-import { useFeedback } from "@/hooks/useFeedback";
 import { userService } from "@/services/userServices";
 import { TimeSlot } from "@/types/disponibilidade";
 import { numberToDayMap, dayMap } from "@/utils/constants";
 import { useAuth } from "@/contexts/AuthContext";
+import { useFeedback } from "@/contexts/FeedbackContext";
+import { useFormHandler } from "@/hooks/useFormHandler";
 
 export default function ProfileAvailability() {
   const router = useRouter();
   const { user } = useAuth();
-  const { feedback, showFeedback, closeFeedback } = useFeedback();
+  const { showFeedback } = useFeedback();
+  const { loading: saving, handleSubmit } = useFormHandler();
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-
   const [availability, setAvailability] = useState<TimeSlot[]>([]);
 
   // Buscar Disponibilidade Atual
@@ -52,9 +51,7 @@ export default function ProfileAvailability() {
   }, [showFeedback, user]);
 
   const handleSave = async () => {
-    setSaving(true);
-    closeFeedback();
-
+    // Validação Local
     const hasInvalidTime = availability.some(
       (slot) =>
         parseInt(slot.start.split(":")[0], 10) >=
@@ -63,28 +60,21 @@ export default function ProfileAvailability() {
 
     if (hasInvalidTime) {
       showFeedback("Horário final deve ser maior que o inicial.", "error");
-      setSaving(false);
       return;
     }
 
-    try {
+    // USANDO O HANDLER GLOBAL
+    await handleSubmit(async () => {
       const payload = availability.map((slot) => ({
         diaSemana: dayMap[slot.day],
         horaInicio: parseInt(slot.start.split(":")[0], 10),
         horaFim: parseInt(slot.end.split(":")[0], 10),
       }));
 
-      // Usa userService para salvar
       await userService.saveMyAvailability(payload);
 
       router.push("/home/perfil?success=disponibilidade");
-    } catch (error: any) {
-      console.error(error);
-      const msg = error.response?.data?.message || "Erro ao salvar horários.";
-      showFeedback(msg, "error");
-    } finally {
-      setSaving(false);
-    }
+    });
   };
 
   if (loading) {
@@ -97,12 +87,6 @@ export default function ProfileAvailability() {
 
   return (
     <div className="max-w-3xl mx-auto w-full pb-20">
-      <FeedbackAlert
-        open={feedback.open}
-        color={feedback.type === "error" ? "red" : "green"}
-        message={feedback.message}
-        onClose={closeFeedback}
-      />
 
       <div className="flex items-center gap-4 mb-6">
         <button

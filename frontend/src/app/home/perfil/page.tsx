@@ -9,14 +9,13 @@ import ProfileMenuItem from "@/components/ProfileMenuItem";
 import { logout } from "@/utils/auth";
 import { useAuth } from "@/contexts/AuthContext";
 import RoleBadge from "@/components/RoleBadge";
-import { useFeedback } from "@/hooks/useFeedback";
-import FeedbackAlert from "@/components/FeedbackAlert";
+import { useFeedback } from "@/contexts/FeedbackContext";
 
 export default function Perfil() {
   const router = useRouter();
   const { user, isLoading } = useAuth();
   const searchParams = useSearchParams();
-  const { feedback, showFeedback, closeFeedback } = useFeedback();
+  const { showFeedback } = useFeedback();
 
   useEffect(() => {
     const successType = searchParams.get("success");
@@ -75,12 +74,6 @@ export default function Perfil() {
 
   return (
     <div className="flex flex-col w-full min-h-full pb-20 lg:pb-0 font-sans">
-      <FeedbackAlert
-        open={feedback.open}
-        color={feedback.type === "error" ? "red" : "green"}
-        message={feedback.message}
-        onClose={closeFeedback}
-      />
 
       <div className="mb-6 lg:mb-8 flex items-center justify-center lg:justify-start">
         <div>

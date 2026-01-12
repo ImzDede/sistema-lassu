@@ -6,55 +6,64 @@ import { ArrowLeft, Lock, Eye, EyeOff, CheckCircle } from "lucide-react";
 import { Card, CardBody, Typography } from "@material-tailwind/react";
 import Input from "@/components/Input";
 import Button from "@/components/Button";
-import FeedbackAlert from "@/components/FeedbackAlert";
-import { useAuth } from "@/contexts/AuthContext";
-import { useFeedback } from "@/hooks/useFeedback";
+import { useFeedback } from "@/contexts/FeedbackContext";
 import { authService } from "@/services/authServices";
+import { useFormHandler } from "@/hooks/useFormHandler";
 
 export default function ProfilePassword() {
   const router = useRouter();
-  const { feedback, showFeedback, closeFeedback } = useFeedback();
-
-  const [loading, setLoading] = useState(false);
+  const { showFeedback } = useFeedback();
+  const { loading, handleSubmit } = useFormHandler();
+  
   const [passwords, setPasswords] = useState({ new: "", confirm: "" });
   const [showPass, setShowPass] = useState({ new: false, confirm: false });
+  const [errors, setErrors] = useState({ new: "", confirm: "" });
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    closeFeedback();
+    
+    let isValid = true;
+    const newErrors = { new: "", confirm: "" };
 
+    // Regex: Pelo menos uma maiúscula (A-Z) E um caractere especial (!@#$&*)
+    const strongPasswordRegex = /^(?=.*[A-Z])(?=.*[!@#$&*]).+$/;
+
+    // 1. Validação de Tamanho
     if (passwords.new.length < 6) {
-      showFeedback("A senha deve ter no mínimo 6 caracteres.", "error");
-      return;
+      newErrors.new = "A senha deve ter no mínimo 6 caracteres.";
+      isValid = false;
+    } 
+    // 2. Validação de Complexidade
+    else if (!strongPasswordRegex.test(passwords.new)) {
+      newErrors.new = "A senha deve ter letra maiúscula e caractere especial.";
+      isValid = false;
     }
+
+    // 3. Validação de Igualdade
     if (passwords.new !== passwords.confirm) {
-      showFeedback("As senhas não coincidem.", "error");
-      return;
+      newErrors.confirm = "As senhas não coincidem.";
+      isValid = false;
     }
 
-    setLoading(true);
+    // Pinta os inputs de vermelho
+    setErrors(newErrors);
 
-    try {
+    // Se tiver erro no front, PARA AQUI e mostra o erro específico
+    if (!isValid) {
+        const errorMessage = newErrors.new || newErrors.confirm || "Verifique os campos destacados.";
+        
+        showFeedback(errorMessage, "error");
+        return; 
+    }
+
+    await handleSubmit(async () => {
       await authService.updateProfile({ senha: passwords.new } as any);
-
       router.push("/home/perfil?success=senha");
-    } catch (error: any) {
-      console.error(error);
-      const msg = error.response?.data?.message || error.response?.data?.error || "Erro ao alterar senha.";
-      showFeedback(typeof msg === 'string' ? msg : "Erro desconhecido.", "error");
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   return (
     <div className="max-w-4xl mx-auto w-full pb-10">
-      <FeedbackAlert
-        open={feedback.open}
-        color={feedback.type === "error" ? "red" : "green"}
-        message={feedback.message}
-        onClose={closeFeedback}
-      />
 
       <div className="flex items-center gap-4 mb-6">
         <button onClick={() => router.back()} className="p-2 rounded-full hover:bg-brand-purple/10 text-brand-purple transition-colors">
@@ -84,7 +93,11 @@ export default function ProfilePassword() {
                 label="Nova Senha"
                 type={showPass.new ? "text" : "password"}
                 value={passwords.new}
-                onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
+                onChange={(e) => {
+                    setPasswords({ ...passwords, new: e.target.value });
+                    setErrors({ ...errors, new: "" });
+                }}
+                error={errors.new}
                 required
                 icon={
                   <button type="button" onClick={() => setShowPass((p) => ({ ...p, new: !p.new }))} className="focus:outline-none text-gray-400 hover:text-brand-purple">
@@ -96,7 +109,11 @@ export default function ProfilePassword() {
                 label="Confirmar Nova Senha"
                 type={showPass.confirm ? "text" : "password"}
                 value={passwords.confirm}
-                onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
+                onChange={(e) => {
+                    setPasswords({ ...passwords, confirm: e.target.value });
+                    setErrors({ ...errors, confirm: "" });
+                }}
+                error={errors.confirm}
                 required
                 icon={
                   <button type="button" onClick={() => setShowPass((p) => ({ ...p, confirm: !p.confirm }))} className="focus:outline-none text-gray-400 hover:text-brand-purple">

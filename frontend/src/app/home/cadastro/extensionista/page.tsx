@@ -6,17 +6,18 @@ import { ArrowLeft, UserPlus } from "lucide-react";
 import { Card, CardBody, Typography, Spinner } from "@material-tailwind/react";
 import Input from "@/components/Input";
 import Button from "@/components/Button";
-import FeedbackAlert from "@/components/FeedbackAlert";
 import { useAuth } from "@/contexts/AuthContext";
-import { useFeedback } from "@/hooks/useFeedback";
+import { useFeedback } from "@/contexts/FeedbackContext";
+import { useFormHandler } from "@/hooks/useFormHandler";
 import { userService } from "@/services/userServices";
 import { cleanFormat, formatPhone } from "@/utils/format";
 
 export default function NewExtensionist() {
   const router = useRouter();
   const { user, isTeacher, isLoading: authLoading } = useAuth();
-  const [formLoading, setFormLoading] = useState(false);
-  const { feedback, showFeedback, closeFeedback } = useFeedback();
+  const { showFeedback } = useFeedback();
+  const { loading: formLoading, handleSubmit } = useFormHandler();
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -57,10 +58,8 @@ export default function NewExtensionist() {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    setFormLoading(true);
-    closeFeedback();
-
-    try {
+    
+    await handleSubmit(async () => {
       const payload = {
         nome: formData.name,
         email: formData.email,
@@ -71,30 +70,14 @@ export default function NewExtensionist() {
       await userService.create(payload);
 
       showFeedback("Extensionista cadastrada com sucesso!", "success");
+      
+      // Limpa o formulário
       setFormData({ name: "", email: "", registration: "", phone: "" });
-    } catch (error: any) {
-      console.error("Error creating extensionist:", error);
-      const dataError = error.response?.data;
-      const msgBackend = dataError?.error || dataError?.message;
-      showFeedback(
-        typeof msgBackend === "string"
-          ? msgBackend
-          : "Erro ao realizar o cadastro.",
-        "error"
-      );
-    } finally {
-      setFormLoading(false);
-    }
+    });
   }
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full relative">
-      <FeedbackAlert
-        open={feedback.open}
-        color={feedback.type === "error" ? "red" : "green"}
-        message={feedback.message}
-        onClose={closeFeedback}
-      />
 
       <div className="flex items-center gap-4">
         <button

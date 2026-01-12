@@ -44,4 +44,11 @@ declare module "@material-tailwind/react" {
   export interface AvatarProps extends GenericMissingProps {}
   export interface AlertProps extends GenericMissingProps {}
   export interface BadgeProps extends GenericMissingProps {}
+
+  export interface MenuProps extends GenericMissingProps {}
+  export interface MenuHandlerProps extends GenericMissingProps {}
+  export interface MenuListProps extends GenericMissingProps {}
+  export interface MenuItemProps extends GenericMissingProps {}
+
+  export interface ProgressProps extends GenericMissingProps {}
 }

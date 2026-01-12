@@ -5,10 +5,10 @@ import Image from "next/image";
 import { Eye, EyeOff } from "lucide-react";
 import Input from "@/components/Input";
 import Button from "@/components/Button";
-import FeedbackAlert from "@/components/FeedbackAlert";
 import { Checkbox, Typography } from "@material-tailwind/react";
-import { useFeedback } from "@/hooks/useFeedback";
+import { useFeedback } from "@/contexts/FeedbackContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useFormHandler } from "@/hooks/useFormHandler";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -16,38 +16,29 @@ export default function Login() {
   const [keepConnected, setKeepConnected] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { feedback, showFeedback, closeFeedback } = useFeedback();
-  const { signIn, isLoading } = useAuth(); 
+  const { signIn } = useAuth();
+  const { loading, handleSubmit } = useFormHandler();
+  const [hasError, setHasError] = useState(false);
 
   async function handleLogin(event: FormEvent) {
     event.preventDefault();
-    closeFeedback();
+    setHasError(false);
 
-    try {
-      // Salva o token, atualiza o usuário e redireciona.
-      await signIn({ email, senha: password });
-      
-      showFeedback("Autenticado! Redirecionando...", "success");
+    await handleSubmit(
+      async () => {
+        await signIn({ email, senha: password });
+        showFeedback("Sucesso!", "success");
+      },
+      undefined, // onSuccess
 
-    } catch (err: any) {
-      console.error("Erro Login:", err);
-      // Tratamento de erro robusto
-      const msg = err.response?.data?.error || 
-                  err.response?.data?.message || 
-                  "Credenciais inválidas ou erro de conexão.";
-      
-      showFeedback(typeof msg === "string" ? msg : "Erro ao entrar.", "error");
-    }
+      () => {
+        setHasError(true);
+      }
+    );
   }
 
   return (
     <main className="min-h-screen flex flex-col justify-center md:flex-row md:justify-normal bg-brand-bg relative">
-      <FeedbackAlert
-        open={feedback.open}
-        color={feedback.type === "error" ? "red" : "green"}
-        message={feedback.message}
-        onClose={closeFeedback}
-      />
-
       {/* Lado Esquerdo - Logo */}
       <div className="w-full md:w-1/2 md:bg-[linear-gradient(to_bottom_right,_#A78FBF,_#D9A3B6,_#F2A9A2,_#F2B694)] flex flex-col items-center justify-center p-6 md:p-10 md:min-h-screen relative overflow-hidden">
         <div className="mb-4 md:mb-8 z-10">
@@ -73,7 +64,10 @@ export default function Login() {
       {/* Lado Direito - Formulário */}
       <div className="w-full md:w-1/2 bg-brand-bg flex items-center justify-center p-8">
         <div className="w-full max-w-md flex flex-col gap-6">
-          <Typography variant="h2" className="text-center mb-4 uppercase tracking-widest font-normal text-brand-purple">
+          <Typography
+            variant="h2"
+            className="text-center mb-4 uppercase tracking-widest font-normal text-brand-purple"
+          >
             Bem-vindo
           </Typography>
 
@@ -82,15 +76,23 @@ export default function Login() {
               type="email"
               label="Email"
               value={email}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                setEmail(e.target.value);
+                setHasError(false);
+              }}
               required
+              error={hasError}
             />
             <Input
               type={showPassword ? "text" : "password"}
               label="Senha"
               value={password}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                setPassword(e.target.value);
+                setHasError(false);
+              }}
               required
+              error={hasError}
               icon={
                 <button
                   type="button"
@@ -109,14 +111,16 @@ export default function Login() {
                 color="purple"
                 className="checked:bg-brand-purple checked:border-brand-purple"
                 checked={keepConnected}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setKeepConnected(e.target.checked)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  setKeepConnected(e.target.checked)
+                }
                 crossOrigin={undefined}
               />
             </div>
 
             <div className="mt-2">
-              <Button type="submit" fullWidth loading={isLoading}>
-                {isLoading ? "ENTRANDO..." : "ACESSAR SISTEMA"}
+              <Button type="submit" fullWidth loading={loading}>
+                {loading ? "ENTRANDO..." : "ACESSAR SISTEMA"}
               </Button>
             </div>
           </form>
@@ -124,4 +128,7 @@ export default function Login() {
       </div>
     </main>
   );
+}
+function setHasError(arg0: boolean) {
+  throw new Error("Function not implemented.");
 }

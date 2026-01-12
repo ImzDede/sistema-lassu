@@ -60,27 +60,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // 2. Login: Autentica o usuário e salva o estado
   async function signIn({ email, senha }: LoginDTO) {
-    setIsLoading(true); // Bloqueia a UI para evitar cliques duplos
+    setIsLoading(true);
     try {
-      console.log("Iniciando autenticação...");
-      const response = await authService.login({ email, senha });
-      const { token } = response;
-      
-      const userResponse = normalizeUser(response);
+      // 1. Faz o login para pegar o token (o user daqui vem incompleto)
+      const loginResponse = await authService.login({ email, senha });
+      const { token } = loginResponse;
 
-      // A. Salva Token nos Cookies
+      // 2. Salva o token e configura o header IMEDIATAMENTE
       saveToken(token);
-      
-      // B. Configura Header Global do Axios para as próximas requisições
       api.defaults.headers["Authorization"] = `Bearer ${token}`;
 
-      // C. Atualiza Estado da Aplicação
-      setUser(userResponse);
+      // 3. Busca o perfil completo (que tem as permissões certas)
+      const userProfile = await authService.getProfile();
+      const fullUser = normalizeUser(userProfile);
 
-      console.log("Login sucesso. Redirecionando...");
+      // 4. Salva o usuário completo no estado
+      setUser(fullUser);
 
-      // D. Redirecionamento Baseado no Perfil
-      if (userResponse.primeiroAcesso) {
+      // 5. Redirecionamento
+      if (fullUser.primeiroAcesso) {
         router.push("/primeiroAcesso");
       } else {
         router.push("/home");
@@ -113,48 +111,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // 5. Validar Sessão: Verifica periodicamente se o usuário ainda está ativo e com as permissões certas
   async function validateSession() {
       if (!user) return;
+
+      // Função auxiliar local: Converte qualquer bagunça para true ou false
+      const safeBool = (val: any): boolean => {
+          if (val === true || val === "true" || val === 1 || val === "1") return true;
+          return false;
+      };
+
       try {
           const response = await authService.getProfile();
           const remoteUser = normalizeUser(response);
           
+          // 1. Se foi desativado no banco, tchau.
           if (remoteUser.ativo === false) {
               console.warn("Usuário desativado. Encerrando sessão.");
               signOut();
               return;
           }
 
-          // Se as permissões mudaram
-          if (
-              remoteUser.permAdmin !== user.permAdmin || 
-              remoteUser.permCadastro !== user.permCadastro ||
-              remoteUser.permAtendimento !== user.permAtendimento
-          ) {
-              console.log("🔄 Permissões alteradas detectadas. Iniciando refresh do token...");
+          // 2. Comparação segura
+          const adminMudou = safeBool(remoteUser.permAdmin) !== safeBool(user.permAdmin);
+          const cadMudou = safeBool(remoteUser.permCadastro) !== safeBool(user.permCadastro);
+          const atendMudou = safeBool(remoteUser.permAtendimento) !== safeBool(user.permAtendimento);
+
+          // Só desloga se realmente houve mudança lógica
+          if (adminMudou || cadMudou || atendMudou) {
+              console.warn("Divergência real de permissão detectada. Sincronizando...");
               
-              // 1. Obtém novo token do backend
-              const { token: newToken } = await authService.refreshToken();
+              // DEBUG: Descomente se o erro persistir para ver o que está comparando
+              console.log("Admin (Remote vs Local):", remoteUser.permAdmin, user.permAdmin);
               
-              if (newToken) {
-                  // 2. Atualiza o Cookie PRIMEIRO
-                  saveToken(newToken);
-                  
-                  // 3. Atualiza o Header da instância atual do Axios em todos os locais possíveis
-                  api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
-                  api.defaults.headers['Authorization'] = `Bearer ${newToken}`;
-                  
-                  // 4. Atualiza o estado do usuário no React
-                  setUser(remoteUser);
-                  
-                  console.log("Token atualizado com sucesso. Permissões sincronizadas.");
-              }
+              signOut();
           }
 
       } catch (error: any) {
-          console.error("Erro na validação de sessão:", error);
-          // Apenas desloga se for erro de autenticação (401)
-          if (error.response?.status === 401) {
-              signOut();
-          }
+          // Se o token expirou ou é inválido (401), aí sim desloga
+          if (error.response?.status === 401) signOut();
       }
   }
 

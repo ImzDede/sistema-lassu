@@ -21,6 +21,7 @@ interface SearchableSelectProps {
   isLoading?: boolean;
   placeholder?: string;
   required?: boolean;
+  disabled?: boolean;
 }
 
 export default function SearchableSelect({
@@ -32,6 +33,7 @@ export default function SearchableSelect({
   isLoading = false,
   placeholder = "Digite para buscar...",
   required = false,
+  disabled = false,
 }: SearchableSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -88,6 +90,7 @@ export default function SearchableSelect({
   };
 
   const handleClear = (e?: React.MouseEvent) => {
+    if (disabled) return;
     e?.stopPropagation();
     onChange(null);
     setSearchTerm("");
@@ -110,7 +113,7 @@ export default function SearchableSelect({
           <CardListagem
             nomePrincipal={selectedOption.label}
             detalhe={selectedOption.subLabel || "Selecionado"}
-            onClick={() => setIsOpen(true)}
+            onClick={() => !disabled && setIsOpen(true)}
             selected={true}
           />
         </div>
@@ -119,6 +122,7 @@ export default function SearchableSelect({
           <Input
             label={label}
             value={searchTerm}
+            disabled={disabled}
             onChange={(e) => {
               setSearchTerm(e.target.value);
               setIsOpen(true);

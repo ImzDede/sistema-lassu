@@ -7,12 +7,12 @@ import { Card, CardBody, Typography, Spinner } from "@material-tailwind/react";
 import { Lock, Clock, ArrowRight, EyeOff, Eye } from "lucide-react";
 import Input from "@/components/Input";
 import Button from "@/components/Button";
-import FeedbackAlert from "@/components/FeedbackAlert";
 import AvailabilityEditor from "@/components/AvailabilityEditor";
+import { useFeedback } from "@/contexts/FeedbackContext";
+import { useFormHandler } from "@/hooks/useFormHandler";
 import { saveToken, verifyUserRedirect } from "@/utils/auth";
 import { dayMap, numberToDayMap } from "@/utils/constants";
 import { TimeSlot } from "@/types/disponibilidade";
-import { useFeedback } from "@/hooks/useFeedback";
 import { authService } from "@/services/authServices";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -20,15 +20,13 @@ export default function FirstAccess() {
   const router = useRouter();
   const pathname = usePathname();
   const { user: contextUser } = useAuth();
-
+  const { showFeedback, closeFeedback } = useFeedback();
+  const { loading, handleSubmit } = useFormHandler();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [step, setStep] = useState(1);
-  const [loading, setLoading] = useState(false);
   const [userName, setUserName] = useState("");
-
-  const { feedback, showFeedback, closeFeedback } = useFeedback();
-
   const [passwords, setPasswords] = useState({ new: "", confirm: "" });
+  const [errors, setErrors] = useState({ new: "", confirm: "" });
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [availability, setAvailability] = useState<TimeSlot[]>([
@@ -36,42 +34,62 @@ export default function FirstAccess() {
   ]);
 
   useEffect(() => {
-    // Verificação dupla (Cookie + Contexto) para garantir segurança
     const userFromToken = verifyUserRedirect(router, pathname);
     const finalUser = userFromToken || contextUser;
 
     if (finalUser) {
       if (finalUser.nome) setUserName(finalUser.nome);
 
-      // Se já passou do primeiro acesso, expulsa para home
       if (finalUser.primeiroAcesso === false) {
         router.replace("/home");
         return;
       }
-
       setIsAuthorized(true);
     }
   }, [router, pathname, contextUser]);
 
-  const handleGoToStep2 = () => {
+  const validateStep1 = () => {
+    let isValid = true;
+    const newErrors = { new: "", confirm: "" };
+
+    // 1. Validação de tamanho
     if (passwords.new.length < 8) {
-      showFeedback("A senha deve ter pelo menos 8 caracteres.", "error");
-      return;
+      newErrors.new = "Mínimo de 8 caracteres.";
+      isValid = false;
     }
 
-    // Verificação de letra maiúscula e caractere especial
+    // 2. Validação de complexidade (Regex)
     const strongPasswordRegex = /^(?=.*[A-Z])(?=.*[!@#$&*]).+$/;
-
     if (!strongPasswordRegex.test(passwords.new)) {
-      showFeedback("A senha deve conter uma letra maiúscula e um caractere especial.", "error");
-      return;
+      if (!newErrors.new) { 
+        newErrors.new = "Necessário letra maiúscula e caractere especial.";
+      }
+      isValid = false;
     }
 
+    // 3. Validação de igualdade
     if (passwords.new !== passwords.confirm) {
-      showFeedback("As senhas não coincidem.", "error");
-      return;
+      newErrors.confirm = "As senhas não coincidem.";
+      isValid = false;
     }
-    setStep(2);
+
+    setErrors(newErrors);
+
+    if (!isValid) {
+      // Pega o erro da senha nova. Se não tiver, pega o da confirmação.
+      const mensagemEspecifica = newErrors.new || newErrors.confirm;
+      
+      showFeedback(mensagemEspecifica, "error");
+    }
+
+    return isValid;
+  };
+
+  const handleGoToStep2 = () => {
+    if (validateStep1()) {
+      closeFeedback();
+      setStep(2);
+    }
   };
 
   const handleBackToStep1 = () => {
@@ -79,7 +97,7 @@ export default function FirstAccess() {
   };
 
   const handleFinalize = async () => {
-    // Validação de horários
+    // Validação de horários (client-side)
     const hasInvalidTime = availability.some(
       (slot) =>
         parseInt(slot.start.split(":")[0], 10) >=
@@ -91,53 +109,51 @@ export default function FirstAccess() {
       return;
     }
 
-    setLoading(true);
+    await handleSubmit(
+      async () => {
+        const disponibilidadeFormatada = availability.map((slot) => ({
+          diaSemana: dayMap[slot.day],
+          horaInicio: parseInt(slot.start.split(":")[0], 10),
+          horaFim: parseInt(slot.end.split(":")[0], 10),
+        }));
 
-    try {
-      // Formata para o Backend (String "Segunda" -> Int 1)
-      const disponibilidadeFormatada = availability.map((slot) => ({
-        diaSemana: dayMap[slot.day],
-        horaInicio: parseInt(slot.start.split(":")[0], 10),
-        horaFim: parseInt(slot.end.split(":")[0], 10),
-      }));
-
-      // Chama o Service
-      const { token } = await authService.completeFirstAccess(passwords.new, disponibilidadeFormatada);
-
-      if (!token) throw new Error("Token não retornado pela API.");
-
-      saveToken(token);
-      showFeedback("Cadastro finalizado! Entrando...", "success");
-      setTimeout(() => router.push("/home"), 1500);
-
-    } catch (error: any) {
-      console.error("Erro no cadastro:", error);
-      let msg = "Erro ao salvar.";
-
-      // Tenta extrair mensagem de erro
-      if (error.response?.data?.error) {
-        const errData = error.response.data.error;
-        if (typeof errData === "string") msg = errData;
-        else if (errData.message) msg = errData.message;
-      }
-      
-      // Traduz números de dias na mensagem de erro se houver
-      if (typeof msg === "string") {
+        // Chamada API
         try {
-           msg = msg.replace(/\b([0-6])\b/g, (match) => {
-             const n = parseInt(match, 10);
-             return numberToDayMap[n] || match;
-           });
-        } catch (e) {}
-        
-        // Se deu erro de disponibilidade, volta pro step 2, senão step 1
-        if (!msg.includes("senha")) setStep(2); 
-      }
+          const { token } = await authService.completeFirstAccess(passwords.new, disponibilidadeFormatada);
+          if (!token) throw new Error("Token não retornado pela API.");
+          
+          saveToken(token);
+          showFeedback("Cadastro finalizado! Entrando...", "success");
+          setTimeout(() => router.push("/home"), 1500);
+          
+        } catch (error: any) {
+          // Lógica de tradução de mensagem (Backend retorna "dia 1", Front mostra "Segunda")
+          let msg = error.response?.data?.error || error.message || "Erro ao salvar.";
+          
+          if (typeof msg === "object" && msg.message) msg = msg.message;
 
-      showFeedback(msg, "error");
-    } finally {
-      setLoading(false);
-    }
+          if (typeof msg === "string") {
+            msg = msg.replace(/\b([0-6])\b/g, (match: string) => {
+              const n = parseInt(match, 10);
+              return numberToDayMap[n] || match;
+            });
+            
+            // Lançamos um novo erro com a mensagem traduzida para o useFormHandler exibir
+            throw new Error(msg);
+          }
+          
+          throw error; // Se não for string, lança o erro original
+        }
+      },
+      undefined, // onSuccess (já tratado dentro da action)
+      (error) => {
+        // onError: callback para decidir se volta ou fica na tela
+        const msg = error.message || "";
+        if (!msg.toLowerCase().includes("senha")) {
+           setStep(2); 
+        }
+      }
+    );
   };
 
   if (!isAuthorized) {
@@ -151,13 +167,6 @@ export default function FirstAccess() {
   return (
     <div className="min-h-screen bg-brand-bg flex flex-col items-center justify-center p-4 relative overflow-hidden">
       <div className="absolute top-0 left-0 w-full h-2 bg-brand-purple"></div>
-
-      <FeedbackAlert
-        open={feedback.open}
-        color={feedback.type === "error" ? "red" : "green"}
-        message={feedback.message}
-        onClose={closeFeedback}
-      />
 
       <div className="w-full max-w-2xl flex flex-col gap-6 relative z-10">
         <div className="text-center space-y-2 px-4 mt-8 md:mt-0">
@@ -208,9 +217,13 @@ export default function FirstAccess() {
                     label="Nova Senha"
                     type={showNew ? "text" : "password"}
                     value={passwords.new}
-                    onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
+                    onChange={(e) => {
+                      setPasswords({ ...passwords, new: e.target.value });
+                      setErrors({ ...errors, new: "" });
+                    }}
+                    error={errors.new}
                     icon={
-                      <button type="button" tabIndex={-1} onClick={() => setShowNew(!showNew)} className="focus:outline-none hover:text-brand-purple text-gray-400">
+                      <button type="button" tabIndex={-1} onClick={() => setShowNew(!showNew)} className="focus:outline-none hover:text-brand-purple text-gray-400 transition-colors">
                         {showNew ? <EyeOff size={18} /> : <Eye size={18} />}
                       </button>
                     }
@@ -219,9 +232,13 @@ export default function FirstAccess() {
                     label="Confirmar Senha"
                     type={showConfirm ? "text" : "password"}
                     value={passwords.confirm}
-                    onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
+                    onChange={(e) => {
+                      setPasswords({ ...passwords, confirm: e.target.value });
+                      setErrors({ ...errors, confirm: "" });
+                    }}
+                    error={errors.confirm}
                     icon={
-                      <button type="button" tabIndex={-1} onClick={() => setShowConfirm(!showConfirm)} className="focus:outline-none hover:text-brand-purple text-gray-400">
+                      <button type="button" tabIndex={-1} onClick={() => setShowConfirm(!showConfirm)} className="focus:outline-none hover:text-brand-purple text-gray-400 transition-colors">
                         {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
                       </button>
                     }
