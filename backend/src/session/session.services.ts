@@ -21,18 +21,18 @@ export class SessionService {
         if (!therapistId) throw new AppError(HTTP_ERRORS.NOT_FOUND.PATIENT, 404);
 
         if (userId != therapistId) {
-            throw new AppError("Permissão negada para agendar este paciente.", 403);
+            throw new AppError(HTTP_ERRORS.FORBIDDEN.SESSION.SCHEDULE_NOT_YOURS, 403);
         }
 
         // Verifica Conflito
         const sameRoom = await repository.verifyConflictRoom(data)
         if (sameRoom) {
-            throw new AppError("Já existe uma sessão agendada para essa sala nesse horário", 409)
+            throw new AppError(HTTP_ERRORS.CONFLICT.SESSION.ROOM_OCCUPIED, 409)
         }
 
         const sameHour = await repository.verifyConflictHour(userId, data)
         if (sameHour) {
-            throw new AppError("Você já tem uma sessão para esse horário", 409)
+            throw new AppError(HTTP_ERRORS.CONFLICT.SESSION.THERAPIST_BUSY, 409)
         }
 
         // Inserção
@@ -70,7 +70,7 @@ export class SessionService {
                 if (!therapistId) throw new AppError(HTTP_ERRORS.NOT_FOUND.PATIENT, 404);
 
                 if (userId != therapistId) {
-                    throw new AppError("Permissão negada para visualizar o histórico deste paciente.", 403);
+                    throw new AppError(HTTP_ERRORS.FORBIDDEN.SESSION.HISTORY_NOT_YOURS, 403);
                 }
 
                 filterPatientId = patientTargetId
@@ -96,11 +96,11 @@ export class SessionService {
 
         const sessionRow = await repository.getById(sessionId);
 
-        if (!sessionRow) throw new AppError("Sessão não encontrada.", 404);
+        if (!sessionRow) throw new AppError(HTTP_ERRORS.NOT_FOUND.SESSION, 404);
 
         // Só vê se for Admin ou se for a dona da sessão
         if (!userPerms.admin && sessionRow.usuario_id !== userId) {
-            throw new AppError("Acesso negado.", 403);
+            throw new AppError(HTTP_ERRORS.FORBIDDEN.DEFAULT, 403);
         }
 
         return { sessionRow }
@@ -108,11 +108,11 @@ export class SessionService {
 
     async updateStatus(userId: string, sessionId: number, data: SessionUpdateStatusDTO) {
         const therapist = await repository.getTherapist(sessionId)
-        if (!therapist) throw new AppError('Sessão não encontrada', 404)
-        if (therapist != userId) throw new AppError('Sem permissão para alterar essa sessão', 403)
+        if (!therapist) throw new AppError(HTTP_ERRORS.NOT_FOUND.SESSION, 404)
+        if (therapist != userId) throw new AppError(HTTP_ERRORS.FORBIDDEN.SESSION.MANAGE_NOT_YOURS, 403)
 
         const sessionRow = await repository.update(sessionId, data)
-        if (!sessionRow) throw new AppError('Sessão não encontrada', 404)
+        if (!sessionRow) throw new AppError(HTTP_ERRORS.NOT_FOUND.SESSION, 404)
 
         return { sessionRow }
     }
@@ -120,12 +120,12 @@ export class SessionService {
     //Atualiza uma sessão
     async update(userId: string, sessionId: number, data: SessionUpdateDTO) {
         const therapist = await repository.getTherapist(sessionId)
-        if (!therapist) throw new AppError('Sessão não encontrada', 404)
-        if (therapist != userId) throw new AppError('Sem permissão para alterar essa sessão', 403)
+        if (!therapist) throw new AppError(HTTP_ERRORS.NOT_FOUND.SESSION, 404)
+        if (therapist != userId) throw new AppError(HTTP_ERRORS.FORBIDDEN.SESSION.MANAGE_NOT_YOURS, 403)
 
         if (data.dia || data.hora || data.sala) {
             const currentSession = await repository.getById(sessionId);
-            if (!currentSession) throw new AppError('Sessão não encontrada', 404);
+            if (!currentSession) throw new AppError(HTTP_ERRORS.NOT_FOUND.SESSION, 404);
 
             const checkData = {
                 dia: data.dia ?? currentSession.dia,
@@ -134,14 +134,14 @@ export class SessionService {
             }
 
             const conflictRoom = await repository.verifyConflictRoom(checkData, sessionId);
-            if (conflictRoom) throw new AppError("Sala já ocupada neste horário.", 409);
+            if (conflictRoom) throw new AppError(HTTP_ERRORS.CONFLICT.SESSION.ROOM_OCCUPIED, 409);
 
             const conflictHour = await repository.verifyConflictHour(userId, checkData, sessionId);
-            if (conflictHour) throw new AppError("Você já tem atendimento neste horário.", 409);
+            if (conflictHour) throw new AppError(HTTP_ERRORS.CONFLICT.SESSION.THERAPIST_BUSY, 409);
         }
 
         const sessionRow = await repository.update(sessionId, data)
-        if (!sessionRow) throw new AppError('Sessão não encontrada', 404)
+        if (!sessionRow) throw new AppError(HTTP_ERRORS.NOT_FOUND.SESSION, 404)
 
         return { sessionRow }
     }
@@ -151,11 +151,22 @@ export class SessionService {
         const { dia, hora, sala, statusCancelamento } = data
 
         const therapist = await repository.getTherapist(sessionId)
-        if (!therapist) throw new AppError('Sessão não encontrada', 404)
-        if (therapist != userId) throw new AppError('Sem permissão para alterar essa sessão', 403)
+        if (!therapist) throw new AppError(HTTP_ERRORS.NOT_FOUND.SESSION, 404)
+        if (therapist != userId) throw new AppError(HTTP_ERRORS.FORBIDDEN.SESSION.MANAGE_NOT_YOURS, 403)
+
+        // Validação de conflito ANTES de cancelar a antiga
+        const conflictRoom = await repository.verifyConflictRoom({ dia, hora, sala });
+        if (conflictRoom) {
+            throw new AppError(HTTP_ERRORS.CONFLICT.SESSION.RESCHEDULE_ROOM, 409)
+        }
+
+        const conflictHour = await repository.verifyConflictHour(userId, { dia, hora });
+        if (conflictHour) {
+            throw new AppError(HTTP_ERRORS.CONFLICT.SESSION.RESCHEDULE_THERAPIST, 409)
+        }
 
         const sessionCanceledRow = await repository.update(sessionId, { status: statusCancelamento })
-        if (!sessionCanceledRow) throw new AppError('Sessão não encontrada', 404)
+        if (!sessionCanceledRow) throw new AppError(HTTP_ERRORS.NOT_FOUND.SESSION, 404)
 
         const { sessionRow } = await this.create(userId, { dia, hora, sala, pacienteId: sessionCanceledRow.paciente_id })
 
@@ -164,8 +175,8 @@ export class SessionService {
 
     async delete(userId: string, sessionId: number) {
         const therapist = await repository.getTherapist(sessionId)
-        if (!therapist) throw new AppError('Sessão não encontrada', 404)
-        if (therapist != userId) throw new AppError('Sem permissão para alterar essa sessão', 403)
+        if (!therapist) throw new AppError(HTTP_ERRORS.NOT_FOUND.SESSION, 404)
+        if (therapist != userId) throw new AppError(HTTP_ERRORS.FORBIDDEN.SESSION.MANAGE_NOT_YOURS, 403)
 
         await repository.delete(sessionId)
 

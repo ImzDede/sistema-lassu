@@ -1,5 +1,6 @@
 import { Pool } from '@neondatabase/serverless';
 import dotenv from 'dotenv';
+import logger from '../utils/logger';
 
 dotenv.config();
 
@@ -8,6 +9,6 @@ const pool = new Pool({
 });
 
 pool.on('connect', () => {
-    console.log('Banco de dados conectado')
+    logger.info("Banco de dados conectado");
 })
 export default pool;

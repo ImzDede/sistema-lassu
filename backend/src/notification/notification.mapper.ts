@@ -1,4 +1,4 @@
-import { NotificationIdListResponseDTO, NotificationIdRow, NotificationListResponseDTO, NotificationRow } from "./notification.type";
+import { NotificationIdListResponseDTO, NotificationIdRow, NotificationListResponseDTO, NotificationRow } from "./notification.type"
 
 export class NotificationMapper {
   static toList(data: { notificationRows: NotificationRow[] }): NotificationListResponseDTO {

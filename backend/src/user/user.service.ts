@@ -196,15 +196,13 @@ export class UserService {
         const { page, limit, orderBy, direction, ativo, nome } = params;
         const offset = (page - 1) * limit;
 
-        const ativoBoolean = ativo === 'true' ? true : (ativo === 'false' ? false : undefined);
-
         const { userRows, total } = await repository.findAll({
             limit,
             offset,
             orderBy,
             direction,
             nome,
-            ativo: ativoBoolean
+            ativo
         });
 
         const totalPages = Math.ceil(total / limit);
@@ -218,7 +216,7 @@ export class UserService {
             sortBy: orderBy,
             sortDirection: direction,
             filterName: nome,
-            filterActive: ativoBoolean
+            filterActive: ativo
         };
     }
 

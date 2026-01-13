@@ -2,6 +2,7 @@ import { ErrorRequestHandler, NextFunction, Response, Request } from "express";
 import { HTTP_ERRORS } from "./messages";
 import { AppError } from "./AppError";
 import { ZodError } from "zod";
+import logger from "../utils/logger";
 
 export const handleError: ErrorRequestHandler = (
     err: unknown,
@@ -45,8 +46,8 @@ export const handleError: ErrorRequestHandler = (
         });
     }
 
-    //REMOVER DEPOIS
-    console.log(err)
+    //Log de erro
+    logger.error(err, "Erro não capturado pelo AppError ou Zod");
 
     return res.status(500).json({
         data: null,

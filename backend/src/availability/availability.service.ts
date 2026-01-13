@@ -10,12 +10,8 @@ export class AvailabilityService {
         const availabilitiesCorrect = this.validate(availabilities)
         await repository.deleteByUser(userId)
 
-        let availabilityRows = [];
-
-        for (const row of availabilitiesCorrect) {
-            const availabilityRow = await repository.create(userId, row)
-            availabilityRows.push(availabilityRow)
-        }
+        const promises = availabilitiesCorrect.map(row => repository.create(userId, row));
+        const availabilityRows = await Promise.all(promises);
 
         return { availabilityRows }
     }
