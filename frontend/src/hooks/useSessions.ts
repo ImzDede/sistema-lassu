@@ -7,11 +7,10 @@ export function useSessions() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 1. LISTAR (GET) - ATUALIZADO
+  // 1. LISTAR (GET)
   const fetchSessions = useCallback(async (filters?: SessionFilters) => {
     setLoading(true);
 
-    console.log("🔍 [useSessions] Enviando filtros para API:", filters);
 
     try {
       const data = await sessionService.getAll(filters);

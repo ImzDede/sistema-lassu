@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Lock, Eye, EyeOff, CheckCircle } from "lucide-react";
+import { ArrowLeft, Lock, CheckCircle } from "lucide-react";
 import { Card, CardBody, Typography } from "@material-tailwind/react";
 import Input from "@/components/Input";
 import Button from "@/components/Button";
@@ -16,7 +16,6 @@ export default function ProfilePassword() {
   const { loading, handleSubmit } = useFormHandler();
   
   const [passwords, setPasswords] = useState({ new: "", confirm: "" });
-  const [showPass, setShowPass] = useState({ new: false, confirm: false });
   const [errors, setErrors] = useState({ new: "", confirm: "" });
 
   const handleSave = async (e: React.FormEvent) => {
@@ -28,31 +27,24 @@ export default function ProfilePassword() {
     // Regex: Pelo menos uma maiúscula (A-Z) E um caractere especial (!@#$&*)
     const strongPasswordRegex = /^(?=.*[A-Z])(?=.*[!@#$&*]).+$/;
 
-    // 1. Validação de Tamanho
     if (passwords.new.length < 6) {
       newErrors.new = "A senha deve ter no mínimo 6 caracteres.";
       isValid = false;
-    } 
-    // 2. Validação de Complexidade
-    else if (!strongPasswordRegex.test(passwords.new)) {
+    } else if (!strongPasswordRegex.test(passwords.new)) {
       newErrors.new = "A senha deve ter letra maiúscula e caractere especial.";
       isValid = false;
     }
 
-    // 3. Validação de Igualdade
     if (passwords.new !== passwords.confirm) {
       newErrors.confirm = "As senhas não coincidem.";
       isValid = false;
     }
 
-    // Pinta os inputs de vermelho
     setErrors(newErrors);
 
-    // Se tiver erro no front, PARA AQUI e mostra o erro específico
     if (!isValid) {
-        const errorMessage = newErrors.new || newErrors.confirm || "Verifique os campos destacados.";
-        
-        showFeedback(errorMessage, "error");
+        // Se houver erro, apenas exibe nos inputs (via prop error) e um toast genérico
+        showFeedback("Verifique os campos destacados.", "error");
         return; 
     }
 
@@ -91,7 +83,7 @@ export default function ProfilePassword() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Input
                 label="Nova Senha"
-                type={showPass.new ? "text" : "password"}
+                type="password" // O componente Input gerencia o ícone de olho
                 value={passwords.new}
                 onChange={(e) => {
                     setPasswords({ ...passwords, new: e.target.value });
@@ -99,15 +91,12 @@ export default function ProfilePassword() {
                 }}
                 error={errors.new}
                 required
-                icon={
-                  <button type="button" onClick={() => setShowPass((p) => ({ ...p, new: !p.new }))} className="focus:outline-none text-gray-400 hover:text-brand-purple">
-                    {showPass.new ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                }
+                leftIcon={Lock}
+                placeholder="Digite a nova senha"
               />
               <Input
                 label="Confirmar Nova Senha"
-                type={showPass.confirm ? "text" : "password"}
+                type="password"
                 value={passwords.confirm}
                 onChange={(e) => {
                     setPasswords({ ...passwords, confirm: e.target.value });
@@ -115,11 +104,8 @@ export default function ProfilePassword() {
                 }}
                 error={errors.confirm}
                 required
-                icon={
-                  <button type="button" onClick={() => setShowPass((p) => ({ ...p, confirm: !p.confirm }))} className="focus:outline-none text-gray-400 hover:text-brand-purple">
-                    {showPass.confirm ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                }
+                leftIcon={Lock}
+                placeholder="Confirme a nova senha"
               />
             </div>
 

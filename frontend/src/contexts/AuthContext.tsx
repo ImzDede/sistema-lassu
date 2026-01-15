@@ -139,7 +139,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               console.warn("Divergência real de permissão detectada. Sincronizando...");
               
               // DEBUG: Descomente se o erro persistir para ver o que está comparando
-              console.log("Admin (Remote vs Local):", remoteUser.permAdmin, user.permAdmin);
               
               signOut();
           }

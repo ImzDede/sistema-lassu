@@ -8,7 +8,7 @@ export function useUsers() {
   const [error, setError] = useState<string | null>(null);
 
   // Busca lista de terapeutas
-  const fetchUsers = useCallback(async (filters?: { page?: number; limit?: number; ativo?: boolean }) => {
+  const fetchUsers = useCallback(async (filters?: { page?: number; limit?: number; ativo?: boolean; nome?: string }) => {
     setLoading(true);
     try {
       let ativoParam: 'true' | 'false' | undefined = undefined;
@@ -19,7 +19,8 @@ export function useUsers() {
         page: filters?.page || 1,
         limit: filters?.limit || 8,
         ativo: ativoParam,
-        orderBy: 'nome'
+        orderBy: 'nome',
+        nome: filters?.nome
       });
 
       setUsers(response.data || []);

@@ -38,8 +38,13 @@ export default function SidebarDesktop({ isVisible, toggleSidebar, user }: Sideb
 
   if (!isVisible || !user) return null;
 
+  // Lógica de Redirecionamento do Cadastro
+  // Admin -> Vai direto para criar Extensionista
+  // Outros -> Vai para o menu geral de cadastro
+  const cadastroHref = user.permAdmin ? "/home/cadastro/extensionista" : "/home/cadastro";
+
   return (
-    <Card className="hidden lg:flex flex-col w-72 min-h-screen rounded-none shadow-xl border-r border-white/10 sticky top-0 h-screen bg-brand-purple z-50">
+    <Card className="hidden lg:flex flex-col w-72 min-h-screen rounded-none shadow-xl border-r border-white/10 sticky top-0 h-screen bg-gradient-to-b from-brand-purple via-brand-purple-dark to-brand-pink z-50">
       
       <div className="p-6 flex items-center justify-between border-b border-white/10 mb-2">
         <Link href="/home">
@@ -67,7 +72,7 @@ export default function SidebarDesktop({ isVisible, toggleSidebar, user }: Sideb
 
         {/* PERMISSÕES ESTRITAS */}
         
-        {/* Pacientes: Apenas Terapeuta (e NÃO Admin) */}
+        {/* Pacientes: Apenas Terapeuta */}
         {user.permAtendimento && !user.permAdmin && (
           <NavItem
             href="/home/pacientes"
@@ -87,8 +92,9 @@ export default function SidebarDesktop({ isVisible, toggleSidebar, user }: Sideb
           />
         )}
 
+        {/* Cadastro: Link dinâmico baseado na permissão */}
         <NavItem
-          href="/home/cadastro"
+          href={cadastroHref}
           icon={<PlusSquare size={20} />}
           label="Cadastro"
           active={pathname.startsWith("/home/cadastro")}
@@ -103,7 +109,7 @@ export default function SidebarDesktop({ isVisible, toggleSidebar, user }: Sideb
       </List>
       
       <div className="p-4 border-t border-white/10 text-white/40 text-xs text-center">
-        Sistema LASSU © 2024
+        Sistema LASSU © 2026
       </div>
     </Card>
   );

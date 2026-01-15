@@ -3,13 +3,14 @@
 import React, { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, Typography, List, Spinner } from "@material-tailwind/react";
-import { User, Lock, Clock, History, Pencil, LogOut } from "lucide-react";
+import { User, Lock, Clock, History, LogOut } from "lucide-react";
 import Button from "@/components/Button";
 import ProfileMenuItem from "@/components/ProfileMenuItem";
 import { logout } from "@/utils/auth";
 import { useAuth } from "@/contexts/AuthContext";
 import RoleBadge from "@/components/RoleBadge";
 import { useFeedback } from "@/contexts/FeedbackContext";
+import EditableProfileAvatar from "@/components/EditableProfileAvatar";
 
 export default function Perfil() {
   const router = useRouter();
@@ -38,30 +39,10 @@ export default function Perfil() {
   const canEditAvailability = (user?.permCadastro || user?.permAtendimento) && !user?.permAdmin;
 
   const menuItems = [
-    {
-      label: "DADOS PESSOAIS",
-      icon: <User size={18} />,
-      href: "/home/perfil/dados",
-      show: true,
-    },
-    {
-      label: "SENHA",
-      icon: <Lock size={18} />,
-      href: "/home/perfil/senha",
-      show: true,
-    },
-    {
-      label: "DISPONIBILIDADE",
-      icon: <Clock size={18} />,
-      href: "/home/perfil/disponibilidade",
-      show: !!canEditAvailability,
-    },
-    {
-      label: "HISTÓRICO",
-      icon: <History size={18} />,
-      href: "/home/perfil/historico",
-      show: true,
-    },
+    { label: "DADOS PESSOAIS", icon: <User size={18} />, href: "/home/perfil/dados", show: true },
+    { label: "SENHA", icon: <Lock size={18} />, href: "/home/perfil/senha", show: true },
+    { label: "DISPONIBILIDADE", icon: <Clock size={18} />, href: "/home/perfil/disponibilidade", show: !!canEditAvailability },
+    { label: "HISTÓRICO", icon: <History size={18} />, href: "/home/perfil/historico", show: true },
   ];
 
   if (isLoading) {
@@ -90,16 +71,12 @@ export default function Perfil() {
         <div className="flex flex-col lg:flex-row min-h-[500px]">
           {/* COLUNA ESQUERDA */}
           <div className="w-full lg:w-1/3 bg-brand-bg/50 lg:border-r border-brand-pink/20 p-6 lg:p-8 flex flex-col items-center">
-            <div className="relative mb-6 group">
-              <div className="w-32 h-32 rounded-full bg-white border-4 border-white shadow-md flex items-center justify-center text-gray-300 overflow-hidden ring-1 ring-gray-100">
-                <User size={64} strokeWidth={1.5} />
-              </div>
-              <button
-                onClick={() => router.push("/home/perfil/dados")}
-                className="absolute bottom-1 right-1 bg-brand-purple text-white p-2.5 rounded-full shadow-md hover:bg-[#967bb3] transition-all transform hover:scale-105 border-2 border-white"
-              >
-                <Pencil size={16} />
-              </button>
+            
+            <div className="mb-6">
+                <EditableProfileAvatar 
+                    avatarUrl={user?.fotoUrl}
+                    onEdit={() => router.push("/home/perfil/dados")} 
+                />
             </div>
 
             <div className="text-center w-full mb-8">
@@ -119,7 +96,7 @@ export default function Perfil() {
                 onClick={handleLogout}
                 variant="outline"
                 fullWidth
-                className="flex items-center justify-center gap-2 border-2 border-red-500 text-red-600 hover:bg-red-50"
+                className="flex items-center justify-center gap-2 border-2 border-red-500 text-red-600 hover:bg-red-50 text-xs sm:text-sm"
               >
                 <LogOut size={18} /> <span>SAIR DA CONTA</span>
               </Button>

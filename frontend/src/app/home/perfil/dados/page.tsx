@@ -2,12 +2,11 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, User, Lock } from "lucide-react";
+import { ArrowLeft, User, Mail, Phone, Hash, Lock } from "lucide-react";
 import { Card, CardBody, Typography, Tooltip } from "@material-tailwind/react";
 import Input from "@/components/Input";
 import Button from "@/components/Button";
 import { useAuth } from "@/contexts/AuthContext";
-import { useFeedback } from "@/contexts/FeedbackContext";
 import { useFormHandler } from "@/hooks/useFormHandler";
 import { authService } from "@/services/authServices";
 import { formatPhone, cleanFormat } from "@/utils/format";
@@ -15,7 +14,6 @@ import { formatPhone, cleanFormat } from "@/utils/format";
 export default function ProfileData() {
   const router = useRouter();
   const { user, refreshProfile } = useAuth();
-  const { showFeedback } = useFeedback();
   const { loading: loadingSave, handleSubmit } = useFormHandler();
 
   const [formData, setFormData] = useState({
@@ -55,9 +53,7 @@ export default function ProfileData() {
         telefone: cleanFormat(formData.telefone),
       });
       
-      // Atualiza o contexto global para refletir o novo nome no Header
       await refreshProfile();
-
       router.push("/home/perfil?success=dados");
     });
   };
@@ -90,6 +86,8 @@ export default function ProfileData() {
                 value={formData.nome} 
                 onChange={handleChange} 
                 required 
+                leftIcon={User}
+                placeholder="Seu nome completo"
               />
               <Input 
                 label="E-mail" 
@@ -98,6 +96,8 @@ export default function ProfileData() {
                 value={formData.email} 
                 onChange={handleChange} 
                 required 
+                leftIcon={Mail}
+                placeholder="seu.email@exemplo.com"
               />
             </div>
 
@@ -107,10 +107,11 @@ export default function ProfileData() {
                 name="matricula"
                 value={formData.matricula}
                 readOnly
-                className="font-medium !border-b-[1px] !border-b-gray-400 text-gray-400 cursor-not-allowed select-none focus:!border-b-gray-400"
-                icon={
-                  <Tooltip content="A matrícula não pode ser alterada.">
-                    <Lock size={16} className="text-gray-400" />
+                placeholder="0000000"
+                leftIcon={Hash}
+                rightIcon={
+                  <Tooltip content="A matrícula não pode ser alterada. Contate o administrador.">
+                    <Lock size={16} className="text-brand-purple/50" />
                   </Tooltip>
                 }
               />
@@ -121,6 +122,7 @@ export default function ProfileData() {
                 onChange={handleChange} 
                 maxLength={15} 
                 placeholder="(00) 00000-0000" 
+                leftIcon={Phone}
               />
             </div>
 

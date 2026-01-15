@@ -1,22 +1,24 @@
 "use client";
 
-import React, { useState } from "react";
-import { Spinner, IconButton, Typography } from "@material-tailwind/react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
+import { Spinner, IconButton, Typography } from "@material-tailwind/react";
 import { Menu } from "lucide-react";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { NotificationProvider } from "@/contexts/NotificationContext";
 import SidebarDesktop from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
-import { NotificationProvider } from "@/contexts/NotificationContext";
 import NotificationBell from "@/components/NotificationBell";
-import { useRouter } from "next/navigation";
 
 function HomeInternal({ children }: { children: React.ReactNode }) {
-  const { user, isLoading, isTeacher } = useAuth();
+  const { user, isLoading } = useAuth();
   const router = useRouter();
   const [showDesktopSidebar, setShowDesktopSidebar] = useState(true);
 
-  React.useEffect(() => {
+  // Redirecionamento de Primeiro Acesso
+  useEffect(() => {
     if (!isLoading && user && user.primeiroAcesso) {
       router.replace("/primeiroAcesso");
     }
@@ -57,13 +59,16 @@ function HomeInternal({ children }: { children: React.ReactNode }) {
 
             {/* Logo Mobile */}
             <div className="lg:hidden">
-              <Image
-                src="/lassuLogoVerticalCor.svg"
-                alt="Logo"
-                width={80}
-                height={30}
-                className="w-28 h-auto"
-              />
+              <Link href="/home">
+                <Image
+                  src="/lassuLogoVerticalCor.svg"
+                  alt="Logo"
+                  width={80}
+                  height={30}
+                  className="w-28 h-auto cursor-pointer"
+                  priority
+                />
+              </Link>
             </div>
 
             <div className="hidden lg:flex flex-col ml-2 lg:ml-0">

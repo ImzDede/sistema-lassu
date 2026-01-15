@@ -1,10 +1,9 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Search, X } from "lucide-react";
-import { Spinner, Card, List, ListItem } from "@material-tailwind/react";
+import { Search, X, Check, ChevronDown } from "lucide-react";
+import { Spinner, Card, List, ListItem, Typography } from "@material-tailwind/react";
 import Input from "@/components/Input";
-import CardListagem from "@/components/CardListagem";
 
 interface Option {
   id: string;
@@ -38,13 +37,12 @@ export default function SearchableSelect({
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const wrapperRef = useRef<HTMLDivElement>(null);
-  
-  // Ref para controlar o tempo de digitação
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
   // Encontra a opção selecionada
-  const selectedOption = options.find((opt) => opt.id === value) || (value ? { label: "Paciente Selecionado", subLabel: "Carregado", id: value } as Option : undefined);
+  const selectedOption = options.find((opt) => opt.id === value) || (value ? { label: "Item Selecionado", subLabel: "Carregado", id: value } as Option : undefined);
 
+  // Fecha ao clicar fora
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
@@ -55,23 +53,21 @@ export default function SearchableSelect({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Limpa o termo se o valor for resetado externamente
+  // Limpa busca se valor for resetado
   useEffect(() => {
     if (!value) setSearchTerm("");
   }, [value]);
 
-  // Só busca quando o usuário para de digitar
+  // Debounce da busca
   useEffect(() => {
     if (!onSearch) return;
-
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     debounceRef.current = setTimeout(() => {
-        // Se estiver aberto ou tiver termo, dispara a busca
         if (isOpen || searchTerm) {
             onSearch(searchTerm);
         }
-    }, 500); // 500ms de atraso
+    }, 500);
 
     return () => {
         if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -85,7 +81,7 @@ export default function SearchableSelect({
   const handleSelect = (option: Option) => {
     onChange(option.id);
     setSearchTerm("");
-    if (onSearch) onSearch(""); // Limpa a busca no back para restaurar a lista padrão
+    if (onSearch) onSearch("");
     setIsOpen(false);
   };
 
@@ -99,28 +95,43 @@ export default function SearchableSelect({
   };
 
   return (
-    <div className="relative w-full" ref={wrapperRef}>
-      {selectedOption && !isOpen ? (
-        <div className="relative animate-fade-in group">
-          <div 
-            onClick={handleClear}
-            className="absolute top-2 right-2 z-20 bg-brand-purple hover:bg-brand-dark text-white rounded-full p-1 cursor-pointer transition-all shadow-md"
-            title="Remover seleção"
-          >
-            <X size={14} />
-          </div>
+    <div className="relative w-full flex flex-col gap-1.5" ref={wrapperRef}>
+      {label && (
+        <label className="text-sm font-semibold text-brand-dark ml-1">
+          {label} {required && <span className="text-red-500">*</span>}
+        </label>
+      )}
 
-          <CardListagem
-            nomePrincipal={selectedOption.label}
-            detalhe={selectedOption.subLabel || "Selecionado"}
+      {selectedOption && !isOpen ? (
+        // Estado: Item Selecionado (Visual Customizado, sem depender de CardListagem)
+        <div 
             onClick={() => !disabled && setIsOpen(true)}
-            selected={true}
-          />
+            className={`
+                relative flex items-center justify-between p-3 border rounded-lg transition-all cursor-pointer bg-brand-purple/5 border-brand-purple
+                ${disabled ? "opacity-60 cursor-not-allowed" : "hover:shadow-md"}
+            `}
+        >
+            <div className="flex flex-col">
+                <span className="font-bold text-brand-dark text-sm">{selectedOption.label}</span>
+                {selectedOption.subLabel && (
+                    <span className="text-xs text-gray-500">{selectedOption.subLabel}</span>
+                )}
+            </div>
+            
+            <button 
+                onClick={handleClear}
+                className="p-1.5 bg-white text-brand-purple rounded-full shadow-sm hover:bg-red-50 hover:text-red-500 transition-colors z-10"
+                title="Remover seleção"
+                type="button"
+            >
+                <X size={14} strokeWidth={2.5} />
+            </button>
         </div>
       ) : (
+        // Estado: Buscando (Input)
         <div className="relative">
           <Input
-            label={label}
+            // Removemos label daqui pois renderizamos acima manualmente para manter consistência com o card de seleção
             value={searchTerm}
             disabled={disabled}
             onChange={(e) => {
@@ -131,31 +142,42 @@ export default function SearchableSelect({
             placeholder={placeholder}
             required={required && !value}
             autoComplete="off"
-            icon={
-              isLoading ? (
-                <Spinner className="h-4 w-4 text-brand-purple" />
-              ) : (
-                <Search size={18} className="text-gray-400" />
-              )
+            leftIcon={Search} // Novo padrão do Input
+            rightIcon={
+                isLoading ? (
+                    <Spinner className="h-4 w-4 text-brand-purple" />
+                ) : (
+                    searchTerm && (
+                        <button onClick={() => setSearchTerm("")} className="text-gray-400 hover:text-gray-600">
+                            <X size={16} />
+                        </button>
+                    )
+                )
             }
           />
 
+          {/* Dropdown de Opções */}
           {isOpen && (
-            <Card className="absolute z-50 w-full mt-1 max-h-60 overflow-y-auto shadow-xl border border-brand-purple/20 rounded-lg bg-white">
+            <Card className="absolute z-50 w-full mt-1 max-h-60 overflow-y-auto shadow-xl border border-gray-100 rounded-lg bg-white">
               <List className="p-1">
                 {filteredOptions.length > 0 ? (
                   filteredOptions.map((opt) => (
                     <ListItem
                       key={opt.id}
                       onClick={() => handleSelect(opt)}
-                      className="text-sm font-medium rounded-md px-3 py-2 hover:bg-brand-purple/5 hover:text-brand-purple flex flex-col items-start gap-0.5"
+                      className="text-sm font-medium rounded-md px-3 py-2.5 hover:bg-brand-purple/5 hover:text-brand-purple flex items-center justify-between group transition-colors"
                     >
-                      <span className="font-bold text-brand-dark">{opt.label}</span>
-                      {opt.subLabel && <span className="text-xs text-gray-400 font-normal">{opt.subLabel}</span>}
+                      <div className="flex flex-col gap-0.5">
+                          <span className="font-bold text-gray-700 group-hover:text-brand-purple transition-colors">
+                            {opt.label}
+                          </span>
+                          {opt.subLabel && <span className="text-[10px] text-gray-400 uppercase tracking-wide">{opt.subLabel}</span>}
+                      </div>
+                      {value === opt.id && <Check size={16} className="text-brand-purple" />}
                     </ListItem>
                   ))
                 ) : (
-                  <div className="p-3 text-center text-sm text-gray-400 italic">
+                  <div className="p-4 text-center text-sm text-gray-400 italic">
                     {isLoading ? "Buscando..." : "Nenhum resultado encontrado."}
                   </div>
                 )}

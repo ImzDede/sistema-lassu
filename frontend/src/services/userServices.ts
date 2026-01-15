@@ -8,7 +8,7 @@ interface UserQueryParams {
   limit?: number;
   orderBy?: string;
   ativo?: "true" | "false";
-  // nome?: string;
+  nome?: string;
 }
 
 export const userService = {
@@ -62,6 +62,11 @@ export const userService = {
     const response = await api.put(`/users/${id}`, perms);
     const result = response.data.data || response.data;
     return result.user || result;
+  },
+
+  // ADMIN: Reseta a senha de um usuário
+  async adminResetPassword(id: string): Promise<void> {
+    await api.patch(`/users/${id}/reset-password`);
   },
 
   // --- Disponibilidade ---

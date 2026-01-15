@@ -2,54 +2,83 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Users } from "lucide-react";
-import { Card, CardBody, Typography, Spinner } from "@material-tailwind/react";
+import { ArrowLeft, Users, Calendar, Clock, MapPin, List, FileText } from "lucide-react";
+import { Card, CardBody, Typography, Spinner, Textarea } from "@material-tailwind/react";
 import Button from "@/components/Button";
-import DateInput from "@/components/DateInput";
+import Input from "@/components/Input"; 
 import Select from "@/components/SelectBox";
 import SearchableSelect from "@/components/SearchableSelect";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFeedback } from "@/contexts/FeedbackContext";
 import { useFormHandler } from "@/hooks/useFormHandler";
 import { usePatients } from "@/hooks/usePatients";
-import { useSessions } from "@/hooks/useSessions";
+import { sessionService } from "@/services/sessionServices";
 import { formatCPF } from "@/utils/format";
 import { sessionHourOptions, roomOptions } from "@/utils/constants";
+import { validateSessionDateISO } from "@/utils/validation";
 
 export default function RegisterSession() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const sessionId = searchParams.get("id");
   const preSelectedPatientId = searchParams.get("patientId");
   const preSelectedPatientName = searchParams.get("patientName");
+  const isEditing = !!sessionId;
   const { user, isLoading: authLoading } = useAuth();
   const { patients, fetchPatients, loading: loadingPatients } = usePatients();
-  const { createSession } = useSessions();
   const { showFeedback } = useFeedback();
   const { loading: loadingSave, handleSubmit } = useFormHandler();
   const [selectedPatient, setSelectedPatient] = useState<string | null>(null);
   const [selectedRoom, setSelectedRoom] = useState("");
+  const [selectedSessionNumber, setSelectedSessionNumber] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedHour, setSelectedHour] = useState("");
+  const [anotacoes, setAnotacoes] = useState("");
+  const [isLoadingData, setIsLoadingData] = useState(false);
 
-  // 1. Lógica de Pré-Seleção (Vinda da tela de Detalhes Paciente)
+  const sessionOptions = [
+    { value: "1", label: "1ª Sessão" },
+    { value: "2", label: "2ª Sessão" },
+    { value: "3", label: "3ª Sessão" },
+  ];
+
+  // 1. CARREGAR DADOS SE FOR EDIÇÃO
   useEffect(() => {
-    if (preSelectedPatientId) {
+    if (isEditing && sessionId) {
+      setIsLoadingData(true);
+      sessionService.getById(Number(sessionId))
+        .then((data) => {
+          setSelectedPatient(data.pacienteId);
+          setSelectedDate(String(data.dia).split("T")[0]);
+          setSelectedHour(String(data.hora));
+          setSelectedRoom(String(data.sala));
+          setAnotacoes(data.anotacoes || "");
+          
+          if (!preSelectedPatientName && data.pacienteId) {
+             fetchPatients({ page: 1, limit: 1, status: "atendimento" } as any); 
+          }
+        })
+        .catch((err: any) => {
+          console.error(err);
+          showFeedback("Erro ao carregar dados da sessão.", "error");
+          router.back();
+        })
+        .finally(() => setIsLoadingData(false));
+    } else if (preSelectedPatientId) {
       setSelectedPatient(preSelectedPatientId);
-      
       if (!preSelectedPatientName) {
-         fetchPatients({ page: 1, limit: 1, nome: "", status: "atendimento" });
+         fetchPatients({ page: 1, limit: 1, nome: "", status: "atendimento" } as any);
       }
     }
-  }, [preSelectedPatientId, preSelectedPatientName, fetchPatients]);
+  }, [sessionId, isEditing, preSelectedPatientId, preSelectedPatientName, fetchPatients, router, showFeedback]);
 
-  // 2. Carrega lista inicial se não tiver pré-seleção
+  // 2. CARREGAR PACIENTES (Lista geral)
   useEffect(() => {
-    if (user && !preSelectedPatientId) {
-      fetchPatients({ page: 1, limit: 10, status: "atendimento" });
+    if (user && !preSelectedPatientId && !isEditing) {
+      fetchPatients({ page: 1, limit: 10, status: "atendimento" } as any);
     }
-  }, [user, fetchPatients, preSelectedPatientId]);
+  }, [user, fetchPatients, preSelectedPatientId, isEditing]);
 
-  // Função de busca do Select
   const handleSearchPatient = useCallback(
     (term: string) => {
       fetchPatients({
@@ -57,63 +86,77 @@ export default function RegisterSession() {
         page: 1,
         limit: 10,
         status: "atendimento",
-      });
+      } as any);
     },
     [fetchPatients]
   );
 
-  // Mapeamento das opções
   const patientOptions = patients
     .filter((p) => p && p.id && p.nome)
-    .map((p) => {
-      const detalhe = p.cpf
-        ? `CPF: ${formatCPF(p.cpf)}`
-        : `Status: ${p.status || "Sem status"}`;
-
-      return {
-        id: p.id,
-        label: p.nome,
-        subLabel: detalhe,
-      };
-    });
+    .map((p) => ({
+      id: p.id,
+      label: p.nome,
+      subLabel: p.cpf ? `CPF: ${formatCPF(p.cpf)}` : `Status: ${p.status}`,
+    }));
     
-  // Truque visual para pré-seleção
   if (preSelectedPatientId && preSelectedPatientName && !patientOptions.find(p => p.id === preSelectedPatientId)) {
       patientOptions.unshift({
           id: preSelectedPatientId,
           label: decodeURIComponent(preSelectedPatientName),
-          subLabel: "Pré-selecionado"
+          subLabel: "Selecionado"
       });
   }
 
   const handleSave = async () => {
-    // Validações Locais
     if (!selectedPatient || !selectedRoom || !selectedDate || !selectedHour) {
-      showFeedback("Preencha todos os campos.", "error");
+      showFeedback("Preencha os campos obrigatórios.", "error");
       return;
     }
 
-    const todayStr = new Date().toISOString().split("T")[0];
-    if (selectedDate < todayStr) {
-      showFeedback("Não é permitido agendar sessões para datas passadas.", "error");
+    const dateCheck = validateSessionDateISO(selectedDate);
+    if (!dateCheck.valid) {
+      showFeedback(dateCheck.message, "error");
       return;
     }
 
     await handleSubmit(async () => {
-      await createSession({
+      const payload = {
         pacienteId: selectedPatient,
         dia: selectedDate,
         hora: Number(selectedHour),
         sala: Number(selectedRoom),
-        anotacoes: "Sessão registrada.",
-      });
+        anotacoes: selectedSessionNumber 
+            ? `Sessão ${selectedSessionNumber} - ${anotacoes}`.trim() 
+            : anotacoes
+      };
 
-      showFeedback("Sessão cadastrada com sucesso!", "success");
-      setTimeout(() => router.push("/home"), 1500);
+      try {
+          if (isEditing) {
+            await sessionService.update(Number(sessionId), {
+                dia: payload.dia,
+                hora: payload.hora,
+                sala: payload.sala,
+                anotacoes: payload.anotacoes
+            });
+            showFeedback("Sessão atualizada com sucesso!", "success");
+          } else {
+            await sessionService.create(payload);
+            showFeedback("Sessão agendada com sucesso!", "success");
+          }
+          
+          setTimeout(() => router.back(), 1000);
+
+      } catch (error: any) {
+          if (error.response?.status === 409) {
+              showFeedback("Conflito: Horário ou Sala indisponível.", "error");
+          } else {
+              showFeedback("Erro ao salvar sessão.", "error");
+          }
+      }
     });
   };
 
-  if (authLoading) return <div className="flex justify-center h-[80vh] items-center"><Spinner className="text-brand-purple" /></div>;
+  if (authLoading || isLoadingData) return <div className="flex justify-center h-[80vh] items-center"><Spinner className="text-brand-purple" /></div>;
 
   return (
     <div className="max-w-4xl mx-auto w-full pb-10">
@@ -123,8 +166,12 @@ export default function RegisterSession() {
           <ArrowLeft className="w-6 h-6" />
         </button>
         <div>
-          <Typography variant="h4" className="font-bold uppercase text-brand-dark">Registro de Sessão</Typography>
-          <Typography className="text-gray-500 text-sm">Preencha os dados do agendamento.</Typography>
+          <Typography variant="h4" className="font-bold uppercase text-brand-dark">
+            {isEditing ? "Editar Sessão" : "Nova Sessão"}
+          </Typography>
+          <Typography className="text-gray-500 text-sm">
+            {isEditing ? "Altere os dados do agendamento." : "Preencha os dados para agendar."}
+          </Typography>
         </div>
       </div>
 
@@ -147,14 +194,67 @@ export default function RegisterSession() {
                 onSearch={handleSearchPatient}
                 isLoading={loadingPatients}
                 required
-                disabled={!!preSelectedPatientId} 
+                disabled={!!preSelectedPatientId || isEditing} 
+                placeholder="Busque pelo nome do paciente"
               />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-              <Select label="Sala" value={selectedRoom} onChange={setSelectedRoom} options={roomOptions} required />
-              <DateInput label="Data" minDate={new Date().toISOString().split("T")[0]} value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} required />
-              <Select label="Horário" value={selectedHour} onChange={setSelectedHour} options={sessionHourOptions} required />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              <Input 
+                type="date"
+                label="Data" 
+                value={selectedDate} 
+                onChange={(e) => setSelectedDate(e.target.value)} 
+                required 
+                leftIcon={Calendar}
+              />
+
+              <Select 
+                label="Horário" 
+                value={selectedHour} 
+                onChange={setSelectedHour} 
+                options={sessionHourOptions} 
+                required 
+                placeholder="Selecione o horário..."
+                leftIcon={Clock}
+              />
+
+              <Select 
+                label="Sala de Atendimento" 
+                value={selectedRoom} 
+                onChange={setSelectedRoom} 
+                options={roomOptions} 
+                required 
+                placeholder="Selecione a sala..."
+                leftIcon={MapPin}
+              />
+
+              {!isEditing && (
+                  <Select 
+                    label="Nº da Sessão (Opcional)" 
+                    value={selectedSessionNumber} 
+                    onChange={setSelectedSessionNumber} 
+                    options={sessionOptions} 
+                    placeholder="Ex: 1ª Sessão"
+                    leftIcon={List}
+                  />
+              )}
+            </div>
+
+            <div className="w-full">
+                <div className="flex items-center gap-2 mb-2">
+                    <FileText size={18} className="text-gray-500" />
+                    <label className="text-sm font-bold text-gray-700">Anotações / Observações</label>
+                </div>
+                <Textarea 
+                    value={anotacoes}
+                    onChange={(e) => setAnotacoes(e.target.value)}
+                    rows={4}
+                    placeholder="Detalhes sobre o atendimento..."
+                    className="!border-gray-300 focus:!border-brand-purple bg-white"
+                    labelProps={{ className: "hidden" }}
+                />
             </div>
 
             <div className="flex flex-col-reverse lg:flex-row gap-4 mt-4 pt-4 border-t border-gray-100">
@@ -162,7 +262,9 @@ export default function RegisterSession() {
                 <Button variant="outline" type="button" onClick={() => router.back()} fullWidth>CANCELAR</Button>
               </div>
               <div className="w-full lg:w-1/2">
-                <Button onClick={handleSave} loading={loadingSave} fullWidth>CADASTRAR SESSÃO</Button>
+                <Button onClick={handleSave} loading={loadingSave} fullWidth>
+                    {isEditing ? "SALVAR ALTERAÇÕES" : "AGENDAR SESSÃO"}
+                </Button>
               </div>
             </div>
           </form>

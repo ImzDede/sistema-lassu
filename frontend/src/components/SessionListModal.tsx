@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useRouter } from "next/navigation";
 import { Dialog, DialogHeader, DialogBody, Typography, IconButton, Chip } from "@material-tailwind/react";
 import { X, Calendar, User, Clock, Armchair } from "lucide-react";
 import { format } from "date-fns";
@@ -17,6 +18,8 @@ interface SessionListModalProps {
 
 export default function SessionListModal({ open, onClose, date, sessions, isTeacher }: SessionListModalProps) {
   if (!date) return null;
+
+  const router = useRouter();
 
   const formattedDate = format(date, "dd 'de' MMMM", { locale: ptBR });
   const isWeekend = date.getDay() === 0 || date.getDay() === 6;
@@ -70,7 +73,7 @@ export default function SessionListModal({ open, onClose, date, sessions, isTeac
                 }
 
                 return (
-                  <div key={session.id} className="flex gap-4 p-4 border-b border-gray-100 hover:bg-brand-bg/50 transition-colors items-center group">
+                  <button key={session.id} type="button" onClick={() => { onClose(); if (session.pacienteId) router.push(`/home/pacientes/${session.pacienteId}`); }} className="flex gap-4 p-4 border-b border-gray-100 hover:bg-brand-bg/50 transition-colors items-center group text-left w-full">
                     
                     {/* Coluna Horário */}
                     <div className="flex flex-col items-center justify-center min-w-[7rem] p-2 bg-brand-purple/5 rounded-lg border border-brand-purple/10 h-fit group-hover:bg-brand-purple/10 transition-colors">
@@ -86,7 +89,7 @@ export default function SessionListModal({ open, onClose, date, sessions, isTeac
                     {/* Coluna Detalhes */}
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-start mb-1 gap-2">
-                        {/* NOME PRINCIPAL (Negrito) */}
+                        {/* NOME PRINCIPAL */}
                         <Typography className="font-bold text-brand-dark text-sm truncate">
                           {nomePrincipal}
                         </Typography>
@@ -99,13 +102,13 @@ export default function SessionListModal({ open, onClose, date, sessions, isTeac
                         />
                       </div>
                       
-                      {/* NOME SECUNDÁRIO (Cinza com ícone) */}
+                      {/* NOME SECUNDÁRIO */}
                       <div className="flex items-center gap-1 text-gray-500 text-xs">
                         <IconeSecundario size={12} />
                         <span className="truncate">{labelSecundario}: {nomeSecundario}</span>
                       </div>
                     </div>
-                  </div>
+                  </button>
                 );
             })}
           </div>

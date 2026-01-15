@@ -11,24 +11,29 @@ import {
   Mail,
   Phone,
   Users,
+  Copy,
+  Lock
 } from "lucide-react";
 import { Typography, Spinner, Chip } from "@material-tailwind/react";
 import Button from "@/components/Button";
-import CardListagem from "@/components/CardListagem";
-import SearchInputWithFilter from "@/components/SearchInputWithFilter";
 import ConfirmationDialog from "@/components/ConfirmationDialog";
 import AvailabilityDialog from "@/components/AvailabilityDialog";
 import PermissionsDialog from "@/components/PermissionsDialog";
+import ResetPasswordDialog from "@/components/ResetPasswordDialog"; 
 import PaginationControls from "@/components/PaginationControls";
+import ProfileCard from "@/components/ProfileCard";
+import CardPaciente, { PatientStatus } from "@/components/CardPaciente";
+import SearchInputWithFilter, { FilterOption } from "@/components/SearchInputWithFilter";
+import { differenceInYears, parseISO } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUsers } from "@/hooks/useUsers";
 import { usePatients } from "@/hooks/usePatients";
-import { calculateAge } from "@/utils/date";
 import { numberToDayMap } from "@/utils/constants";
 import { usePagination } from "@/hooks/usePagination";
 import { useFeedback } from "@/contexts/FeedbackContext";
 import { User } from "@/types/usuarios";
-import ProfileCard from "@/components/ProfileCard";
+import { userService } from "@/services/userServices";
+import { formatPhone } from "@/utils/format";
 
 interface TherapistData extends User {
   disponibilidade?: any[];
@@ -46,21 +51,31 @@ export default function TherapistDetails({
   const { patients, fetchPatients, loading: loadingPatients } = usePatients();
   const [therapist, setTherapist] = useState<TherapistData | null>(null);
   const { showFeedback } = useFeedback();
+  
+  // Dialogs
   const [openRoleDialog, setOpenRoleDialog] = useState(false);
   const [openStatusDialog, setOpenStatusDialog] = useState(false);
   const [openAvailabilityDialog, setOpenAvailabilityDialog] = useState(false);
+  const [openResetDialog, setOpenResetDialog] = useState(false);
+  
+  // Filtros
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("ativo");
+  const [activeFilter, setActiveFilter] = useState("todos");
   const pagination = usePagination();
 
-  // 1. Carrega dados APENAS do Terapeuta
+  const filterOptions: FilterOption[] = [
+    { label: "Todos", value: "todos", placeholder: "Buscar paciente por nome..." },
+    { label: "Em Atendimento", value: "ativo" },
+    { label: "Encaminhados", value: "encaminhado" },
+    { label: "Inativos", value: "inativo" },
+  ];
+
   const loadTherapistData = useCallback(async () => {
     if (!id) return;
     try {
       const userResponse = await getUserById(id);
       
       if (userResponse) {
-        // Mapeamento robusto da disponibilidade
         const rawAvailability = (userResponse as any).disponibilidade || (userResponse as any).availability || [];
         
         const mappedAvailability = rawAvailability.map((slot: any) => {
@@ -82,19 +97,24 @@ export default function TherapistDetails({
     }
   }, [id, getUserById, showFeedback]);
 
-  // 2. Carrega lista de Pacientes
   const loadPatients = useCallback((pageToLoad: number) => {
-      const backendStatus = statusFilter === "ativo" ? "atendimento" : (statusFilter === "inativo" ? "encaminhada" : undefined);
+      let backendStatus = undefined;
       
-      fetchPatients({
+      if (activeFilter === "ativo") backendStatus = "atendimento";
+      if (activeFilter === "encaminhado") backendStatus = "encaminhada";
+      if (activeFilter === "inativo") backendStatus = "inativo";
+
+      const payload: any = {
           page: pageToLoad,
           limit: 8,
-          nome: searchTerm,
           status: backendStatus,
-          userTargetId: id 
-      }).then((meta) => {
+          userTargetId: id,
+          nome: searchTerm || undefined
+      };
+      
+      fetchPatients(payload).then((meta) => {
           if (meta) {
-              const rawTotal = (meta as any).total ?? (meta as any).count ?? 0;
+              const rawTotal = (meta as any).totalItems ?? (meta as any).total ?? 0;
               
               pagination.setMetadata({
                   currentPage: meta.page || pageToLoad,
@@ -105,35 +125,30 @@ export default function TherapistDetails({
               });
           }
       });
-  }, [id, searchTerm, statusFilter, fetchPatients, pagination]);
+  }, [id, searchTerm, activeFilter, fetchPatients, pagination]);
 
-  // Validação de Acesso e Carga Inicial
   useEffect(() => {
     if (authLoading) return;
-
     if (!isTeacher) {
       router.push("/home");
       return;
     }
-
-    // Carrega dados iniciais
     loadTherapistData();
-
   }, [authLoading, isTeacher]);
 
-  // Recarrega pacientes quando filtros mudam
   useEffect(() => {
-    // Reseta para página 1 sempre que mudar o filtro
-    pagination.setPage(1);
-    loadPatients(1);
-  }, [searchTerm, statusFilter]);
+    const timer = setTimeout(() => {
+        pagination.setPage(1);
+        loadPatients(1);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm, activeFilter]);
 
   const handlePatientsPageChange = (p: number) => {
     pagination.setPage(p);
     loadPatients(p);
   };
 
-  // --- Funções de Ação (Permissão/Status) ---
   const handleConfirmStatusChange = async () => {
     if (!id || !therapist) return;
     const novoStatus = !therapist.ativo;
@@ -141,9 +156,7 @@ export default function TherapistDetails({
       await updatePermissions(id, { ativo: novoStatus } as any);
       setTherapist({ ...therapist, ativo: novoStatus });
       showFeedback(
-        novoStatus
-          ? "Conta reativada com sucesso!"
-          : "Conta desativada com sucesso.",
+        novoStatus ? "Conta reativada com sucesso!" : "Conta desativada com sucesso.",
         novoStatus ? "success" : "warning"
       );
     } catch (e) {
@@ -163,6 +176,28 @@ export default function TherapistDetails({
     }
   };
 
+  const handleResetPassword = async () => {
+      if(!id) return;
+      try {
+          await userService.adminResetPassword(id);
+          showFeedback("Senha redefinida para o padrão.", "success");
+      } catch (error) {
+          showFeedback("Erro ao redefinir senha.", "error");
+      }
+  };
+
+  const copyToClipboard = (text: string) => {
+      navigator.clipboard.writeText(text);
+      showFeedback("Número copiado!", "success");
+  };
+
+  const mapStatusToCard = (pStatus: string): PatientStatus | null => {
+      if (pStatus === "atendimento") return "in_progress";
+      if (pStatus === "alta") return "completed";
+      if (pStatus === "desistência" || pStatus === "encaminhada") return "dropped";
+      return null;
+  };
+
   if (authLoading || !isTeacher || !therapist) {
     return (
       <div className="flex justify-center h-[80vh] items-center">
@@ -171,17 +206,19 @@ export default function TherapistDetails({
     );
   }
 
+  const formattedPhone = therapist.telefone ? formatPhone(therapist.telefone) : "--";
+
   return (
     <div className="flex flex-col w-full h-full pb-10">
 
-      <div className="flex items-center mb-6">
+      <div className="flex items-center mb-6 gap-4">
         <button
           onClick={() => router.back()}
           className="p-2 rounded-full hover:bg-brand-purple/10 text-brand-purple transition-colors"
         >
           <ArrowLeft size={24} />
         </button>
-        <Typography variant="h5" className="ml-2 text-gray-600 font-normal">
+        <Typography variant="h4" className="font-bold uppercase text-brand-dark">
           Detalhes da Profissional
         </Typography>
       </div>
@@ -210,45 +247,64 @@ export default function TherapistDetails({
                 </div>
             }
         >
-            {/* Dados de Contato (Slots Filhos) */}
             <div className="flex items-center gap-2 text-gray-600 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100">
                 <Mail size={16} className="text-brand-purple" />
                 <span className="text-sm">{therapist.email}</span>
             </div>
             
-            <div className="flex items-center gap-2 text-gray-600 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100">
+            <div 
+                className="flex items-center gap-2 text-gray-600 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100 cursor-pointer hover:border-brand-purple/30 hover:text-brand-purple transition-all group"
+                onClick={() => therapist.telefone && copyToClipboard(therapist.telefone)}
+            >
                 <Phone size={16} className="text-brand-purple" />
-                <span className="text-sm">{therapist.telefone || "--"}</span>
+                <span className="text-sm">{formattedPhone}</span>
+                <Copy size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
 
             <div className="flex items-center gap-2 text-blue-800 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-100">
                 <Users size={16} className="text-blue-600" />
-                <span className="text-sm font-medium">{pagination.totalItems || patients.length || 0} Pacientes</span>
+                <span className="text-sm font-medium">{pagination.totalItems} Pacientes</span>
             </div>
         </ProfileCard>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 my-6">
+      {/* Grid de Ações */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 my-6">
+        
+        {/* 1. Permissões */}
         <Button
           variant="outline"
           onClick={() => setOpenRoleDialog(true)}
-          className="flex items-center justify-center gap-2 !border-brand-purple !text-brand-purple hover:!bg-brand-purple hover:!text-white"
+          className="flex items-center justify-center gap-2 !border-[#A78FBF] !text-[#A78FBF] hover:!bg-[#A78FBF]/10"
         >
-          <UserCog size={18} /> Gerenciar Permissões
+          <UserCog size={18} /> Permissões
         </Button>
+        
+        {/* 2. Disponibilidade */}
         <Button
           variant="outline"
           onClick={() => setOpenAvailabilityDialog(true)}
-          className="flex items-center justify-center gap-2 !border-blue-500 !text-blue-600 hover:!bg-blue-500 hover:!text-white"
+          className="flex items-center justify-center gap-2 !border-[#F2B694] !text-[#F2B694] hover:!bg-[#F2B694]/10"
         >
-          <CalendarClock size={18} /> Ver Disponibilidade
+          <CalendarClock size={18} /> Disponibilidade
         </Button>
+
+        {/* 3. Redefinir Senha */}
+        <Button
+          variant="outline"
+          onClick={() => setOpenResetDialog(true)}
+          className="flex items-center justify-center gap-2 !border-[#D9A3B6] !text-[#D9A3B6] hover:!bg-[#D9A3B6]/10"
+        >
+          <Lock size={18} /> Redefinir Senha
+        </Button>
+
+        {/* 4. Status */}
         <Button
           variant="outline"
           onClick={() => setOpenStatusDialog(true)}
-          className="flex items-center justify-center gap-2 !border-red-500 !text-red-500 hover:!bg-red-500 hover:!text-white"
+          className={`flex items-center justify-center gap-2 ${therapist.ativo ? "!border-red-500 !text-red-500 hover:!bg-red-50" : "!border-green-500 !text-green-500 hover:!bg-green-50"}`}
         >
-          <Power size={18} />{" "}
-          {therapist.ativo ? "Desativar Conta" : "Reativar Conta"}
+          <Power size={18} /> 
+          {therapist.ativo ? "Desativar" : "Reativar"}
         </Button>
       </div>
 
@@ -269,11 +325,14 @@ export default function TherapistDetails({
 
         <div className="mb-4">
           <SearchInputWithFilter
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            statusFilter={statusFilter}
-            onFilterChange={setStatusFilter}
-            searchLabel="Procurar paciente"
+            value={searchTerm}
+            onChange={setSearchTerm}
+            filter={activeFilter}
+            onFilterChange={(newFilter) => {
+                setActiveFilter(newFilter);
+                setSearchTerm("");
+            }}
+            options={filterOptions}
           />
         </div>
 
@@ -287,31 +346,38 @@ export default function TherapistDetails({
               <>
                 {patients.length > 0 ? (
                   <>
-                    {patients.map((p) => (
-                      <CardListagem
-                        key={p.id}
-                        nomePrincipal={p.nome}
-                        detalhe={
-                          <span className="font-medium text-gray-700">
-                            {p.dataNascimento
-                              ? calculateAge(p.dataNascimento)
-                              : "-"}
-                          </span>
-                        }
-                        status={p.status}
-                        onClick={() => router.push(`/home/pacientes/${p.id}`)}
-                      />
-                    ))}
-                    <PaginationControls
-                      currentPage={pagination.page}
-                      totalPages={pagination.totalPages}
-                      hasNext={pagination.hasNext}
-                      hasPrev={pagination.hasPrev}
-                      onPageChange={handlePatientsPageChange}
-                    />
+                    <div className="grid grid-cols-1 gap-3">
+                        {patients.map((p) => {
+                          const ageNumber = p.dataNascimento 
+                            ? differenceInYears(new Date(), parseISO(p.dataNascimento)) 
+                            : null;
+
+                          return (
+                            <CardPaciente
+                                key={p.id}
+                                name={p.nome}
+                                age={ageNumber}
+                                avatarUrl={null}
+                                progressPercent={0} 
+                                status={mapStatusToCard(p.status || "")} 
+                                onClick={() => router.push(`/home/pacientes/${p.id}`)}
+                            />
+                          );
+                        })}
+                    </div>
+                    
+                    <div className="mt-4 flex justify-center pb-6">
+                        <PaginationControls
+                            currentPage={pagination.page}
+                            totalPages={pagination.totalPages}
+                            hasNext={pagination.hasNext}
+                            hasPrev={pagination.hasPrev}
+                            onPageChange={handlePatientsPageChange}
+                        />
+                    </div>
                   </>
                 ) : (
-                  <div className="text-center p-12 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                  <div className="text-center p-12 bg-white rounded-xl border border-dashed border-gray-200 mt-4">
                     <Typography className="text-gray-400 text-sm">
                       Nenhum paciente encontrado.
                     </Typography>
@@ -341,6 +407,13 @@ export default function TherapistDetails({
           open={openAvailabilityDialog}
           onClose={() => setOpenAvailabilityDialog(false)}
           availabilities={therapist.disponibilidade || []}
+        />
+        <ResetPasswordDialog
+            open={openResetDialog}
+            onClose={() => setOpenResetDialog(false)}
+            onConfirm={handleResetPassword}
+            therapistName={therapist.nome}
+            matricula={therapist.matricula}
         />
       </div>
     </div>

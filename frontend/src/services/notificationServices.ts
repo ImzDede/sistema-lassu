@@ -20,5 +20,11 @@ export const notificationService = {
   // Marca como lida
   async markAsRead(ids: number[]): Promise<void> {
     await api.patch("/notifications/read", { ids });
+  },
+
+  // Deleta notificações
+  async deleteNotifications(ids: string[]) {
+    const response = await api.post('/notifications/delete', { ids });
+    return response.data;
   }
 };

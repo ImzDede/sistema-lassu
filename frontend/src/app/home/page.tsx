@@ -1,58 +1,77 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { format, startOfMonth, endOfMonth } from "date-fns"; 
 import { Typography, Spinner } from "@material-tailwind/react";
+import Button from "@/components/Button";
 import CalendarWidget from "@/components/Calendar";
 import { useAuth } from "@/contexts/AuthContext";
-import CardListagem from "@/components/CardListagem";
+import SessionListCard from "@/components/CardSessao";
 import { useUsers } from "@/hooks/useUsers";
 import { useSessions } from "@/hooks/useSessions";
 import SessionListModal from "@/components/SessionListModal";
 import { Session } from "@/types/sessao";
 
 export default function Home() {
+  const router = useRouter();
   const { isTeacher, user } = useAuth();
   const { refreshUsers, loading: loadingUsers } = useUsers();
-  const { sessions, loading: loadingSessions, fetchSessions } = useSessions();
+  
+  // HOOK 1: Sessões para a lista de "Hoje"
+  const { 
+    sessions: todaySessionsList, 
+    loading: loadingToday, 
+    fetchSessions: fetchTodaySessions 
+  } = useSessions();
+
+  // HOOK 2: Sessões para o Calendário
+  const { 
+    sessions: calendarSessions, 
+    fetchSessions: fetchCalendarSessions 
+  } = useSessions();
+  
   const [currentCalendarDate, setCurrentCalendarDate] = useState(new Date());
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [daySessions, setDaySessions] = useState<Session[]>([]);
   const today = new Date();
   const formattedDate = format(today, "dd/MM");
+  const todayStr = format(today, "yyyy-MM-dd");
   
   useEffect(() => {
-    // Carrega lista de usuários apenas se for professor (para filtros futuros)
     if (isTeacher && user) refreshUsers();
 
-    // 1. Define intervalo do mês visível no calendário
+    // 1. Busca Sessões de HOJE
+    fetchTodaySessions({ 
+        start: todayStr, 
+        end: todayStr 
+    });
+
+  }, [isTeacher, user, refreshUsers, fetchTodaySessions, todayStr]);
+
+  // 2. Busca Sessões do CALENDÁRIO
+  useEffect(() => {
     const start = format(startOfMonth(currentCalendarDate), "yyyy-MM-dd");
     const end = format(endOfMonth(currentCalendarDate), "yyyy-MM-dd");
+    fetchCalendarSessions({ start, end });
+  }, [currentCalendarDate, fetchCalendarSessions]);
 
-    // 2. Prepara filtros básicos
-    const filters: any = { start, end };
-    
-    fetchSessions(filters);
+  // Filtra e ordena a lista de hoje
+  const sessionsToday = todaySessionsList
+    .filter((s) => {
+      const sessionDate = typeof s.dia === "string" ? s.dia.split("T")[0] : s.dia;
+      return sessionDate === todayStr;
+    })
+    .sort((a, b) => a.hora - b.hora);
 
-  }, [isTeacher, user, refreshUsers, fetchSessions, currentCalendarDate]);
-
-  // Encontra a sessão de "Hoje" para o card de destaque
-  const myTodaySession = sessions.find(s => {
-    // Normaliza a data para YYYY-MM-DD para evitar erros de hora/fuso
-    const sessionDate = typeof s.dia === 'string' ? s.dia.split('T')[0] : s.dia;
-    const todayStr = format(today, "yyyy-MM-dd");
-    
-    // Se a API já filtrou (aluno), qualquer sessão hoje é válida.
-    // Se for professor, mostra qualquer uma (ou a primeira) do dia.
-    return sessionDate === todayStr;
-  });
+  const myTodaySession = sessionsToday[0];
 
   const handleDayClick = (date: Date) => {
     const dateStr = format(date, "yyyy-MM-dd");
     
-    // Filtra as sessões do dia clicado
-    const sessionsOnThisDay = sessions.filter(s => {
+    // Procura na lista do CALENDÁRIO
+    const sessionsOnThisDay = calendarSessions.filter(s => {
         const sDate = typeof s.dia === 'string' ? s.dia.split('T')[0] : s.dia;
         return sDate === dateStr;
     });
@@ -72,19 +91,61 @@ export default function Home() {
           <h2 className="text-lg font-bold uppercase text-brand-dark">Hoje, {formattedDate}</h2>
         </div>
 
-        {(loadingUsers || loadingSessions) ? (
+        {(loadingUsers || loadingToday) ? (
           <div className="flex justify-center p-8"><Spinner className="text-brand-purple" /></div>
         ) : (
           <div className="flex flex-col gap-3">
-            {isTeacher && <div className="text-center py-6 text-gray-400 text-sm">Selecione um dia no calendário para ver os detalhes da clínica.</div>}
+            {isTeacher && (
+              sessionsToday.length > 0 ? (
+                <div className="flex flex-col gap-3">
+                  {sessionsToday.slice(0, 3).map((s) => (
+                    <SessionListCard
+                      key={s.id}
+                      therapistName={(s.profissionalNome || "Terapeuta").toUpperCase()}
+                      patientName={s.pacienteNome || "Paciente"}
+                      patientAvatarUrl={null}
+                      sessionLabel={`Sessão ${s.hora}:00`}
+                      roomLabel={`Sala ${s.sala}`}
+                      timeLabel="Hoje"
+                      onClick={() => {
+                        if (s.pacienteId) router.push(`/home/pacientes/${s.pacienteId}`);
+                      }}
+                    />
+                  ))}
+
+                  {sessionsToday.length > 3 && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedDay(today);
+                        setDaySessions(sessionsToday);
+                        setModalOpen(true);
+                      }}
+                      className="w-full"
+                    >
+                      Ver todas as sessões de hoje
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-gray-400 text-sm">Nenhuma sessão hoje.</div>
+              )
+            )}
             
             {!isTeacher && (
               myTodaySession ? (
-                <CardListagem
-                    nomePrincipal={myTodaySession.pacienteNome || "Paciente"}
-                    detalhe={`Sala ${myTodaySession.sala}`}
-                    horario={`${myTodaySession.hora}:00`}
-                    status={myTodaySession.status}
+                <SessionListCard
+                    therapistName={myTodaySession.profissionalNome || "Terapeuta"}
+                    patientName={myTodaySession.pacienteNome || "Paciente"}
+                    patientAvatarUrl={null}
+                    sessionLabel={`${myTodaySession.hora}:00`}
+                    roomLabel={`Sala ${myTodaySession.sala}`}
+                    timeLabel="Hoje"
+                    onClick={() => {
+                        setSelectedDay(today);
+                        setDaySessions([myTodaySession]);
+                        setModalOpen(true);
+                    }}
                 />
               ) : (
                 <div className="text-center py-6 text-gray-400 text-sm">Você não possui atendimentos hoje.</div>
@@ -98,7 +159,7 @@ export default function Home() {
       <section className="w-full shadow-lg border-t-4 border-brand-purple bg-brand-surface p-4 md:p-6 rounded-xl mb-8">
         <h2 className="text-lg font-bold uppercase mb-4 text-brand-dark">Agenda</h2>
         <CalendarWidget 
-            sessions={sessions} 
+            sessions={calendarSessions}
             onMonthChange={setCurrentCalendarDate} 
             onDayClick={handleDayClick}
             isTeacher={isTeacher}

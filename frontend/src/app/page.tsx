@@ -2,7 +2,7 @@
 
 import React, { useState, FormEvent, ChangeEvent } from "react";
 import Image from "next/image";
-import { Eye, EyeOff } from "lucide-react";
+import { Mail, Lock } from "lucide-react";
 import Input from "@/components/Input";
 import Button from "@/components/Button";
 import { Checkbox, Typography } from "@material-tailwind/react";
@@ -14,15 +14,14 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [keepConnected, setKeepConnected] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const { feedback, showFeedback, closeFeedback } = useFeedback();
+  const { showFeedback } = useFeedback();
   const { signIn } = useAuth();
   const { loading, handleSubmit } = useFormHandler();
-  const [hasError, setHasError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   async function handleLogin(event: FormEvent) {
     event.preventDefault();
-    setHasError(false);
+    setErrorMessage("");
 
     await handleSubmit(
       async () => {
@@ -30,9 +29,9 @@ export default function Login() {
         showFeedback("Sucesso!", "success");
       },
       undefined, // onSuccess
-
-      () => {
-        setHasError(true);
+      (err: any) => {
+        const msg = err.response?.data?.message || "E-mail ou senha incorretos.";
+        setErrorMessage(msg);
       }
     );
   }
@@ -78,31 +77,26 @@ export default function Login() {
               value={email}
               onChange={(e: ChangeEvent<HTMLInputElement>) => {
                 setEmail(e.target.value);
-                setHasError(false);
+                setErrorMessage("");
               }}
               required
-              error={hasError}
+              error={errorMessage}
+              leftIcon={Mail}
+              placeholder="Digite seu e-mail"
             />
+            
             <Input
-              type={showPassword ? "text" : "password"}
+              type="password"
               label="Senha"
               value={password}
               onChange={(e: ChangeEvent<HTMLInputElement>) => {
                 setPassword(e.target.value);
-                setHasError(false);
+                setErrorMessage("");
               }}
               required
-              error={hasError}
-              icon={
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  tabIndex={-1}
-                  className="focus:outline-none hover:text-brand-purple text-gray-400 transition-colors cursor-pointer"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              }
+              error={errorMessage}
+              leftIcon={Lock}
+              placeholder="Digite sua senha"
             />
 
             <div className="-ml-2.5">
@@ -128,7 +122,4 @@ export default function Login() {
       </div>
     </main>
   );
-}
-function setHasError(arg0: boolean) {
-  throw new Error("Function not implemented.");
 }

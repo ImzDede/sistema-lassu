@@ -1,62 +1,140 @@
-// frontend/src/components/PatientFolderContent.tsx
-import React from "react";
-import { Edit3, Clock, Calendar, FileText } from "lucide-react";
-import { Progress, Typography } from "@material-tailwind/react";
+import React, { ReactNode } from "react";
+import { Edit2, Eye, Clock, ChevronRight } from "lucide-react";
+import { Card, Typography } from "@material-tailwind/react";
 
-// CARD DE ITEM DA PASTA
+// Variantes suportadas
+type FolderItemVariant = "simple" | "progress" | "session_admin";
+
 interface FolderItemCardProps {
-    title: string;
-    subtitle?: React.ReactNode; // Pode ser "Sala 02 | Data" ou null
-    progress?: number;
-    icon?: React.ReactNode; // Ícone do canto superior direito (ex: Relógio)
-    onClick?: () => void;
-    highlight?: boolean; // Se true, põe a borda roxa esquerda (para sessões)
+  title: string;
+  subtitle?: ReactNode; // Aceita string ou JSX
+  variant?: FolderItemVariant;
+
+  // Progresso
+  progress?: number; // 0 a 100
+
+  // Ícone Overlay (ex: relógio)
+  highlight?: boolean;
+
+  // Ações
+  icon?: ReactNode; // Ícone principal à esquerda (opcional)
+  onEdit?: () => void;
+  onView?: () => void;
+  onClick?: () => void;
+
+  // Affordance (>)
+  showChevron?: boolean;
+
+  className?: string;
 }
 
-export const FolderItemCard = ({ title, subtitle, progress, icon, onClick, highlight = false }: FolderItemCardProps) => {
+export function FolderItemCard({
+  title,
+  subtitle,
+  variant = "simple",
+  progress = 0,
+  highlight = false,
+  icon,
+  onEdit,
+  onView,
+  onClick,
+  showChevron = false,
+  className = "",
+}: FolderItemCardProps) {
+  const isClickable = Boolean(onClick);
+
   return (
-    <div 
-        onClick={onClick}
-        className={`
-            bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-3 relative cursor-pointer 
-            hover:border-brand-purple transition-all group
-            ${highlight ? "border-l-4 border-l-brand-purple" : ""}
-        `}
+    <Card
+      onClick={onClick}
+      className={`
+        w-full p-4 border border-gray-200 shadow-sm hover:shadow-md transition-all relative overflow-visible
+        ${highlight ? "border-l-4 border-l-brand-purple" : ""}
+        ${isClickable ? "cursor-pointer" : "cursor-default"}
+        ${className}
+      `}
     >
-        {/* Ícone opcional no topo direito (ex: Relógio) */}
+      {/* Badge Overlay (ex: Relógio no canto superior direito) */}
+      {highlight && (
+        <div className="absolute -top-2 -right-2 bg-white p-1 rounded-full border border-gray-100 shadow-sm z-10 text-brand-purple">
+          <Clock size={14} />
+        </div>
+      )}
+
+      <div className="flex items-center gap-4">
+        {/* Ícone Opcional à Esquerda */}
         {icon && (
-            <div className="absolute top-3 right-3 text-gray-400 group-hover:text-brand-purple transition-colors">
-                {icon}
-            </div>
+          <div className="text-brand-purple bg-brand-purple/5 p-2 rounded-lg">
+            {icon}
+          </div>
         )}
 
-        <div className="flex justify-between items-start pr-6">
-            <div className="flex-1">
-                <h4 className="font-bold text-gray-800 text-lg">{title}</h4>
-                
-                {/* Subtítulo (Data, Sala, etc) */}
-                {subtitle && (
-                    <div className="text-gray-500 text-sm mt-1">
-                        {subtitle}
-                    </div>
-                )}
+        {/* Conteúdo Central */}
+        <div className="flex-1 min-w-0">
+          <div className="flex justify-between items-start">
+            <div className="flex flex-col gap-1 min-w-0">
+              <Typography variant="h6" className="text-sm font-bold text-brand-dark truncate">
+                {title}
+              </Typography>
 
-                {/* Barra de Progresso (Se houver) */}
-                {progress !== undefined && (
-                    <div className="mt-2 w-full max-w-xs">
-                        <Progress value={progress} size="sm" color="purple" className="bg-gray-100" />
-                        <span className="text-xs text-gray-400 mt-1 block">{progress}% preenchido</span>
-                    </div>
-                )}
-            </div>
-
-            {/* Ícone de Ação (Sempre Editar por padrão visual) */}
-            <div className={`mt-2 ${!subtitle && !progress ? 'self-center' : ''}`}>
-                <div className="p-2 rounded-full bg-gray-50 text-brand-purple group-hover:bg-brand-purple group-hover:text-white transition-colors">
-                    <Edit3 size={18} />
+              {subtitle && (
+                <div className="text-xs text-gray-500 font-medium truncate">
+                  {subtitle}
                 </div>
+              )}
             </div>
+
+            {/* Ações Rápidas (Direita) */}
+            <div className="flex gap-2 pl-2 shrink-0 items-center">
+              {onView && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onView();
+                  }}
+                  className="p-1.5 text-gray-400 hover:text-brand-purple hover:bg-brand-purple/10 rounded-full transition-colors"
+                  aria-label="Visualizar"
+                >
+                  <Eye size={16} />
+                </button>
+              )}
+
+              {onEdit && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit();
+                  }}
+                  className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-full transition-colors"
+                  aria-label="Editar"
+                >
+                  <Edit2 size={16} />
+                </button>
+              )}
+
+              {(showChevron && isClickable) && (
+                <div className="p-1.5 text-gray-300">
+                  <ChevronRight size={18} />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Barra de Progresso */}
+          {variant === "progress" && (
+            <div className="mt-3 flex items-center gap-3">
+              <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-brand-purple rounded-full"
+                  style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
+                />
+              </div>
+              <span className="text-[10px] font-bold text-brand-purple">
+                {Math.round(Math.min(100, Math.max(0, progress)))}%
+              </span>
+            </div>
+          )}
         </div>
-    </div>
+      </div>
+    </Card>
   );
-};
+}

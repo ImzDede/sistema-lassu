@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, UserPlus } from "lucide-react";
+import { ArrowLeft, UserPlus, User, Mail, Hash, Phone } from "lucide-react";
 import { Card, CardBody, Typography, Spinner } from "@material-tailwind/react";
 import Input from "@/components/Input";
 import Button from "@/components/Button";
@@ -24,6 +24,7 @@ export default function NewExtensionist() {
     registration: "",
     phone: "",
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -43,6 +44,8 @@ export default function NewExtensionist() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    // Limpa erro visual ao digitar
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: "" }));
 
     if (name === "phone") {
       setFormData((prev) => ({ ...prev, [name]: formatPhone(value) }));
@@ -58,7 +61,31 @@ export default function NewExtensionist() {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
+    setErrors({});
+    const nextErrors: Record<string, string> = {};
     
+    // Validação
+    if (!formData.name?.trim()) nextErrors.name = "Campo obrigatório.";
+    if (!formData.email?.trim()) nextErrors.email = "Campo obrigatório.";
+    
+    if (!formData.registration?.trim()) {
+        nextErrors.registration = "Campo obrigatório.";
+    } else if (formData.registration.length < 7) {
+        nextErrors.registration = "Mínimo 7 dígitos.";
+    }
+
+    if (!formData.phone?.trim()) {
+        nextErrors.phone = "Campo obrigatório.";
+    } else if (cleanFormat(formData.phone).length < 10) {
+        nextErrors.phone = "Telefone incompleto.";
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      showFeedback("Preencha todos os campos obrigatórios corretamente.", "error");
+      return;
+    }
+
     await handleSubmit(async () => {
       const payload = {
         nome: formData.name,
@@ -70,8 +97,6 @@ export default function NewExtensionist() {
       await userService.create(payload);
 
       showFeedback("Extensionista cadastrada com sucesso!", "success");
-      
-      // Limpa o formulário
       setFormData({ name: "", email: "", registration: "", phone: "" });
     });
   }
@@ -121,6 +146,9 @@ export default function NewExtensionist() {
                 value={formData.name}
                 onChange={handleChange}
                 required
+                leftIcon={User}
+                placeholder="Ex: Maria Silva" 
+                error={errors.name} 
               />
               <Input
                 label="E-mail"
@@ -129,6 +157,9 @@ export default function NewExtensionist() {
                 value={formData.email}
                 onChange={handleChange}
                 required
+                leftIcon={Mail}
+                placeholder="exemplo@dominio.com" 
+                error={errors.email} 
               />
             </div>
 
@@ -141,15 +172,20 @@ export default function NewExtensionist() {
                 required
                 maxLength={7}
                 minLength={7}
+                leftIcon={Hash}
+                placeholder="Ex: 1234567" 
+                error={errors.registration} 
               />
               <Input
                 label="Celular"
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
-                placeholder="(00) 00000-0000"
                 maxLength={15}
                 required
+                leftIcon={Phone}
+                placeholder="(00) 90000-0000" 
+                error={errors.phone} 
               />
             </div>
 

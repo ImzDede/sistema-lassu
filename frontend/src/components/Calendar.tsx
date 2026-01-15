@@ -35,10 +35,7 @@ export default function CalendarWidget({
   const firstDayOfMonth = new Date(year, month, 1).getDay();
 
   useEffect(() => {
-    console.log("📅 [CalendarWidget] Recebeu sessões:", sessions.length);
     if (sessions.length > 0) {
-        console.log("📅 [CalendarWidget] Datas das sessões recebidas:");
-        sessions.forEach(s => console.log("   - ", s.dia));
     }
   }, [sessions]);
 
@@ -69,7 +66,6 @@ export default function CalendarWidget({
         
         // LOG 4: Se achar uma data igual, avisa!
         if (sDate === dayStr) {
-            // console.log(`🎉 MATCH FOUND! Dia: ${dayStr}, Sessão ID: ${s.id}`);
         }
         
         return sDate === dayStr;

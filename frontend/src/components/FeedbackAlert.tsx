@@ -46,7 +46,7 @@ export default function FeedbackAlert({
   const current = colorMap[color] || colorMap.green;
 
   return (
-    <div className="fixed top-6 right-6 z-[9999] w-full max-w-sm px-4 md:px-0 animate-slide-in-right">
+    <div className="fixed top-6 left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 md:right-6 z-[9999] w-[90%] max-w-sm animate-slide-in-right">
       <Alert
         open={open}
         onClose={onClose}
