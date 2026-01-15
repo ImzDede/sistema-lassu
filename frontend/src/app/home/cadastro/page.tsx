@@ -19,29 +19,30 @@ export default function Cadastro() {
   const isMasterAdmin = user?.permAdmin;
   const isCadastroTeam = user?.permCadastro;
 
-  // Itens de Rotina (Sessões, Anotações, etc)
+  // Itens de Rotina
   const itemsRoutine = [
     { label: "SESSÕES", href: "/home/cadastro/sessoes" },
     { label: "ANOTAÇÕES", href: "/home/cadastro/anotacoes" },
     { label: "ANAMNESE", href: "/home/cadastro/anamnese" },
     { label: "SÍNTESES", href: "/home/cadastro/sintese" },
+    { label: "ENCAMINHAMENTO", href: "/home/cadastro/encaminhamento" }
   ];
 
   // Itens Administrativos (Pacientes, Terapeutas)
   const itemPatient = { label: "PACIENTES", href: "/home/cadastro/paciente" };
   const itemTherapist = { label: "TERAPEUTAS", href: "/home/cadastro/extensionista" };
 
-  // Lógica de Exibição
+  // Lógica de Exibição (MANTIDA A SUA LÓGICA)
   let itemsToShow: { label: string; href: string }[] = [];
 
   if (isMasterAdmin) {
-    // Regra: Admin vê APENAS cadastro de terapeuta
+    // Regra: Admin (Professora) vê APENAS cadastro de terapeuta nesta tela
     itemsToShow = [itemTherapist];
   } else if (isCadastroTeam) {
-    // Regra: Perm cadastro vê TUDO
+    // Regra: Equipe de cadastro vê TUDO
     itemsToShow = [...itemsRoutine, itemPatient, itemTherapist];
   } else {
-    // Regra: Terapeuta vê o que já está hoje (Rotina)
+    // Regra: Terapeuta comum vê apenas a rotina (incluindo o novo encaminhamento)
     itemsToShow = itemsRoutine;
   }
 
