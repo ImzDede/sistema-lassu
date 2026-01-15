@@ -34,8 +34,10 @@ export class PatientService {
         const patientRow = await repository.create(data, newId)
 
         //Notificações
-        const userName = await userRepository.getName(userId) as string;
-        const therapistName = await userRepository.getName(therapistId) as string
+        const [userName, therapistName] = await Promise.all([
+            userRepository.getName(userId),
+            userRepository.getName(therapistId)
+        ]) as [string, string]
 
         //Para admin
         await notificationService.notifyAdmins(NOTIFICATION_MESSAGE.ADMIN.NEW_PATIENT({
@@ -103,7 +105,7 @@ export class PatientService {
         if (!patientRow) {
             throw new AppError(HTTP_ERRORS.NOT_FOUND.PATIENT, 404)
         }
-        if (!perms.admin && patientRow.terapeuta_id !== userId) {
+        if (!perms.cadastro && patientRow.terapeuta_id !== userId) {
             throw new AppError(HTTP_ERRORS.FORBIDDEN.PATIENT.NOT_YOURS, 403);
         }
 
@@ -119,14 +121,14 @@ export class PatientService {
             throw new AppError(HTTP_ERRORS.NOT_FOUND.PATIENT, 404);
         }
 
-        if (!perms.admin && patient.terapeuta_id !== userId) {
+        if (!perms.cadastro && patient.terapeuta_id !== userId) {
             throw new AppError(HTTP_ERRORS.FORBIDDEN.PATIENT.NOT_YOURS, 403);
         }
 
         if (data.cpf) {
             const patientSameCPF = await repository.verifyCpfExist(data.cpf, patientId)
             if (patientSameCPF) {
-                throw new AppError(HTTP_ERRORS.CONFLICT.PATIENT.ALREADY_REFER)
+                throw new AppError(HTTP_ERRORS.CONFLICT.PATIENT.CPF_EXISTS)
             }
         }
 

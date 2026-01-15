@@ -31,6 +31,6 @@ export class AvailabilityRepository {
     }
 
     async deleteByUser(userId: string) {
-        const result = await pool.query('DELETE FROM disponibilidades WHERE usuario_id = $1', [userId]);
+        await pool.query('DELETE FROM disponibilidades WHERE usuario_id = $1', [userId]);
     }
 }

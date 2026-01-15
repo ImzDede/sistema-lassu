@@ -7,11 +7,14 @@ import notificationRoutes from './notification/notification.routes'
 import patientRoutes from './patient/patient.routes'
 import { handleError } from "./errors/handleError";
 import sessionRoutes from './session/session.routes'
+import helmet from "helmet";
+import logger from "./utils/logger";
 
 dotenv.config();
 
 const app = express();
 
+app.use(helmet())
 app.use(cors())
 app.use(express.json())
 
@@ -30,5 +33,5 @@ app.get('/', (req: Request, res: Response) => {
 const PORT = process.env.PORT;
 
 app.listen(PORT, () => {
-    console.log("Servidor rodando na porta " + PORT)
+    logger.info("Servidor Rodando");
 })

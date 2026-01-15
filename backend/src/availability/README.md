@@ -1,89 +1,94 @@
-# 📅 Módulo Disponibilidade
+# 📅 Módulo Availability (Disponibilidade)
 
-O módulo de Disponibilidade gerencia os horários de atendimento das terapeutas. Ele funciona de forma independente, mas seus dados são cruciais para o módulo de Agendamento e para a busca de terapeutas (/users/available).
+O módulo de Disponibilidade gerencia os horários de atendimento das terapeutas.
+A lógica funciona baseada em **substituição total**: ao salvar, a agenda antiga é removida e a nova é gravada.
 
-### [↩️Voltar ao README principal](/backend/README.md)
+### [↩️ Voltar ao README principal](../README.md)
 
-## 🗄️ Persistência no Banco de Dados
-#### ``Tabela: disponibilidades``
+---
 
-| Coluna         | Tipo      | Nulo  | Observações                           |
-| -------------- | --------- | ----- | ------------------------------------- |
-| id             | serial      | ❌    | Gerado automaticamente                |
-| usuario_id     | uuid      | ❌    | FK para usuarios                      |
-| dia_semana     | int       | ❌    | 0 (Dom) a 6 (Sáb)                     |
-| hora_inicio    | int       | ❌    | 8 (8:00) a 17 (17:00)                 |
-| hora_fim       | int       | ❌    | 9 (9:00) a 18 (18:00)                 |
+## 🗺️ Sumário das Rotas
 
-## 🧠 Comportamento dos Campos
+### 🔐 Autenticadas (Qualquer usuário logado)
+| Método | Endpoint | Descrição |
+| :--- | :--- | :--- |
+| **PUT** | [``/availability``](#1-gerenciar-disponibilidade-salvar) | Define ou substitui a grade de horários completa. |
+| **GET** | [``/availability``](#2-obter-minha-disponibilidade) | Retorna a grade atual cadastrada. |
 
-### ``id``
-- **Integer (Serial)**
-- Gerado automaticamente pelo banco.
-- Identificador interno, raramente exposto pois a edição é feita via substituição total.
+> **Nota:** Não existe rota `GET /availability/:id` neste módulo.
+> * Para ver a agenda de outro usuário (Admin), use a rota `GET /users/:targetId` do módulo **User**.
+> * Para buscar terapeutas livres, use `GET /users/available`.
 
-### ``usuario_id``
-- **UUID**
-- Vinculado à tabela ``usuarios.id``.
-- **Cascade Delete:** Se o usuário for removido, suas disponibilidades somem automaticamente.
+---
 
-### ``dia_semana``
-- **Inteiro (0-6)**
-- 0 = Domingo, 1 = Segunda ... 6 = Sábado.
-- Usado para montar a grade visual no frontend.
+## 🧠 Regras de Negócio
 
-### ``hora_inicio`` & ``hora_fim``
-- **Inteiros**
-- Representam horas cheias.
-- ``hora_fim`` > ``hora_inicio``.
-- O sistema valida conflitos (ex: não pode ter 08-10 e 09-11 no mesmo dia).
+### 1. Horários Permitidos
+* A clínica funciona das **08:00 às 18:00**.
+* Não é permitido agendar horários fora dessa janela.
+* A hora de término (`horaFim`) deve ser sempre maior que a de início.
 
-## 🧩 Responsabilidades do Módulo
+### 2. Validação de Conflito
+* O sistema impede automaticamente a sobreposição de horários no mesmo dia.
+* *Exemplo:* Se tentar salvar `08-10` e `09-11` no mesmo dia, o sistema rejeita a operação.
 
-- **Gestão de Grade:** Permitir que o terapeuta defina quando pode atender.
-- **Validação de Conflitos:** O algoritmo do Service garante que não existam horários sobrepostos.
-- **Suporte a Buscas:** Serve de base para a rota `GET /users/available` encontrar terapeutas livres.
-- **Sanitização:** Garante que os horários estejam sempre ordenados e consistentes antes de salvar no banco.
+### 3. Persistência (Substituição Total)
+* A operação de salvar é destrutiva (Método `PUT`): ela apaga toda a disponibilidade anterior do usuário e grava a nova lista enviada.
+* Se enviar um array vazio `[]`, o usuário ficará sem horários disponíveis (indisponível).
 
-## Rotas
-### 1. 💾 Gerenciar Disponibilidade (Salvar)
-#### ``PUT /availability``
-Define ou atualiza a grade de horários do usuário logado.
+---
 
-#### 🎯 Objetivo da Rota
-- Substituição Total: Apaga todos os horários anteriores deste usuário e grava a nova lista enviada.
+## 🗄️ Persistência (Banco de Dados)
 
-- Limpeza: Se enviar um array vazio, o usuário ficará sem horários disponíveis.
+**Tabela: `disponibilidades`**
 
-- Validação Lógica: Impede conflitos (sobreposição de horários no mesmo dia) e horários inválidos (início > fim).
+| Coluna | Tipo | Obrigatório | Descrição |
+| :--- | :--- | :---: | :--- |
+| `id` | int | ✅ | PK (Auto Incremento). |
+| `usuario_id` | uuid | ✅ | FK para tabela usuarios (Cascade Delete). |
+| `dia_semana` | int | ✅ | 0 (Dom) a 6 (Sáb). |
+| `hora_inicio` | int | ✅ | 8 a 17. |
+| `hora_fim` | int | ✅ | 9 a 18. |
 
-#### 🔐 Autorização
-- Requer autenticação.
+---
 
-- O usuário altera apenas a própria disponibilidade.
+## 📋 Regras de Validação (Campos)
 
-#### 📥 Request Body
-Array contendo os objetos de horário.
+Todos os endpoints aplicam as seguintes validações (Erro `400 Bad Request`).
 
-````JSON
+| Campo | Regra / Cenário | Mensagem de Erro |
+| :--- | :--- | :--- |
+| **diaSemana** | Número fora de 0-6. | "Dia da semana inválido." |
+| **horaInicio** | Menor que 8 ou maior que 17. | "Os atendimentos devem ocorrer entre 08:00 e 18:00." |
+| **horaFim** | Menor que 9 ou maior que 18.<br>Menor ou igual a horaInicio. | "Os atendimentos devem ocorrer entre 08:00 e 18:00."<br>"A hora final não pode ser anterior à hora inicial." |
+
+---
+
+## 📡 Referência da API
+
+### 1. Gerenciar Disponibilidade (Salvar)
+`PUT /availability`
+
+Substitui toda a grade de horários do usuário logado.
+
+**Body:**
+````json
 [
   {
-    "diaSemana": 3, 
+    "diaSemana": 3,
     "horaInicio": 8,
     "horaFim": 12
   },
   {
-    "diaSemana": 1, 
+    "diaSemana": 1,
     "horaInicio": 14,
-    "horaFim": 18 
+    "horaFim": 18
   }
 ]
 ````
 
-#### 📤 Response — Sucesso (200)
-Retorna a lista confirmada que foi salva.
-
-````JSON
+**Response (200):**
+````json
 {
   "data": {
     "availability": [
@@ -99,45 +104,24 @@ Retorna a lista confirmada que foi salva.
       }
     ]
   },
-  "meta": {
-    "count": 2
-  },
+  "meta": {},
   "error": null
 }
 ````
-#### ❌ Possíveis Erros
-#### 400 Bad Request:
-Validações de negócio e ZOD:
 
-- O corpo deve ser um array.
+#### ❌ Possíveis Erros de Negócio
+**400 Bad Request:**
+- Você tem um horário conflitante no dia ${day}. Verifique sua agenda.
 
-- horaFim deve ser maior que horaInicio.
+---
 
-- Conflito de horários (ex: tentar salvar 08-10 e 09-11 no mesmo dia).
+### 2. Obter Minha Disponibilidade
+`GET /availability`
 
-- Dia da semana inválido (fora de 0-6).
+Retorna a grade atual do usuário logado. Se não houver horários, retorna um array vazio.
 
-#### 401 Unauthorized:
-- Token inválido ou expirado.
-
-#### 500 Internal Server Error:
-- Erro interno do servidor. Tente novamente mais tarde.
-
-### 2. 📅 Obter Minha Disponibilidade
-#### ``GET /availability``
-Retorna a grade de horários completa cadastrada para o usuário autenticado.
-
-#### 🎯 Objetivo da Rota
-- Carregar os horários atuais para exibir no calendário ou formulário de edição do frontend.
-
-#### 🔐 Autorização
-Requer autenticação.
-
-#### 📥 Request Body
-Não requer corpo.
-
-#### 📤 Response — Sucesso (200)
-````JSON
+**Response (200):**
+````json
 {
   "data": {
     "availability": [
@@ -145,25 +129,10 @@ Não requer corpo.
         "diaSemana": 1,
         "horaInicio": 14,
         "horaFim": 18
-      },
-      {
-        "diaSemana": 3,
-        "horaInicio": 8,
-        "horaFim": 12
       }
     ]
   },
-  "meta": {
-    "count": 2
-  },
+  "meta": {},
   "error": null
 }
 ````
-*Nota:* Se o usuário não tiver horários, retorna um array vazio em availability.
-
-#### ❌ Possíveis Erros
-#### 401 Unauthorized:
-- Token inválido ou expirado.
-
-#### 500 Internal Server Error:
-- Erro interno do servidor. Tente novamente mais tarde.

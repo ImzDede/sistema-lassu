@@ -1,439 +1,257 @@
-# 🏥 Módulo Patients
-O módulo Patients gerencia o cadastro e o ciclo de vida dos pacientes da clínica. Ele lida com dados sensíveis, vinculação com terapeutas e status do tratamento.
+# 🏥 Módulo Patient (Pacientes)
 
-### [↩️Voltar ao README principal](/backend/README.md)
+O módulo de Pacientes gerencia os cadastros administrativos, vínculos com terapeutas e status de atendimento.
+Possui regras de visibilidade baseadas no vínculo (Terapeuta) e permissão de gestão (Coordenação).
+
+### [↩️ Voltar ao README principal](../README.md)
+
+---
 
 ## 🗺️ Sumário das Rotas
 
-### 🔐 Autenticadas (Qualquer usuário logado)
+### 🔐 Gestão & Terapeutas
 | Método | Endpoint | Descrição |
 | :--- | :--- | :--- |
-| **GET** | [``/patients``](#1-📋-listar-pacientes) | Lista pacientes (Seus pacientes ou todos se for Admin). |
+| **GET** | [``/patients``](#2-listar-pacientes) | Lista pacientes (Filtros: nome, status, terapeuta). |
+| **GET** | [``/patients/:targetId``](#3-buscar-paciente-por-id) | Detalhes do paciente e nome da terapeuta responsável. |
+| **PUT** | [``/patients/:targetId``](#4-atualizar-paciente) | Atualiza dados cadastrais (Nome, CPF, etc). |
+| **DELETE** | [``/patients/:targetId``](#8-excluir-paciente) | Realiza a exclusão lógica (Soft Delete). |
+| **PATCH** | [``/patients/:targetId/restore``](#9-restaurar-paciente) | Restaura um paciente excluído. |
 
-### 🏥 Operacional (Terapeuta Responsável)
+### 🏥 Cadastro e Vínculo (Requer `perm_cadastro`)
 | Método | Endpoint | Descrição |
 | :--- | :--- | :--- |
-| **GET** | [``/patients/:targetId``](#2-🔍-buscar-paciente-por-id) | Consulta o prontuário/detalhes de uma paciente. |
-| **POST** | [``/patients``](#3-➕-cadastrar-paciente) | Inicia um novo ciclo de atendimento (Cadastro). |
-| **PUT** | [``/patients/:targetId``](#4-✏️-atualizar-paciente) | Atualiza dados cadastrais (Nome, Telefone, etc). |
-| **PATCH** | [``/patients/:targetId/refer``](#5-🏥-encaminhar-paciente) | Finaliza o ciclo e muda status para ``encaminhada``. |
-| **DELETE** | [``/patients/:targetId``](#8-🗑️-excluir-paciente-soft-delete) | Move a paciente para a lixeira (Soft Delete). |
-| **PATCH** | [``/patients/:targetId/restore``](#9-♻️-restaurar-paciente) | Recupera uma paciente excluída da lixeira. |
+| **POST** | [``/patients``](#1-criar-paciente) | Cria um novo paciente e vincula a uma terapeuta. |
+| **PATCH** | [``/patients/:targetId/transfer``](#7-transferir-paciente) | Transfere o paciente para outra terapeuta. |
 
-### 🛡️ Admin
+### 🛂 Fluxo de Alta
 | Método | Endpoint | Descrição |
 | :--- | :--- | :--- |
-| **PATCH** | [``/patients/:targetId/unrefer``](#6-↩️-desfazer-encaminhamento) | Reverte status de ``encaminhada`` para ``atendimento``. |
-| **PATCH** | [``/patients/:targetId/transfer``](#7-⇄-transferir-paciente-troca-de-terapeuta) | Transfere a responsabilidade para outra terapeuta. |
+| **PATCH** | [``/patients/:targetId/refer``](#5-encaminhar-paciente) | Muda status para "Encaminhada". (Apenas a Terapeuta dona). |
+| **PATCH** | [``/patients/:targetId/unrefer``](#6-desfazer-encaminhamento) | Reativa status para "Atendimento". (Apenas Admin). |
 
-## 🗄️ Persistência no Banco de Dados
-Tabela: ``pacientes``
-Coluna               | Tipo         | Nulo  | Observações
------                | -----        | ----- | -----
- ``id``              | uuid         | ❌   | Chave Primária 
- ``nome``            | varchar      | ❌   | Nome completo
- ``data_nascimento`` | date         | ❌   | Formato YYYY-MM-DD
- ``cpf``             | varchar(11)  |  ❌  | Apenas números, Unique
- ``telefone``        | varchar(20)  | ❌   | Apenas números
- ``status``          | varchar      | ❌   | Enum: 'triagem', 'encaminhada'
- ``terapeuta_id``    | uuid         | ❌   | FK para usuarios (Quem atende)
- ``created_at``      | timestamp    | ❌   | Data de cadastro
- ``deleted_at``      |	timestamp	  | ✅   |	Data de exclusão (Soft Delete). Se nulo, está ativo.
+---
 
-## 🧠 Comportamento dos Campos
-### ``id``
-- **UUID**
-- Gerado automaticamente pelo sistema na criação.
+## 🧠 Regras de Negócio
 
-### ``nome``
-- **String**
-- Nome completo da paciente.
+### 1. Visibilidade e Edição
+* **Terapeutas:** Acessam e editam apenas seus próprios pacientes. Tentar acessar paciente de outra colega gera erro `403 Forbidden`.
+* **Coordenação (`perm_cadastro`):** Pode listar, visualizar e editar os dados cadastrais de **qualquer** paciente.
 
-#### ``data_nascimento``
-- **Date**
-- O backend valida se a data é válida, formatação e se não é futura.
+### 2. Validação de CPF
+* O sistema valida o **algoritmo matemático** do CPF (dígitos verificadores).
+* O CPF deve ser único no sistema.
 
-### ``cpf``
-- **String (11)**
-- Armazena apenas os dígitos (sem pontos ou traço).
-- **Validação**: Deve passar pelo algoritmo oficial de CPF e ser único no sistema para evitar duplicidade de prontuários.
+### 3. Ciclo de Vida
+* **Atendimento:** Status padrão. O paciente está ativo.
+* **Encaminhada:** O paciente recebeu alta ou foi encaminhado.
+* **Exclusão:** O sistema usa *Soft Delete*. O registro não é apagado do banco, apenas marcado com `deleted_at`.
 
-### ``telefone``
-- **String**
-- Principal meio de contato para agendamento das sessões.
-- Deve ser sanitizado para conter apenas números antes de salvar.
+---
 
-### ``status``
-- **ENUM**
-- Define a etapa do ciclo de acolhimento breve.
-- Valores:
-    - **atendimento**: Estado inicial. Indica que a paciente está realizando o ciclo de consultas (geralmente ~3 sessões).
-    - **encaminhada**: Estado final. Indica que o ciclo no laboratório foi concluído e a paciente foi direcionada para a rede de apoio externa.
+## 🗄️ Persistência (Banco de Dados)
 
-### ``terapeuta_id``
-- **UUID**
-- Define a terapeuta responsável pelo acolhimento (FK para usuarios).
-- Uma paciente sempre deve ter uma terapeuta vinculada desde o cadastro.
+**Tabela: `pacientes`**
 
-### ``created_at``
-- **Timestamp**
-- Data de entrada da paciente no sistema.
+| Coluna | Tipo | Obrigatório | Descrição |
+| :--- | :--- | :---: | :--- |
+| `id` | uuid | ✅ | PK. |
+| `nome` | varchar | ✅ | Nome completo. |
+| `data_nascimento` | date | ✅ | Formato YYYY-MM-DD. |
+| `cpf` | varchar | ✅ | 11 dígitos (apenas números). Único. |
+| `telefone` | varchar | ✅ | Apenas números. |
+| `terapeuta_id` | uuid | ✅ | FK para usuarios. |
+| `status` | varchar | ✅ | 'atendimento' ou 'encaminhada'. |
+| `created_at` | timestamp | ✅ | Data de cadastro. |
+| `deleted_at` | timestamp | ❌ | Se preenchido, paciente está na lixeira. |
 
-### ``deleted_at``
-- **Timestamp (Nullable)**
-- Controla a exclusão lógica (Lixeira).
-- Se estiver preenchido, a paciente é considerada excluída e não aparece nas listagens padrões.
-- Se estiver `NULL`, a paciente está ativa.
+---
 
-## 🧩 Responsabilidades do Módulo
-- **CRUD Completo**: Criação, Leitura, Atualização (Delete não implementado por segurança de dados).
-- **Segurança de Dados Sensíveis**: Garantir que informações das pacientes sejam acessadas apenas pela terapeuta responsável e administradores.
-- **Validação**: Garantir integridade de CPF e datas.
+## 📋 Regras de Validação (Campos)
 
-## Rotas
+Todos os endpoints aplicam as seguintes validações (Erro `400 Bad Request`).
 
-### 1. 📋 Listar Pacientes
-#### ``GET /patients``
-Retorna a lista paginada de pacientes.
+| Campo | Regra / Cenário | Mensagem de Erro |
+| :--- | :--- | :--- |
+| **Nome** | Vazio. | "O campo nome é obrigatório." |
+| **CPF** | Algoritmo inválido.<br>Formato incorreto. | "CPF inválido." |
+| **Telefone** | Menos de 8 ou mais de 20 dígitos. | "Telefone inválido." |
+| **Data Nascimento** | Formato inválido (não ISO). | "Data inválida." |
+| **Terapeuta ID** | UUID inválido. | "ID de terapeuta inválido." |
 
-#### 🎯 Objetivo da Rota
-- **Visão Geral:** Permitir que administradores vejam o volume total de atendimentos.
-- **Operacional:** Permitir que a terapeuta veja rapidamente sua lista de "Minhas Pacientes".
+---
 
-#### 🔐 Autorização
-- Requer autenticação.
-- **Regra de Negócio:**
-    - **Admin:** Retorna todos os pacientes.
-    - **Comum (Terapeuta):** O sistema força um filtro `WHERE terapeuta_id = id_logado`.
+## 📡 Referência da API
 
-#### 📥 Query Parameters
-| Parâmetro | Tipo | Padrão | Descrição |
-| :--- | :--- | :--- | :--- |
-| ``page`` | number | 1 | Página atual. |
-| ``limit`` | number | 10 | Itens por página. |
-| ``nome`` | string | - | (Opcional) Filtra por parte do nome (Case Insensitive). |
-| ``userId`` | uuid | - | (Opcional) Filtra por terapeuta responsável. |
-| ``status`` | string | - | (Opcional) Filtra por 'atendimento' ou 'encaminhada'. |
-| ``orderBy`` | string | 'nome' | Campo de ordenação ('nome', 'created_at'). |
-| ``direction`` | string | 'ASC' | 'ASC' ou 'DESC'. |
-| ``deleted`` |	boolean	| ``false``	| Se ``true``, lista apenas pacientes da lixeira. |
+### 1. Criar Paciente (Requer `perm_cadastro`)
+`POST /patients`
 
-#### 📤 Response — Sucesso (200)
-````JSON
+Cria um paciente e o vincula imediatamente a uma terapeuta ativa.
+
+**Body:**
+````json
+{
+  "nome": "Paciente Exemplo",
+  "dataNascimento": "1990-01-01",
+  "cpf": "12345678909",
+  "telefone": "11999998888",
+  "terapeutaId": "uuid-da-terapeuta"
+}
+````
+
+**Response (201):**
+````json
+{
+  "data": {
+    "patient": {
+      "id": "uuid...",
+      "nome": "Paciente Exemplo",
+      "status": "atendimento",
+      "terapeutaId": "uuid-da-terapeuta",
+      "createdAt": "2026-01-01T10:00:00.000Z"
+    }
+  },
+  "meta": {},
+  "error": null
+}
+````
+
+#### ❌ Erros de Negócio
+* `409 Conflict`: CPF já cadastrado.
+* `404 Not Found`: O ID da terapeuta informado não existe.
+
+---
+
+### 2. Listar Pacientes
+`GET /patients`
+
+Lista os pacientes.
+* **Terapeuta:** Vê apenas os seus.
+* **Coordenação:** Pode ver de todos ou filtrar por terapeuta específico.
+
+**Query Params:**
+* `page`, `limit`, `orderBy`, `direction`.
+* `nome`: Filtro parcial por nome do paciente.
+* `status`: `atendimento` ou `encaminhada`.
+* `deleted`: `true` (ver lixeira) ou `false` (padrão).
+* `userTargetId`: (Apenas Coordenação) Filtrar pacientes de uma terapeuta específica.
+
+**Response (200):**
+````json
 {
   "data": [
     {
-      "id": "a1b2c3d4-...",
-      "nome": "Maria Souza",
-      "dataNascimento": "1990-05-15",
-      "cpf": "12345678900",
-      "telefone": "85999999999",
-      "status": "atendimento",
-      "terapeutaId": "user-uuid-xyz",
-      "createdAt": "2025-01-01T10:00:00.000Z"
+      "patient": {
+        "id": "uuid...",
+        "nome": "Paciente A",
+        "status": "atendimento"
+      }
     }
   ],
   "meta": {
     "totalItems": 50,
-    "totalPages": 5,
-    "currentPage": 1,
-    "itemsPerPage": 10,
-    "filterName": "Maria"
-  },
-  "error": null
+    "page": 1
+  }
 }
 ````
-
-#### ❌ Possíveis Erros
-- **401 Unauthorized:** Token inválido ou expirado.
-- **500 Internal Server Error:** Erro de conexão com o banco.
 
 ---
 
-### 2. 🔍 Buscar Paciente por ID
-#### ``GET /patients/:targetId``
-Retorna os detalhes completos de uma paciente específica.
+### 3. Buscar Paciente por ID
+`GET /patients/:targetId`
 
-#### 🎯 Objetivo da Rota
-- Exibir o "Prontuário" ou ficha cadastral detalhada da paciente antes de iniciar uma sessão.
+Retorna dados do paciente e o nome da terapeuta responsável.
 
-#### 🔐 Autorização
-- Requer autenticação.
-- **Validação de Propriedade:** Se o usuário não for Admin, ele só pode ver pacientes vinculados ao seu ID. Caso contrário, recebe erro.
-
-#### 📥 Path Parameters
-| Parâmetro | Tipo | Obrigatório |
-| :--- | :--- | :--- |
-| ``targetId`` | UUID | ✅ |
-
-#### 📤 Response — Sucesso (200)
-````JSON
+**Response (200):**
+````json
 {
   "data": {
-      "id": "a1b2c3d4-...",
-      "nome": "Maria Souza",
-      "dataNascimento": "1990-05-15",
-      "cpf": "12345678900",
-      "telefone": "85999999999",
-      "status": "atendimento",
-      "terapeutaId": "user-uuid-xyz",
-      "createdAt": "2025-01-01T10:00:00.000Z"
+    "patient": { "id": "...", "nome": "..." },
+    "therapist": { "id": "...", "nome": "Dra. Ana" }
   },
   "meta": {},
   "error": null
 }
 ````
 
-#### ❌ Possíveis Erros
-- **400 Bad Request:** ID inválido (não é um UUID).
-- **401 Unauthorized:** Token inválido.
-- **404 Not Found:** Paciente não existe OU o usuário logado não tem permissão para vê-la.
+#### ❌ Erros de Negócio
+* `403 Forbidden`: Este paciente pertence a outra terapeuta e você não tem permissão de cadastro.
 
 ---
 
-### 3. ➕ Cadastrar Paciente
-#### ``POST /patients``
-Registra uma nova paciente no sistema para iniciar o ciclo de acolhimento.
+### 4. Atualizar Paciente
+`PUT /patients/:targetId`
 
-#### 🎯 Objetivo da Rota
-- Inserir a paciente no banco e vincular imediatamente a uma terapeuta responsável.
-- Disparar notificações automáticas para a terapeuta e admins.
+Atualiza dados cadastrais. Se alterar o CPF, verifica unicidade novamente.
 
-#### 🔐 Autorização
-- Requer autenticação.
-- Requer permissão explícita ``perm_cadastro``.
-
-#### 📥 Request Body
-````JSON
+**Body (Parcial):**
+````json
 {
-  "nome": "João da Silva",
-  "dataNascimento": "1985-10-20",
-  "cpf": "12345678900",
-  "telefone": "85988887777",
-  "terapeutaId": "uuid-do-terapeuta"
+  "telefone": "11988887777",
+  "nome": "Nome Corrigido"
 }
 ````
 
-#### 📤 Response — Sucesso (201)
-````JSON
-{
-  "data": {
-      "id": "novo-uuid-gerado",
-      "nome": "João da Silva",
-      "status": "atendimento",
-      "terapeutaId": "uuid-do-terapeuta",
-      "createdAt": "..."
-  },
-  "meta": {},
-  "error": null
-}
-````
-
-#### ❌ Possíveis Erros
-- **400 Bad Request:**
-    - CPF inválido (dígito verificador incorreto).
-    - CPF já cadastrado no sistema.
-    - Campos obrigatórios faltando.
-- **401 Unauthorized:** Token inválido.
-- **403 Forbidden:** Usuário logado não tem permissão ``perm_cadastro``.
-- **404 Not Found:** O ``terapeutaId`` informado não existe no banco.
+#### ❌ Erros de Negócio
+* `409 Conflict`: O novo CPF já pertence a outro paciente.
+* `403 Forbidden`: Você não tem permissão para editar este paciente.
 
 ---
 
-### 4. ✏️ Atualizar Paciente
-#### ``PUT /patients/:targetId``
-Atualiza os dados cadastrais ou o status da paciente.
+### 5. Encaminhar Paciente (Apenas Terapeuta)
+`PATCH /patients/:targetId/refer`
 
-#### 🎯 Objetivo da Rota
-- Corrigir erros de digitação ou atualizar contato.
+Muda o status para `encaminhada`. Usado em casos de alta ou encaminhamento externo.
 
-#### 🔐 Autorização
-- Requer autenticação.
-- Apenas a Terapeuta Responsável pela paciente (ou Admin) pode editar os dados.
-
-#### 📥 Request Body (Exemplo Parcial)
-````JSON
-{
-  "telefone": "85999990000",
-  "status": "encaminhada"
-}
-````
-
-#### 📤 Response — Sucesso (200)
-````JSON
-{
-  "data": {
-      "id": "uuid-da-paciente",
-      "nome": "Maria Souza",
-      "telefone": "85999990000",
-      "status": "encaminhada",
-      "...": "..."
-  },
-  "meta": {},
-  "error": null
-}
-````
-
-#### ❌ Possíveis Erros
-- **400 Bad Request:** Dados inválidos (ex: status que não existe no Enum).
-- **401 Unauthorized:** Token inválido.
-- **403 Forbidden:** Sem permissão de edição.
-- **404 Not Found:** Paciente não encontrada.
-
-### 5. 🏥 Encaminhar Paciente
-#### ``PATCH /patients/:targetId/refer``
-Finaliza o ciclo de acolhimento e altera o status da paciente para ``encaminhada``.
-
-#### 🎯 Objetivo da Rota
-- Formalizar que a paciente concluiu o ciclo na clínica escola e foi direcionada para a rede externa.
-- **Nota:** Esta ação remove a paciente da lista de "atendimentos ativos".
-
-#### 🔐 Autorização
-- Requer autenticação.
-- **Restrição:** Apenas a **Terapeuta Responsável** pela paciente pode realizar o encaminhamento.
-
-#### 📤 Response — Sucesso (200)
-````JSON
-{
-  "data": {
-      "id": "uuid-da-paciente",
-      "nome": "Maria Souza",
-      "status": "encaminhada",
-      "terapeutaId": "uuid-terapeuta",
-      "updatedAt": "2025-10-25T14:00:00.000Z"
-  },
-  "meta": {},
-  "error": null
-}
-````
-
-#### ❌ Possíveis Erros
-- **403 Forbidden:** Usuário logado não é a terapeuta responsável pela paciente.
-- **404 Not Found:** Paciente não encontrada.
-- **409 Conflict:** Paciente já está com status 'encaminhada'.
+#### ❌ Erros de Negócio
+* `409 Conflict`: Paciente já está com status 'encaminhada'.
+* `403 Forbidden`: Você não é a terapeuta responsável por este paciente.
 
 ---
 
-### 6. ↩️ Desfazer Encaminhamento
-#### ``PATCH /patients/:targetId/unrefer``
-Reverte o status da paciente de ``encaminhada`` para ``atendimento``.
+### 6. Desfazer Encaminhamento (Apenas Admin)
+`PATCH /patients/:targetId/unrefer`
 
-#### 🎯 Objetivo da Rota
-- Corrigir encaminhamentos feitos por engano.
-- Reabrir o caso para novos atendimentos no laboratório.
+Reativa um paciente encaminhado, voltando o status para `atendimento`.
 
-#### 🔐 Autorização
-- Requer autenticação.
-- **Restrição:** Apenas **Administradores** podem desfazer um encaminhamento.
+#### ❌ Erros de Negócio
+* `400 Bad Request`: O paciente não está com status 'encaminhada'.
 
-#### 📤 Response — Sucesso (200)
-````JSON
-{
-  "data": {
-      "id": "uuid-da-paciente",
-      "nome": "Maria Souza",
-      "status": "atendimento",
-      "terapeutaId": "uuid-terapeuta"
-  },
-  "meta": {},
-  "error": null
-}
-````
+---
 
-#### ❌ Possíveis Erros
-- **403 Forbidden:** Usuário logado não tem permissão de Administrador (perm_admin).
-- **400 Bad Request:** A paciente não está no status 'encaminhada'.
-- **404 Not Found:** Paciente não encontrada.
+### 7. Transferir Paciente (Requer `perm_cadastro`)
+`PATCH /patients/:targetId/transfer`
 
-### 7. ⇄ Transferir Paciente (Troca de Terapeuta)
-#### ``PATCH /patients/:targetId/transfer``
-Transfere a responsabilidade de uma paciente para outra terapeuta.
+Transfere a responsabilidade do paciente para outra terapeuta.
 
-#### 🎯 Objetivo da Rota
-- Permitir a troca de profissional em casos de: rotatividade de alunos, incompatibilidade de horários ou saída da terapeuta atual.
-- **Importante:** Esta ação altera apenas a **responsabilidade atual**. O histórico de sessões passadas permanece vinculado à terapeuta que realizou o atendimento na época, garantindo a integridade do prontuário.
-
-#### 🔐 Autorização
-- Requer autenticação.
-- **Restrição:** Apenas **Administradores** podem realizar transferências.
-
-#### 📥 Request Body
-````JSON
+**Body:**
+````json
 {
   "newTherapistId": "uuid-da-nova-terapeuta"
 }
 ````
 
-#### 📤 Response — Sucesso (200)
-````JSON
-{
-  "data": {
-      "id": "uuid-da-paciente",
-      "nome": "Maria Souza",
-      "status": "atendimento",
-      "terapeutaId": "uuid-da-nova-terapeuta",
-      "updatedAt": "2025-11-01T10:00:00.000Z"
-  },
-  "meta": {
-      "message": "Paciente transferida com sucesso."
-  },
-  "error": null
-}
-````
+#### ❌ Erros de Negócio
+* `404 Not Found`: Paciente ou Nova Terapeuta não encontrados.
 
-#### ❌ Possíveis Erros
-- **400 Bad Request:** ID do novo terapeuta inválido ou ausente.
-- **403 Forbidden:** Usuário logado não é Administrador.
-- **404 Not Found:** Paciente não encontrada OU Nova Terapeuta não encontrada.
+---
 
-### 8. 🗑️ Excluir Paciente (Soft Delete)
-#### ``DELETE /patients/:targetId``
-Move a paciente para a lixeira (preenche o campo `deleted_at`), removendo-a das listagens padrões.
+### 8. Excluir Paciente
+`DELETE /patients/:targetId`
 
-#### 🎯 Objetivo da Rota
-- Remover pacientes criadas por engano ou que desistiram antes do processo iniciar.
-- **Segurança:** Não apaga o registro físico do banco, mantendo histórico de auditoria.
+Remove o paciente da listagem principal (Soft Delete).
 
-#### 🔐 Autorização
-- Requer autenticação.
-- **Permissão:** Apenas **Admin** ou a **Terapeuta Responsável** podem excluir.
+### 9. Restaurar Paciente
+`PATCH /patients/:targetId/restore`
 
-#### 📤 Response — Sucesso (204)
-Não retorna conteúdo (`No Content`).
+Recupera um paciente da lixeira.
 
-#### ❌ Possíveis Erros
-- **403 Forbidden:** Usuário não tem permissão sobre esta paciente.
-- **404 Not Found:** Paciente não encontrada (ou já excluída).
+---
 
-### 9. ♻️ Restaurar Paciente
-#### ``PATCH /patients/:targetId/restore``
-Recupera uma paciente da lixeira, tornando-a ativa novamente (limpa o campo `deleted_at`).
+### 🔔 Notificações Geradas
 
-#### 🎯 Objetivo da Rota
-- Corrigir exclusões acidentais.
-
-#### 🔐 Autorização
-- Requer autenticação.
-- **Permissão:** Apenas **Admin** ou a **Terapeuta Responsável** podem restaurar.
-
-#### 📤 Response — Sucesso (200)
-Retorna os dados da paciente recuperada.
-&&&&JSON
-{
-  "data": {
-      "id": "uuid-da-paciente",
-      "nome": "Maria Souza",
-      "status": "atendimento",
-      "deletedAt": null
-  },
-  "meta": {
-      "message": "Paciente restaurada com sucesso."
-  },
-  "error": null
-}
-&&&&
-
-#### ❌ Possíveis Erros
-- **400 Bad Request:** Erro ao restaurar (talvez a paciente não estivesse excluída).
-- **403 Forbidden:** Sem permissão.
-- **404 Not Found:** ID não encontrado.
+| Gatilho (Rota) | Público | Título | Mensagem |
+| :--- | :--- | :--- | :--- |
+| `POST /patients` | **Admin** | Novo Paciente | "Novo paciente cadastrado: [Nome] vinculado a [Terapeuta]." |
+| `POST /patients` | **Terapeuta** | Novo Paciente | "Você tem um novo paciente: [Nome]." |
+| `PATCH .../transfer` | **Terapeuta** | Novo Paciente | "Você tem um novo paciente: [Nome] (Transferido)." |

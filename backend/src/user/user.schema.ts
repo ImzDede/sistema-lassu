@@ -11,7 +11,7 @@ export const userIdSchema = z.string().uuid("ID inválido");
 
 export const userListSchema = paginationSchema.extend({
     orderBy: z.enum(['nome', 'created_at', 'ativo']).default('nome'),
-    ativo: z.enum(['true', 'false']).optional(),
+    ativo: z.enum(['true', 'false']).transform((val) => val === 'true').optional(),
     nome: z.string().optional()
 });
 

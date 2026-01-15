@@ -9,6 +9,7 @@ export const HTTP_ERRORS = {
             UUID: "Identificador inválido (não é um UUID).",
             DATE_FORMAT: "Data inválida. Use o formato AAAA-MM-DD.",
             INTEGER: "O valor deve ser um número inteiro.",
+            URL: "URL inválida.",
             PHONE: {
                 LENGTH: "O telefone deve ter entre 8 e 20 dígitos.",
                 INVALID: "O telefone deve conter apenas números."
@@ -28,30 +29,32 @@ export const HTTP_ERRORS = {
                 LOWERCASE: "A senha precisa ter pelo menos uma letra minúscula.",
                 NUMBER: "A senha precisa ter pelo menos um número.",
                 SPECIAL: "A senha precisa ter pelo menos um caractere especial (!@#$...).",
-                MISMATCH: "A senha informada está incorreta ou não confere com a atual."
+                MISMATCH: "Informe uma senha diferente da atual."
             },
             EMAIL: "Insira um e-mail válido (ex: nome@dominio.com).",
             ALREADY_FIRST_ACCESS: "O cadastro inicial deste usuário já foi finalizado."
         },
 
-        //Módulo: Notificação
         NOTIFICATION: {
             ID_ARRAY: "A lista de IDs deve conter apenas números positivos."
         },
 
-        // Módulo: Paciente
         PATIENT: {
             CPF_INVALID: "O CPF informado é inválido.",
             STATUS_NOT_REFER: "Não é possível desfazer: esta paciente não está marcada como 'encaminhada'.",
             RESTORE_ERROR: "Não foi possível restaurar. Verifique se a paciente realmente estava na lixeira."
         },
 
-        // Módulo: Disponibilidade
         AVAILABILITY: {
             DAY_INVALID: "Dia da semana inválido.",
             HOUR_RANGE: "Os atendimentos devem ocorrer entre 08:00 e 18:00.",
             HOUR_ORDER: "A hora final não pode ser anterior à hora inicial.",
-            CONFLICT: (day: number) => `Você já tem um horário conflitante no dia ${day}. Verifique sua agenda.`
+            CONFLICT: (day: number) => `Você tem um horário conflitante no dia ${day}. Verifique sua agenda.`
+        },
+
+        SESSION: {
+            INVALID_HOUR: "Hora inválida.",
+            INVALID_ROOM: "Sala inválida (deve ser um número positivo)."
         }
     },
 
@@ -77,6 +80,12 @@ export const HTTP_ERRORS = {
             NOT_YOURS: "Acesso negado. Apenas a terapeuta responsável pode realizar esta ação.",
             DELETE: "Você não tem permissão para excluir esta paciente.",
             RESTORE: "Você não tem permissão para restaurar esta paciente."
+        },
+        
+        SESSION: {
+            SCHEDULE_NOT_YOURS: "Permissão negada para agendar este paciente.",
+            HISTORY_NOT_YOURS: "Permissão negada para visualizar o histórico deste paciente.",
+            MANAGE_NOT_YOURS: "Permissão negada. Você não pode alterar ou excluir uma sessão que não é sua."
         }
     },
 
@@ -87,7 +96,8 @@ export const HTTP_ERRORS = {
         ROUTE: "Rota não encontrada.",
         USER: "Usuário não encontrado.",
         THERAPIST: "A terapeuta informada não foi encontrada.",
-        PATIENT: "Paciente não encontrada."
+        PATIENT: "Paciente não encontrada.",
+        SESSION: "Sessão não encontrada."
     },
 
     // --------------------------------------------------------
@@ -102,6 +112,12 @@ export const HTTP_ERRORS = {
             CPF_EXISTS: "Já existe uma paciente ativa ou na lixeira com este CPF.",
             ALREADY_REFER: "Esta paciente já foi encaminhada anteriormente.",
             ALREADY_DELETED: "Esta paciente já está na lixeira."
+        },
+        SESSION: {
+            ROOM_OCCUPIED: "Já existe uma sessão agendada para essa sala nesse horário.",
+            THERAPIST_BUSY: "Você já tem uma sessão para esse horário.",
+            RESCHEDULE_ROOM: "Não foi possível reagendar: Sala já ocupada no novo horário.",
+            RESCHEDULE_THERAPIST: "Não foi possível reagendar: Você já tem atendimento no novo horário."
         }
     },
 

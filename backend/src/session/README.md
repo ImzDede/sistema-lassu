@@ -1,147 +1,183 @@
-# 📅 Módulo Sessions
+# 🛋️ Módulo Session (Sessões)
 
-O módulo Sessions é responsável exclusivamente pela Gestão de Agenda e marcação de sessões.
+O módulo de Sessões é o coração do agendamento. Ele gerencia os atendimentos, alocação de salas e o histórico clínico/financeiro.
+Possui lógica robusta para evitar **conflitos de agenda** (duas sessões na mesma sala ou mesmo terapeuta no mesmo horário).
 
-## 🗄️ Persistência no Banco de Dados
-#### `Tabela: sessoes`
-
-| Coluna | Tipo | Nulo | Observações |
-| :--- | :--- | :--- | :--- |
-| id | serial | ❌ | Inteiro, Auto-incremento (PK) |
-| paciente_id | uuid | ❌ | FK para pacientes |
-| usuario_id | uuid | ❌ | FK para usuarios (Terapeuta) |
-| dia | date | ❌ | Data da sessão (YYYY-MM-DD) |
-| hora | integer | ❌ | Hora cheia (Ex: 8, 14, 16) |
-| sala | integer | ❌ | Número da sala física |
-| status | varchar | ❌ | Enum de Status |
-| updated_at | timestamp | ✅ | Data da última atualização |
-| created_at | timestamp | ❌ | Data de criação (Default NOW) |
-
-## 🧠 Regras de Negócio
-
-### `dia` e `hora`
-- **Dia:** String no formato ISO `YYYY-MM-DD`.
-- **Hora:** Número inteiro representando a hora de início (ex: `14` para 14:00).
-- **Regra de Conflito:** O sistema impede:
-    1. Mesma **Sala** ocupada no mesmo horário.
-    2. Mesma **Terapeuta** ocupada no mesmo horário.
-
-### `status`
-- **Valores Permitidos:**
-    - `agendada` (Padrão ao criar)
-    - `realizada`
-    - `falta`
-    - `cancelada_paciente`
-    - `cancelada_terapeuta`
+### [↩️ Voltar ao README principal](../README.md)
 
 ---
 
-## Rotas
+## 🗺️ Sumário das Rotas
 
-### 1. 📅 Listar Sessões (Agenda)
-#### `GET /sessions`
-Retorna a lista de sessões filtrada.
+### 📅 Agendamento e Gestão
+| Método | Endpoint | Descrição |
+| :--- | :--- | :--- |
+| **GET** | [``/sessions``](#1-listar-sessões) | Lista sessões por período (obrigatório informar datas). |
+| **POST** | [``/sessions``](#2-agendar-sessão) | Cria um novo agendamento. |
+| **GET** | [``/sessions/:targetId``](#3-buscar-sessão-por-id) | Detalhes de uma sessão específica. |
 
-#### 📥 Query Parameters (`SessionListDTO`)
-| Parâmetro | Tipo | Obrigatório | Descrição |
-| :--- | :--- | :--- | :--- |
-| `start` | string | ✅ | Início (YYYY-MM-DD) |
-| `end` | string | ✅ | Fim (YYYY-MM-DD) |
-| `status` | string | ❌ | Filtro de status |
-| `patientTargetId` | uuid | ❌ | Filtrar por paciente |
-| `userTargetId` | uuid | ❌ | (Admin) Filtrar por terapeuta |
+### 🔄 Alteração de Estado e Agenda
+| Método | Endpoint | Descrição |
+| :--- | :--- | :--- |
+| **PATCH** | [``/sessions/:targetId/status``](#4-atualizar-status) | Atualiza apenas a situação (Realizada, Falta, Cancelada). |
+| **PUT** | [``/sessions/:targetId/reschedule``](#5-reagendar-sessão) | **Flow complexo:** Cancela a atual e cria uma nova em outro horário. |
+| **PUT** | [``/sessions/:targetId``](#6-editar-detalhes) | Altera sala ou horário da mesma sessão (correção administrativa). |
+| **DELETE** | [``/sessions/:targetId``](#7-excluir-sessão) | Remove o registro do banco (Exclusão permanente). |
 
-#### 📤 Response — Sucesso (200)
+---
+
+## 🧠 Regras de Negócio
+
+### 1. Prevenção de Conflitos
+O sistema impede agendamentos se:
+* **Conflito de Sala:** Já existe uma sessão `agendada` ou `realizada` naquela Sala + Dia + Hora.
+* **Conflito de Terapeuta:** A terapeuta já tem outro paciente agendado naquele Dia + Hora.
+
+### 2. Visibilidade
+* **Admin:** Pode ver e gerenciar sessões de qualquer pessoa.
+* **Terapeuta:** Só vê sessões onde ela é a responsável (`usuario_id`) e de seus próprios pacientes.
+
+### 3. Reagendamento (Smart Logic)
+A rota de reagendar (`PUT .../reschedule`) não apenas muda a data. Ela:
+1.  Verifica se o novo horário está livre.
+2.  Marca a sessão original como `cancelada` (mantendo o histórico).
+3.  Cria uma **nova** sessão com o novo horário.
+
+---
+
+## 🗄️ Persistência (Banco de Dados)
+
+**Tabela: `sessoes`**
+
+| Coluna | Tipo | Obrigatório | Descrição |
+| :--- | :--- | :---: | :--- |
+| `id` | serial | ✅ | PK. |
+| `paciente_id` | uuid | ✅ | FK para pacientes. |
+| `usuario_id` | uuid | ✅ | FK para usuarios (Terapeuta). |
+| `dia` | date | ✅ | YYYY-MM-DD. |
+| `hora` | int | ✅ | Hora cheia (8 a 17). |
+| `sala` | int | ✅ | Número da sala. |
+| `status` | varchar | ✅ | Enum de status (veja abaixo). |
+| `created_at` | timestamp | ✅ | Data de criação. |
+| `updated_at` | timestamp | ❌ | Data da última alteração. |
+
+**Status Possíveis:**
+* `agendada` (Padrão ao criar)
+* `realizada` (Concluída com sucesso)
+* `falta` (Paciente não apareceu)
+* `cancelada_paciente` (Aviso prévio do paciente)
+* `cancelada_terapeuta` (Imprevisto da terapeuta)
+
+---
+
+## 📋 Regras de Validação (Campos)
+
+Todos os endpoints aplicam as seguintes validações (Erro `400 Bad Request`).
+
+| Campo | Regra / Cenário | Mensagem de Erro |
+| :--- | :--- | :--- |
+| **Data (Start/End/Dia)** | Formato YYYY-MM-DD. | "Data inválida. Use o formato AAAA-MM-DD." |
+| **Hora** | Inteiro entre 8 e 17. | "Hora inválida." |
+| **Sala** | Número maior que 0. | "Sala inválida." |
+| **Filtro de Lista** | `start` e `end` são obrigatórios. | "Datas de início e fim são obrigatórias." |
+
+---
+
+## 📡 Referência da API
+
+### 1. Listar Sessões
+`GET /sessions`
+
+Lista atendimentos dentro de um intervalo de datas.
+* **Terapeuta:** Vê sua agenda.
+* **Admin:** Vê a agenda da clínica toda (pode filtrar por usuário).
+
+**Query Params:**
+* `start`: Data inicial YYYY-MM-DD (**Obrigatório**).
+* `end`: Data final YYYY-MM-DD (**Obrigatório**).
+* `status`: Filtrar por status (ex: `agendada`).
+* `patientTargetId`: Filtrar por paciente específico.
+* `userTargetId`: (Admin) Filtrar por terapeuta.
+
+**Exemplo:** `/sessions?start=2026-01-01&end=2026-01-31&status=agendada`
+
+**Response (200):**
 ````json
 {
   "data": [
     {
       "session": {
         "id": 105,
-        "dia": "2025-10-20",
+        "dia": "2026-01-15",
         "hora": 14,
         "sala": 2,
         "status": "agendada"
       },
-      "therapist": {
-        "id": "uuid-terapeuta",
-        "nome": "Dra. Ana"
-      },
-      "patient": {
-        "id": "uuid-paciente",
-        "nome": "Maria Souza"
-      }
+      "therapist": { "id": "...", "nome": "Dra. Ana" },
+      "patient": { "id": "...", "nome": "Paciente X" }
     }
   ],
-  "meta": { "totalItems": 1 },
-  "error": null
+  "meta": {
+    "totalItems": 1
+  }
 }
 ````
 
 ---
 
-### 2. 🔍 Ver Detalhes
-#### `GET /sessions/:targetId`
-Retorna os dados completos de uma sessão específica.
+### 2. Agendar Sessão
+`POST /sessions`
 
-#### 📤 Response — Sucesso (200)
+Cria um agendamento. Verifica automaticamente conflitos de sala e horário.
+
+**Body:**
 ````json
 {
-  "data": {
-      "session": {
-        "id": 105,
-        "dia": "2025-10-20",
-        "hora": 14,
-        "sala": 2,
-        "status": "cancelada_paciente",
-        "updatedAt": "2025-10-19T10:00:00Z",
-        "createdAt": "2025-10-01T10:00:00Z"
-      },
-      "therapist": {
-        "id": "uuid-terapeuta",
-        "nome": "Dra. Ana"
-      },
-      "patient": {
-        "id": "uuid-paciente",
-        "nome": "Maria Souza"
-      }
-  },
-  "meta": {},
-  "error": null
+  "pacienteId": "uuid-do-paciente",
+  "dia": "2026-01-20",
+  "hora": 10,
+  "sala": 3
 }
 ````
 
----
-
-### 3. ➕ Criar Sessão (Agendar)
-#### `POST /sessions`
-
-#### 📥 Request Body (`SessionCreateDTO`)
-````json
-{
-  "pacienteId": "uuid-paciente",
-  "dia": "2025-10-20",
-  "hora": 14,
-  "sala": 2
-}
-````
-
-#### 📤 Response — Sucesso (201)
+**Response (201):**
 ````json
 {
   "data": {
     "session": {
       "id": 106,
-      "dia": "2025-10-20",
-      "hora": 14,
-      "sala": 2,
+      "dia": "2026-01-20",
+      "hora": 10,
+      "sala": 3,
       "status": "agendada",
-      "createdAt": "2025-10-05T14:30:00Z"
+      "createdAt": "..."
     },
-    "patient": {
-      "id": "uuid-paciente",
-      "nome": "Maria Souza"
-    }
+    "patient": { "id": "...", "nome": "Paciente X" }
+  },
+  "meta": {},
+  "error": null
+}
+````
+
+#### ❌ Erros de Negócio
+* `409 Conflict`: "Já existe uma sessão agendada para essa sala nesse horário."
+* `409 Conflict`: "Você já tem uma sessão para esse horário."
+* `403 Forbidden`: Você não é a terapeuta responsável por este paciente.
+
+---
+
+### 3. Buscar Sessão por ID
+`GET /sessions/:targetId`
+
+Retorna detalhes completos da sessão.
+
+**Response (200):**
+````json
+{
+  "data": {
+    "session": { "id": 106, "status": "agendada", ... },
+    "therapist": { "id": "...", "nome": "..." },
+    "patient": { "id": "...", "nome": "..." }
   },
   "meta": {},
   "error": null
@@ -150,24 +186,26 @@ Retorna os dados completos de uma sessão específica.
 
 ---
 
-### 4. 📝 Atualizar Status
-#### `PATCH /sessions/:targetId/status`
+### 4. Atualizar Status
+`PATCH /sessions/:targetId/status`
 
-#### 📥 Request Body (`SessionUpdateStatusDTO`)
+Usado para dar baixa (`realizada`) ou marcar faltas/cancelamentos sem mudar o horário.
+
+**Body:**
 ````json
 {
   "status": "realizada"
 }
 ````
 
-#### 📤 Response — Sucesso (200)
+**Response (200):**
 ````json
 {
   "data": {
     "session": {
-      "id": 105,
+      "id": 106,
       "status": "realizada",
-      "updatedAt": "2025-10-20T14:05:00Z"
+      "updatedAt": "..."
     }
   },
   "meta": {},
@@ -177,41 +215,35 @@ Retorna os dados completos de uma sessão específica.
 
 ---
 
-### 5. 🔄 Remarcar (Reschedule)
-#### `PUT /sessions/:targetId/reschedule`
-Cancela a sessão atual e cria uma nova imediatamente (Atômico).
+### 5. Reagendar Sessão (Smart Reschedule)
+`PUT /sessions/:targetId/reschedule`
 
-#### 📥 Request Body (`SessionRescheduleDTO`)
+Cancela a sessão atual e cria uma nova imediatamente.
+
+**Body:**
 ````json
 {
-  "dia": "2025-10-25",
-  "hora": 16,
-  "sala": 2,
+  "dia": "2026-01-22",
+  "hora": 11,
+  "sala": 3,
   "statusCancelamento": "cancelada_paciente"
 }
 ````
 
-#### 📤 Response — Sucesso (200)
-*Retorna a nova sessão criada e a antiga cancelada.*
-
+**Response (200):**
 ````json
 {
   "data": {
     "session": {
       "id": 107,
-      "dia": "2025-10-25",
-      "hora": 16,
-      "sala": 2,
+      "dia": "2026-01-22",
       "status": "agendada",
-      "createdAt": "2025-10-20T18:00:00Z"
+      "createdAt": "..."
     },
     "canceledSession": {
-       "id": 105,
-       "dia": "2025-10-20",
-       "hora": 14,
-       "sala": 2,
-       "status": "cancelada_paciente",
-       "updatedAt": "2025-10-20T18:00:00Z"
+      "id": 106,
+      "status": "cancelada_paciente",
+      "updatedAt": "..."
     }
   },
   "meta": {},
@@ -219,32 +251,32 @@ Cancela a sessão atual e cria uma nova imediatamente (Atômico).
 }
 ````
 
+#### ❌ Erros de Negócio
+* `409 Conflict`: Não foi possível reagendar: Sala já ocupada no novo horário.
+* `409 Conflict`: Não foi possível reagendar: Você já tem atendimento no novo horário.
+
 ---
 
-### 6. ✏️ Edição (Dia/Hora/Sala)
-#### `PUT /sessions/:targetId`
-Atualiza dados da sessão existente (sem criar nova). Valida conflitos.
+### 6. Editar Detalhes
+`PUT /sessions/:targetId`
 
-#### 📥 Request Body (`SessionUpdateDTO`)
-*Campos opcionais (Partial)*
+Altera dados da sessão (Dia, Hora, Sala) **sem criar uma nova**. Use com cautela (geralmente para correções de erro de cadastro).
+
+**Body (Parcial):**
 ````json
 {
-  "sala": 5,
-  "hora": 15
+  "sala": 4
 }
 ````
 
-#### 📤 Response — Sucesso (200)
+**Response (200):**
 ````json
 {
   "data": {
     "session": {
-      "id": 105,
-      "dia": "2025-10-20",
-      "hora": 15,
-      "sala": 5,
-      "status": "agendada",
-      "updatedAt": "2025-10-10T09:00:00Z"
+      "id": 106,
+      "sala": 4,
+      "updatedAt": "..."
     }
   },
   "meta": {},
@@ -254,9 +286,19 @@ Atualiza dados da sessão existente (sem criar nova). Valida conflitos.
 
 ---
 
-### 7. 🗑️ Excluir
-#### `DELETE /sessions/:targetId`
-Remove a sessão do banco (Hard Delete).
+### 7. Excluir Sessão
+`DELETE /sessions/:targetId`
 
-#### 📤 Response — Sucesso (204)
-*Sem corpo de resposta (No Content).*
+**Atenção:** Remove permanentemente o registro do banco.
+Para cancelamentos de rotina, prefira usar a rota de Status.
+
+**Response (204):** No Content.
+
+---
+
+### 🔔 Notificações Geradas
+
+| Gatilho (Rota) | Público | Título | Mensagem |
+| :--- | :--- | :--- | :--- |
+| `POST /sessions` | **Admin** | Nova Sessão | "[Terapeuta] agendou com [Paciente] em [Data] às [Hora]h." |
+| `POST /sessions` | **Terapeuta** | Sessão Criada | "Sessão confirmada com [Paciente] em [Data] às [Hora]h." |
