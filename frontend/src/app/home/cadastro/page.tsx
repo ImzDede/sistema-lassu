@@ -13,6 +13,7 @@ export default function Cadastro() {
     { label: "ANOTAÇÕES", href: "/home/cadastro/anotacoes" },
     { label: "ANAMNESE", href: "/home/cadastro/anamnese" },
     { label: "SÍNTESES", href: "/home/cadastro/sintese" },
+    { label: "ENCAMINHAMENTO", href: "/home/cadastro/encaminhamento" }
   ];
 
   // Itens restritos (Admin ou Equipe de Cadastro)
