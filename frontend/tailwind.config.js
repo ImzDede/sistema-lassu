@@ -2,6 +2,12 @@ const withMT = require("@material-tailwind/react/utils/withMT");
 
 const brandColors = [
   'brand-purple', 
+  'brand-pink',       
+  'brand-peach',      
+  'brand-terracota',  
+  'brand-dark',      
+  'brand-bg',         
+  'brand-surface',    
   'brand-sessao', 
   'brand-sintese', 
   'brand-anamnese', 
@@ -20,11 +26,13 @@ module.exports = withMT({
   ],
   safelist: [
     {
+      // Pega classes normais (bg-, text-, border-...)
       pattern: new RegExp(`^!?((bg|text|border|ring)-(${brandColors.join('|')}))`),
       variants: ['hover', 'focus', 'focus-within'], 
     },
     {
-      pattern: new RegExp(`^!?((bg|text|border|ring)-(${brandColors.join('|')})/(5|10|20|30|50))`),
+      // Pega classes com opacidade (ex: /10, /20...)
+      pattern: new RegExp(`^!?((bg|text|border|ring)-(${brandColors.join('|')})/(5|10|20|30|50|70|90))`),
       variants: ['hover', 'focus', 'focus-within'],
     }
   ],
