@@ -1,3 +1,4 @@
+import pool from "../config/db";
 import { AppError } from "../errors/AppError";
 import { HTTP_ERRORS } from "../errors/messages";
 import { NOTIFICATION_MESSAGE } from "../notification/notification.messages";
@@ -6,11 +7,11 @@ import { PatientRepository } from "../patient/patient.repository";
 import { UserRepository } from "../user/user.repository";
 import { UserPermDTO } from "../user/user.schema";
 import { SessionRepository } from "./session.repository";
-import { SessionCreateDTO, SessionListDTO, SessionRescheduleDTO, SessionUpdateDTO, SessionUpdateStatusDTO } from "./session.schema";
+import { SessionCreateDTO, SessionListDTO, SessionRescheduleDTO, SessionUpdateDTO, SessionUpdateNotesDTO, SessionUpdateStatusDTO } from "./session.schema";
 
 const repository = new SessionRepository()
 const notificationService = new NotificationService();
-const patientRepository = new PatientRepository()
+const patientRepository = new PatientRepository(pool)
 const userRepository = new UserRepository()
 
 export class SessionService {
@@ -98,7 +99,6 @@ export class SessionService {
 
         if (!sessionRow) throw new AppError(HTTP_ERRORS.NOT_FOUND.SESSION, 404);
 
-        // Só vê se for Admin ou se for a dona da sessão
         if (!userPerms.admin && sessionRow.usuario_id !== userId) {
             throw new AppError(HTTP_ERRORS.FORBIDDEN.DEFAULT, 403);
         }
@@ -112,6 +112,17 @@ export class SessionService {
         if (therapist != userId) throw new AppError(HTTP_ERRORS.FORBIDDEN.SESSION.MANAGE_NOT_YOURS, 403)
 
         const sessionRow = await repository.update(sessionId, data)
+        if (!sessionRow) throw new AppError(HTTP_ERRORS.NOT_FOUND.SESSION, 404)
+
+        return { sessionRow }
+    }
+
+    async updateNotes(userId: string, sessionId: number, data: SessionUpdateNotesDTO) {
+        const therapist = await repository.getTherapist(sessionId)
+        if (!therapist) throw new AppError(HTTP_ERRORS.NOT_FOUND.SESSION, 404)
+        if (therapist != userId) throw new AppError(HTTP_ERRORS.FORBIDDEN.SESSION.MANAGE_NOT_YOURS, 403)
+
+        const sessionRow = await repository.updateNotes(sessionId, data)
         if (!sessionRow) throw new AppError(HTTP_ERRORS.NOT_FOUND.SESSION, 404)
 
         return { sessionRow }

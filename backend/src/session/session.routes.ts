@@ -3,7 +3,7 @@ import { SessionControllers } from "./session.controllers";
 import { authMiddleware } from "../middlewares/authMiddleware";
 import { validate } from "../middlewares/validateMiddleware";
 import { userIdSchema } from "../user/user.schema";
-import { sessionCreateSchema, sessionListSchema, sessionRescheduleSchema, sessionTargetIdParamSchema, sessionUpdateSchema, sessionUpdateStatusSchema } from "./session.schema";
+import { sessionCreateSchema, sessionListSchema, sessionRescheduleSchema, sessionTargetIdParamSchema, sessionUpdateNotesSchema, sessionUpdateSchema, sessionUpdateStatusSchema } from "./session.schema";
 import z from "zod";
 
 const router = Router();
@@ -21,6 +21,7 @@ router.use(validate(sessionTargetIdParamSchema, 'params'))
 router.get('/:targetId', sessionController.getById);
 router.put('/:targetId', validate(sessionUpdateSchema), sessionController.update);
 router.put('/:targetId/reschedule', validate(sessionRescheduleSchema), sessionController.reschedule);
+router.patch('/:targetId/notes', validate(sessionUpdateNotesSchema), sessionController.updateNotes);
 router.patch('/:targetId/status', validate(sessionUpdateStatusSchema), sessionController.updateStatus);
 router.delete('/:targetId', sessionController.delete);
 

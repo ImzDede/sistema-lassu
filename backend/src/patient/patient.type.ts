@@ -19,6 +19,14 @@ export type PatientIdRow = Pick<PatientRow, 'id'>;
 
 export type PatientListRow = Pick<PatientRow, 'id' | 'nome' | 'data_nascimento' | 'terapeuta_id' | 'status' | 'created_at'>;
 
+export interface ReferRow {
+    id: number;
+    paciente_id: string;
+    destino: string;
+    arquivo_url: string | null;
+    created_at: Date;
+}
+
 //--------------
 // Response DTO 
 //--------------
@@ -73,13 +81,30 @@ export type PatientListResponseDTO = {
     }
 }[]
 
-export type PatientReferResponseDTO = {
-    id: string,
-    nome: string,
-    dataNascimento: string,
-    cpf: string,
-    telefone: string,
-    terapeutaId: string,
-    status: string,
-    createdAt: string
+export type ReferResponseDTO = {
+    patient: {
+        id: string,
+        nome: string,
+        dataNascimento: string,
+        cpf: string,
+        telefone: string,
+        terapeutaId: string,
+        status: string,
+        createdAt: string
+    },
+    refer: {
+        id: number;
+        destino: string;
+        arquivoUrl: string | null;
+        dataEncaminhamento: Date;
+    }
+}
+
+export interface ReferGetResponseDTO {
+    refer: {
+        id: number;
+        destino: string;
+        arquivoUrl: string | null;
+        dataEncaminhamento: Date;
+    }
 }

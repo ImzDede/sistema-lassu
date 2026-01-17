@@ -1,5 +1,5 @@
 import { v4 } from "uuid";
-import { PatientCreateDTO, PatientListDTO, PatientTransferDTO, PatientUpdateDTO } from "./patient.schema";
+import { CreateReferralDTO, PatientCreateDTO, PatientListDTO, PatientTransferDTO, PatientUpdateDTO } from "./patient.schema";
 import { PatientRepository } from "./patient.repository";
 import { AppError } from "../errors/AppError";
 import { HTTP_ERRORS } from "../errors/messages";
@@ -7,9 +7,14 @@ import { NotificationService } from "../notification/notification.service";
 import { NOTIFICATION_MESSAGE } from "../notification/notification.messages";
 import { UserRepository } from "../user/user.repository";
 import { UserPermDTO } from "../user/user.schema";
-const repository = new PatientRepository()
+import { FormRepository } from "../form/form.repository";
+import pool from "../config/db";
+import { withTransaction } from "../utils/withTransaction";
+
+const repository = new PatientRepository(pool)
 const userRepository = new UserRepository()
 const notificationService = new NotificationService()
+//const formRepository = new FormRepository()
 
 export class PatientService {
     async create(userId: string, data: PatientCreateDTO) {
@@ -32,6 +37,24 @@ export class PatientService {
 
         //Cria paciente no banco
         const patientRow = await repository.create(data, newId)
+
+        /*
+        //Cria formulários
+        const anamneseVersion = await formRepository.getActiveVersionId('ANAMNESE');
+        const sinteseVersion = await formRepository.getActiveVersionId('SINTESE');
+
+        const tasks = [];
+
+        if (anamneseVersion) {
+            tasks.push(formRepository.createResponse(v4(), patientRow.id, anamneseVersion));
+        }
+
+        if (sinteseVersion) {
+            tasks.push(formRepository.createResponse(v4(), patientRow.id, sinteseVersion));
+        }
+
+        await Promise.all(tasks);
+        */
 
         //Notificações
         const [userName, therapistName] = await Promise.all([
@@ -114,6 +137,24 @@ export class PatientService {
         return { patientRow, therapistName }
     }
 
+    async getRefer(userId: string, patientId: string, perms: UserPermDTO) {
+        const patientRow = await repository.getById(patientId)
+        if (!patientRow) {
+            throw new AppError(HTTP_ERRORS.NOT_FOUND.PATIENT, 404)
+        }
+        if (!perms.cadastro && patientRow.terapeuta_id !== userId) {
+            throw new AppError(HTTP_ERRORS.FORBIDDEN.PATIENT.NOT_YOURS, 403);
+        }
+
+        const referRow = await repository.getRefer(patientId)
+
+        if (!referRow) {
+            throw new AppError("Encaminhmento não encontrado", 404)
+        }
+
+        return { patientRow, referRow }
+    }
+
     async update(userId: string, patientId: string, data: PatientUpdateDTO, perms: UserPermDTO) {
         const patient = await repository.getById(patientId);
 
@@ -141,7 +182,7 @@ export class PatientService {
         return { patientRow }
     }
 
-    async refer(userId: string, patientId: string) {
+    async refer(userId: string, patientId: string, filename: string | null, data: CreateReferralDTO) {
         const patient = await repository.getById(patientId);
         if (!patient) throw new AppError(HTTP_ERRORS.NOT_FOUND.PATIENT, 404);
 
@@ -153,13 +194,30 @@ export class PatientService {
             throw new AppError(HTTP_ERRORS.CONFLICT.PATIENT.ALREADY_REFER, 409);
         }
 
-        const patientRow = await repository.updateStatus(patientId, 'encaminhada');
+        return await withTransaction(async (client) => {
+            const repository = new PatientRepository(client);
+            const formRepository = new FormRepository(client);
 
-        if (!patientRow) {
-            throw new AppError(HTTP_ERRORS.NOT_FOUND.PATIENT)
-        }
+            /*const totalForms = await formRepository.countFinalizedForms(patientId);
 
-        return { patientRow };
+            // Precisa de 2 forms finalizados (Anamnese e Síntese)
+            if (totalForms < 2) {
+                throw new AppError(
+                    "Pendência: O paciente precisa ter Anamnese e Síntese finalizadas antes de ser encaminhado.",
+                    400
+                );
+            }*/
+
+            const referRow = await repository.upsertRefer(patientId, data.destino, filename);
+
+            const patientRow = await repository.updateStatus(patientId, 'encaminhada');
+
+            if (!patientRow) {
+                throw new AppError(HTTP_ERRORS.NOT_FOUND.PATIENT);
+            }
+
+            return { patientRow, referRow };
+        });
     }
 
     async unrefer(patientId: string) {

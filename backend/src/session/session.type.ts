@@ -9,6 +9,7 @@ export type SessionRow = {
     dia: string,
     hora: number,
     sala: number,
+    anotacoes: string,
     status: 'agendada' | 'realizada' | 'falta' | 'cancelada_paciente' | 'cancelada_terapeuta',
     updated_at: Date | null,
     created_at: Date,
@@ -31,6 +32,7 @@ export type SessionGetResponseDTO = {
         hora: number,
         sala: number,
         status: string,
+        anotacoes: string,
         updatedAt: Date | null,
         createdAt: Date
     },
@@ -41,6 +43,13 @@ export type SessionGetResponseDTO = {
     patient: {
         id: string
         nome: string
+    }
+}
+
+export type SessionUpdateNotesResponseDTO = {
+    session: {
+        id: number,
+        anotacoes: string
     }
 }
 

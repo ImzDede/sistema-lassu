@@ -92,3 +92,9 @@ export const patientUpdateSchema = z.object({
 }).partial()
 
 export type PatientUpdateDTO = z.infer<typeof patientUpdateSchema>
+
+export const createReferralSchema = z.object({
+    destino: z.string().min(3, "O destino deve ter pelo menos 3 caracteres (Ex: 'CAPS AD').")
+});
+
+export type CreateReferralDTO = z.infer<typeof createReferralSchema>;
