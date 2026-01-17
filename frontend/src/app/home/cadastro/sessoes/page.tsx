@@ -13,9 +13,9 @@ import { useFeedback } from "@/contexts/FeedbackContext";
 import { useFormHandler } from "@/hooks/useFormHandler";
 import { usePatients } from "@/hooks/usePatients";
 import { sessionService } from "@/services/sessionServices";
-import { formatCPF } from "@/utils/format";
 import { sessionHourOptions, roomOptions } from "@/utils/constants";
 import { validateSessionDateISO } from "@/utils/validation";
+import { formatCPF } from "@/utils/format";
 
 export default function RegisterSession() {
   const router = useRouter();
@@ -23,11 +23,14 @@ export default function RegisterSession() {
   const sessionId = searchParams.get("id");
   const preSelectedPatientId = searchParams.get("patientId");
   const preSelectedPatientName = searchParams.get("patientName");
+  
   const isEditing = !!sessionId;
+  
   const { user, isLoading: authLoading } = useAuth();
   const { patients, fetchPatients, loading: loadingPatients } = usePatients();
   const { showFeedback } = useFeedback();
   const { loading: loadingSave, handleSubmit } = useFormHandler();
+  
   const [selectedPatient, setSelectedPatient] = useState<string | null>(null);
   const [selectedRoom, setSelectedRoom] = useState("");
   const [selectedSessionNumber, setSelectedSessionNumber] = useState("");
@@ -42,7 +45,7 @@ export default function RegisterSession() {
     { value: "3", label: "3ª Sessão" },
   ];
 
-  // 1. CARREGAR DADOS SE FOR EDIÇÃO
+  // Carrega dados se for Edição
   useEffect(() => {
     if (isEditing && sessionId) {
       setIsLoadingData(true);
@@ -60,7 +63,7 @@ export default function RegisterSession() {
         })
         .catch((err: any) => {
           console.error(err);
-          showFeedback("Erro ao carregar dados da sessão.", "error");
+          showFeedback("Erro ao carregar sessão.", "error");
           router.back();
         })
         .finally(() => setIsLoadingData(false));
@@ -72,31 +75,23 @@ export default function RegisterSession() {
     }
   }, [sessionId, isEditing, preSelectedPatientId, preSelectedPatientName, fetchPatients, router, showFeedback]);
 
-  // 2. CARREGAR PACIENTES (Lista geral)
+  // Busca pacientes inicial
   useEffect(() => {
     if (user && !preSelectedPatientId && !isEditing) {
       fetchPatients({ page: 1, limit: 10, status: "atendimento" } as any);
     }
   }, [user, fetchPatients, preSelectedPatientId, isEditing]);
 
-  const handleSearchPatient = useCallback(
-    (term: string) => {
-      fetchPatients({
-        nome: term,
-        page: 1,
-        limit: 10,
-        status: "atendimento",
-      } as any);
-    },
-    [fetchPatients]
-  );
+  const handleSearchPatient = useCallback((term: string) => {
+      fetchPatients({ nome: term, page: 1, limit: 10, status: "atendimento" } as any);
+  }, [fetchPatients]);
 
   const patientOptions = patients
     .filter((p) => p && p.id && p.nome)
     .map((p) => ({
       id: p.id,
       label: p.nome,
-      subLabel: p.cpf ? `CPF: ${formatCPF(p.cpf)}` : `Status: ${p.status}`,
+      subLabel: p.cpf ? `CPF: ${formatCPF(p.cpf)}` : "Sem CPF",
     }));
     
   if (preSelectedPatientId && preSelectedPatientName && !patientOptions.find(p => p.id === preSelectedPatientId)) {
@@ -159,10 +154,14 @@ export default function RegisterSession() {
   if (authLoading || isLoadingData) return <div className="flex justify-center h-[80vh] items-center"><Spinner className="text-brand-purple" /></div>;
 
   return (
-    <div className="max-w-4xl mx-auto w-full pb-10">
+    <div className="max-w-4xl mx-auto w-full pb-10 relative">
 
       <div className="flex items-center gap-4 mb-6">
-        <button onClick={() => router.back()} className="p-2 rounded-full hover:bg-brand-purple/10 text-brand-purple transition-colors">
+        {/* BOTÃO DE VOLTAR COM BOLA */}
+        <button 
+          onClick={() => router.back()} 
+          className="p-3 rounded-full transition-colors bg-brand-sessao/20 text-brand-sessao hover:bg-brand-sessao/30"
+        >
           <ArrowLeft className="w-6 h-6" />
         </button>
         <div>
@@ -175,11 +174,12 @@ export default function RegisterSession() {
         </div>
       </div>
 
-      <Card className="w-full shadow-lg border-t-4 border-brand-purple bg-brand-surface">
+      <Card className="w-full shadow-lg border-t-4 bg-brand-surface border-brand-sessao">
         <CardBody className="p-6 md:p-10">
-          <div className="flex items-center gap-3 mb-8 pb-4 border-b border-gray-100">
-            <div className="p-2 bg-brand-purple/10 rounded-lg">
-              <Users className="w-6 h-6 text-brand-purple" />
+          
+          <div className="flex items-center gap-3 mb-8 pb-4 border-b border-gray-200">
+            <div className="p-2 rounded-lg bg-brand-sessao/20">
+              <Users className="w-6 h-6 text-brand-sessao" />
             </div>
             <Typography variant="h6" className="font-bold text-brand-dark">Dados do Agendamento</Typography>
           </div>
@@ -200,7 +200,6 @@ export default function RegisterSession() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              
               <Input 
                 type="date"
                 label="Data" 
@@ -209,7 +208,6 @@ export default function RegisterSession() {
                 required 
                 leftIcon={Calendar}
               />
-
               <Select 
                 label="Horário" 
                 value={selectedHour} 
@@ -219,7 +217,6 @@ export default function RegisterSession() {
                 placeholder="Selecione o horário..."
                 leftIcon={Clock}
               />
-
               <Select 
                 label="Sala de Atendimento" 
                 value={selectedRoom} 
@@ -229,7 +226,6 @@ export default function RegisterSession() {
                 placeholder="Selecione a sala..."
                 leftIcon={MapPin}
               />
-
               {!isEditing && (
                   <Select 
                     label="Nº da Sessão (Opcional)" 
@@ -242,7 +238,7 @@ export default function RegisterSession() {
               )}
             </div>
 
-            <div className="w-full">
+            {/*<div className="w-full">
                 <div className="flex items-center gap-2 mb-2">
                     <FileText size={18} className="text-gray-500" />
                     <label className="text-sm font-bold text-gray-700">Anotações / Observações</label>
@@ -252,17 +248,30 @@ export default function RegisterSession() {
                     onChange={(e) => setAnotacoes(e.target.value)}
                     rows={4}
                     placeholder="Detalhes sobre o atendimento..."
-                    className="!border-gray-300 focus:!border-brand-purple bg-white"
+                    className="!border-gray-300 focus:!border-brand-sessao bg-white"
                     labelProps={{ className: "hidden" }}
                 />
-            </div>
+            </div>*/}
 
-            <div className="flex flex-col-reverse lg:flex-row gap-4 mt-4 pt-4 border-t border-gray-100">
+            <div className="flex flex-col-reverse lg:flex-row gap-4 mt-4 pt-4 border-t border-gray-200">
               <div className="w-full lg:w-1/2">
-                <Button variant="outline" type="button" onClick={() => router.back()} fullWidth>CANCELAR</Button>
+                <Button 
+                  variant="outline" 
+                  type="button" 
+                  onClick={() => router.back()} 
+                  fullWidth
+                  className="bg-transparent hover:bg-opacity-10 border transition-colors border-brand-sessao text-brand-sessao"
+                >
+                  CANCELAR
+                </Button>
               </div>
               <div className="w-full lg:w-1/2">
-                <Button onClick={handleSave} loading={loadingSave} fullWidth>
+                <Button 
+                  onClick={handleSave} 
+                  loading={loadingSave} 
+                  fullWidth
+                  className="bg-brand-sessao"
+                >
                     {isEditing ? "SALVAR ALTERAÇÕES" : "AGENDAR SESSÃO"}
                 </Button>
               </div>

@@ -8,6 +8,7 @@ interface PaginationControlsProps {
   hasNext: boolean;
   hasPrev: boolean;
   onPageChange: (newPage: number) => void;
+  accentColorClass?: string;
 }
 
 export default function PaginationControls({
@@ -16,6 +17,7 @@ export default function PaginationControls({
   hasNext,
   hasPrev,
   onPageChange,
+  accentColorClass = "brand-purple",
 }: PaginationControlsProps) {
   
   const handlePrev = () => {
@@ -26,7 +28,6 @@ export default function PaginationControls({
     if (hasNext) onPageChange(currentPage + 1);
   };
 
-  // Se não tiver páginas (lista vazia ou loading), não mostra nada ou mostra desabilitado
   if (totalPages <= 1) return null;
 
   return (
@@ -35,7 +36,8 @@ export default function PaginationControls({
         variant="outline"
         onClick={handlePrev}
         disabled={!hasPrev}
-        className="border-brand-purple text-brand-purple disabled:opacity-50"
+        accentColorClass={accentColorClass} 
+        className="disabled:opacity-50"
       >
         Anterior
       </Button>
@@ -48,7 +50,8 @@ export default function PaginationControls({
         variant="outline"
         onClick={handleNext}
         disabled={!hasNext}
-        className="border-brand-purple text-brand-purple disabled:opacity-50"
+        accentColorClass={accentColorClass}
+        className="disabled:opacity-50"
       >
         Próxima
       </Button>

@@ -1,31 +1,49 @@
 "use client";
 
 import Link from "next/link";
-import { PlusCircle } from "lucide-react";
-import { Card, CardBody, Typography } from "@material-tailwind/react";
+import React from "react";
+import { LucideIcon } from "lucide-react";
 
 interface CardCadastroProps {
   label: string;
   href: string;
+  icon: LucideIcon;
+  color: string;
 }
 
-const CardCadastro = ({ label, href }: CardCadastroProps) => {
+const CardCadastro = ({ label, href, icon: Icon, color }: CardCadastroProps) => {
   return (
-    <Link href={href} className="block group">
-      <Card className="h-28 w-full cursor-pointer transition-all duration-300 active:scale-95 hover:shadow-lg hover:shadow-brand-purple/10 border border-brand-purple/10 hover:border-brand-purple bg-brand-surface">
-        <CardBody className="flex flex-col items-center justify-center h-full gap-3 p-0">
-          <div className="p-3 bg-brand-bg rounded-full group-hover:bg-brand-purple/10 transition-colors duration-300">
-            <PlusCircle className="w-6 h-6 text-gray-400 group-hover:text-brand-purple" />
+    <Link href={href} className="w-full">
+      <div 
+        className="group relative flex items-center w-full bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border cursor-pointer p-4 md:p-6 lg:p-8"
+        style={{ borderColor: color }}
+      >
+        
+        {/* Faixa lateral esquerda */}
+        <div 
+          className="absolute left-0 top-0 w-4 h-full shrink-0 transition-opacity duration-300 group-hover:opacity-80"
+          style={{ backgroundColor: color }}
+        />
+
+        <div className="flex-1 flex items-center justify-center gap-3 pr-4">
+          {/* Ícone colorido */}
+          <div className="p-2 rounded-full transition-colors group-hover:bg-gray-50">
+             <Icon 
+                size={24} 
+                strokeWidth={2.5}
+                style={{ color: color }}
+             />
           </div>
-          <Typography
-            variant="small"
-            color="blue-gray"
-            className="font-bold uppercase text-center text-gray-500 group-hover:text-brand-purple transition-colors font-heading"
+          
+          {/* Texto colorido */}
+          <span 
+            className="font-bold uppercase text-sm tracking-wider"
+            style={{ color: color }}
           >
             {label}
-          </Typography>
-        </CardBody>
-      </Card>
+          </span>
+        </div>
+      </div>
     </Link>
   );
 };

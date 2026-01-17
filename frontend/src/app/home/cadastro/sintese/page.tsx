@@ -1,308 +1,209 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowLeft, FileDown, FileText } from "lucide-react";
+import { Card, CardBody, Typography } from "@material-tailwind/react";
+import { FormularioBuilder } from "@/components/FormularioBuilder";
+import SearchableSelect from "@/components/SearchableSelect";
+import { useFeedback } from "@/contexts/FeedbackContext";
+import { usePatients } from "@/hooks/usePatients";
+import { useAuth } from "@/contexts/AuthContext";
+import { PDFDownloadLink } from "@react-pdf/renderer";
+import { formatCPF } from "@/utils/format";
+import { SintesePDF } from "@/components/pdfs/SintesePDF";
 
-export default function FormularioDinamico() {
-  const [data, setData] = useState<any>(null); // JSON do GET
-  const [answers, setAnswers] = useState<any>({}); // respostas do usuário
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function loadForm() {
-      // aqui você chama sua API real
-      const mock = {
+const MOCK_SINTESE = {
   data: {
-    pacienteId: "uuid-do-paciente-123",
-    versaoId: "uuid-versao-2025-2",
     secoes: [
       {
         id: "sec-01",
-        titulo: "1. Identificação e Hábitos",
+        titulo: "1. Avaliação da Sessão",
+        ordem: 1,
         perguntas: [
           {
-            id: "q-nome",
-            enunciado: "Nome Social",
-            tipo: "texto",
+            id: "q-humor",
+            enunciado: "Estado de humor da paciente hoje",
+            tipo: "unica_escolha",
+            obrigatoria: true,
+            dependeDeOpcaoId: null,
+            opcoes: [
+              {
+                id: "opt-humor-estavel",
+                enunciado: "Estável",
+                requerTexto: false,
+              },
+              {
+                id: "opt-humor-deprimido",
+                enunciado: "Deprimido/Triste",
+                requerTexto: false,
+              },
+              {
+                id: "opt-humor-ansioso",
+                enunciado: "Ansioso/Agitado",
+                requerTexto: false,
+              },
+              {
+                id: "opt-humor-euforico",
+                enunciado: "Eufórico",
+                requerTexto: false,
+              },
+            ],
+          },
+          {
+            id: "q-cooperacao",
+            enunciado: "Nível de cooperação",
+            tipo: "unica_escolha",
+            obrigatoria: true,
+            dependeDeOpcaoId: null,
+            opcoes: [
+              { id: "opt-coop-alta", enunciado: "Alta", requerTexto: false },
+              { id: "opt-coop-media", enunciado: "Média", requerTexto: false },
+              {
+                id: "opt-coop-baixa",
+                enunciado: "Baixa / Resistente",
+                requerTexto: false,
+              },
+            ],
+          },
+        ],
+      },
+
+      {
+        id: "sec-02",
+        titulo: "2. Desenvolvimento",
+        ordem: 2,
+        perguntas: [
+          {
+            id: "q-temas",
+            enunciado: "Principais temas abordados",
+            tipo: "longo_texto",
             obrigatoria: true,
             dependeDeOpcaoId: null,
             opcoes: [],
-            resposta: "Maria da Silva"
           },
           {
-            id: "q-filhos",
-            enunciado: "Possui filhos?",
+            id: "q-intervencoes",
+            enunciado: "Intervenções realizadas",
+            tipo: "longo_texto",
+            obrigatoria: false,
+            dependeDeOpcaoId: null,
+            opcoes: [],
+          },
+        ],
+      },
+      {
+        id: "sec-03",
+        titulo: "3. Fechamento",
+        ordem: 3,
+        perguntas: [
+          {
+            id: "q-tarefas",
+            enunciado: "Tarefas de casa passadas?",
             tipo: "unica_escolha",
             obrigatoria: true,
+            dependeDeOpcaoId: null,
             opcoes: [
-              { id: "opt-filho-sim", texto: "Sim" },
-              { id: "opt-filho-nao", texto: "Não" }
+              { id: "opt-tarefa-nao", enunciado: "Não", requerTexto: false },
+              {
+                id: "opt-tarefa-sim",
+                enunciado: "Sim",
+                requerTexto: true,
+                labelTexto: "Descreva a tarefa",
+              },
             ],
-            resposta: {
-              opcoes: [{ id: "opt-filho-sim" }]
-            }
           },
           {
-            id: "q-qtd-filhos",
-            enunciado: "Quantos filhos?",
-            tipo: "inteiro",
-            dependeDeOpcaoId: "opt-filho-sim",
-            resposta: "2"
-          }
-        ]
-      }
-    ]
-  }
+            id: "q-prox-sessao",
+            enunciado: "Planejamento para próxima sessão",
+            tipo: "texto",
+            obrigatoria: false,
+            dependeDeOpcaoId: null,
+            opcoes: [],
+          },
+        ],
+      },
+    ],
+  },
 };
 
-setTimeout(() => {
-  setData(mock.data);
-  initAnswers(mock.data);
-  setLoading(false);
-}, 800);
+export default function SintesePage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const preSelectedPatientId = searchParams.get("patientId");
+  const preSelectedPatientName = searchParams.get("patientName");
+  const { user } = useAuth();
+  const { patients, fetchPatients, loading: loadingPatients } = usePatients();
+  const { showFeedback } = useFeedback();
 
-    }
+  const [selectedPatient, setSelectedPatient] = useState<string | null>(preSelectedPatientId || null);
+  const [formularioFinalizado, setFormularioFinalizado] = useState(false);
+  const [respostasFinais, setRespostasFinais] = useState<any>({});
 
-    loadForm();
-  }, []);
-
-  function initAnswers(form: any) {
-    const initial: any = {};
-
-    form.secoes.forEach((sec: any) => {
-      sec.perguntas.forEach((p: any) => {
-        if (p.tipo === "texto" || p.tipo === "inteiro" || p.tipo === "longo") {
-          initial[p.id] = { valor: p.resposta ?? "" };
-        }
-
-        if (p.tipo === "unica_escolha" || p.tipo === "multipla_escolha") {
-          initial[p.id] = {
-            opcoes:
-              p.resposta?.opcoes?.map((o: any) => ({
-                id: o.id,
-                complemento: o.complemento ?? "",
-              })) ?? [],
-          };
-        }
-      });
-    });
-
-    setAnswers(initial);
+  useEffect(() => { if (user && !preSelectedPatientId) fetchPatients({ page: 1, limit: 10, status: "atendimento" } as any); }, [user, fetchPatients, preSelectedPatientId]);
+  const handleSearchPatient = useCallback((term: string) => fetchPatients({ nome: term, page: 1, limit: 10, status: "atendimento" } as any), [fetchPatients]);
+  const patientOptions = patients.map((p) => ({ id: p.id, label: p.nome, subLabel: p.cpf ? `CPF: ${formatCPF(p.cpf)}` : "Sem CPF" }));
+  if (preSelectedPatientId && preSelectedPatientName && !patientOptions.find((p) => p.id === preSelectedPatientId)) {
+    patientOptions.unshift({ id: preSelectedPatientId, label: decodeURIComponent(preSelectedPatientName), subLabel: "Selecionado" });
   }
 
-  if (loading) return <p>Carregando…</p>;
-
-  return (
-    <div className="p-6">
-      <h1 className="font-bold text-xl mb-4">Formulário Dinâmico</h1>
-
-      {data.secoes.map((sec: any) => (
-        <Section
-          key={sec.id}
-          secao={sec}
-          answers={answers}
-          setAnswers={setAnswers}
-        />
-      ))}
-
-      <button onClick={() => console.log(formatForSubmit())}>
-        Enviar
-      </button>
-    </div>
-  );
-}
-
-function Section({ secao, answers, setAnswers }: any) {
-  return (
-    <div className="mb-10 p-4 border rounded">
-      <h2 className="font-bold text-lg mb-4">{secao.titulo}</h2>
-
-      {secao.perguntas.map((p: any) => (
-        <Pergunta
-          key={p.id}
-          pergunta={p}
-          answers={answers}
-          setAnswers={setAnswers}
-        />
-      ))}
-    </div>
-  );
-}
-
-
-function Pergunta({ pergunta, answers, setAnswers }: any) {
-  const ans = answers[pergunta.id];
-
-  // VERIFICA SE ESTÁ DESABILITADO POR DEPENDÊNCIA
-  const disabled = isDisabled(pergunta, answers);
-
-  function updateValue(v: any) {
-    setAnswers((prev: any) => ({
-      ...prev,
-      [pergunta.id]: { valor: v },
-    }));
-  }
-
-  function updateOption(optionId: string, complemento?: string) {
-    setAnswers((prev: any) => {
-      const previous = prev[pergunta.id]?.opcoes || [];
-
-      // única escolha → substitui tudo
-      if (pergunta.tipo === "unica_escolha") {
-        return {
-          ...prev,
-          [pergunta.id]: { opcoes: [{ id: optionId, complemento }] },
-        };
-      }
-
-      // múltipla escolha:
-      const exists = previous.find((o: any) => o.id === optionId);
-
-      if (exists) {
-        // desmarcar
-        return {
-          ...prev,
-          [pergunta.id]: {
-            opcoes: previous.filter((o: any) => o.id !== optionId),
-          },
-        };
-      }
-
-      // marcar
-      return {
-        ...prev,
-        [pergunta.id]: {
-          opcoes: [...previous, { id: optionId, complemento }],
-        },
-      };
-    });
-  }
-
-  return (
-    <div className="mb-6">
-      <p className="font-medium">{pergunta.enunciado}</p>
-
-      {/* TEXTO SIMPLES */}
-      {pergunta.tipo === "texto" && (
-        <input
-          value={ans.valor}
-          disabled={disabled}
-          onChange={(e) => updateValue(e.target.value)}
-          className="border p-2 w-full"
-        />
-      )}
-
-      {/* LONGO TEXTO */}
-      {pergunta.tipo === "longo" && (
-        <textarea
-          value={ans.valor}
-          disabled={disabled}
-          onChange={(e) => updateValue(e.target.value)}
-          className="border p-2 w-full"
-        />
-      )}
-
-      {/* ESOLHA ÚNICA */}
-      {pergunta.tipo === "unica_escolha" &&
-        pergunta.opcoes.map((op: any) => {
-          const selected = ans.opcoes?.[0]?.id === op.id;
-
-          return (
-            <label key={op.id} className="flex gap-2 mt-2">
-              <input
-                type="radio"
-                name={pergunta.id}
-                checked={selected}
-                disabled={disabled}
-                onChange={() => updateOption(op.id)}
-              />
-              {op.texto}
-
-              {op.requerTexto && selected && (
-                <input
-                  type="text"
-                  placeholder={op.labelTexto}
-                  className="border ml-2"
-                  value={ans.opcoes[0]?.complemento || ""}
-                  onChange={(e) =>
-                    updateOption(op.id, e.target.value) // inclui complemento
-                  }
-                />
-              )}
-            </label>
-          );
-        })}
-
-      {/* MÚLTIPLA ESCOLHA */}
-      {pergunta.tipo === "multipla_escolha" &&
-        pergunta.opcoes.map((op: any) => {
-          const selected = ans.opcoes?.some((x: any) => x.id === op.id);
-
-          const current = ans.opcoes?.find((x: any) => x.id === op.id);
-
-          return (
-            <label key={op.id} className="flex gap-2 mt-2">
-              <input
-                type="checkbox"
-                checked={selected}
-                disabled={disabled}
-                onChange={() => updateOption(op.id)}
-              />
-              {op.texto}
-
-              {op.requerTexto && selected && (
-                <input
-                  type="text"
-                  placeholder={op.labelTexto}
-                  className="border ml-2"
-                  value={current?.complemento ?? ""}
-                  onChange={(e) =>
-                    updateOption(op.id, e.target.value)
-                  }
-                />
-              )}
-            </label>
-          );
-        })}
-    </div>
-  );
-}
-
-function isDisabled(pergunta: any, answers: any) {
-  if (!pergunta.dependeDeOpcaoId) return false;
-
-  const parentOptionId = pergunta.dependeDeOpcaoId;
-
-  // Procura no estado se a opção pai foi marcada
-  const enabled = Object.values(answers).some((resp: any) =>
-    resp.opcoes?.some((o: any) => o.id === parentOptionId)
-  );
-
-  return !enabled; // se não marcada → disabled
-}
-
-function formatForSubmit() {
-  const result = [];
-
-  Object.entries(answers).forEach(([perguntaId, ans]: any) => {
-    if (ans.valor !== undefined) {
-      result.push({
-        perguntaId,
-        valor: ans.valor || "",
-      });
-    }
-
-    if (ans.opcoes !== undefined) {
-      result.push({
-        perguntaId,
-        opcoes: ans.opcoes,
-      });
-    }
-  });
-
-  return {
-    pacienteId: data.pacienteId,
-    versaoId: data.versaoId,
-    finalizar: false,
-    respostas: result,
+  const handleFinalizar = (respostas: any) => {
+    if (!selectedPatient) { showFeedback("Por favor, selecione um paciente.", "error"); return; }
+    setRespostasFinais(respostas);
+    setFormularioFinalizado(true);
+    showFeedback("Síntese salva!", "success");
   };
+
+  if (formularioFinalizado) {
+    const nomePaciente = patientOptions.find((p) => p.id === selectedPatient)?.label || "Paciente";
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 animate-fade-in">
+        <Typography variant="h4" className="text-brand-dark">Relatório Gerado!</Typography>
+        <PDFDownloadLink document={<SintesePDF pacienteNome={nomePaciente} respostas={respostasFinais} />} fileName={`sintese.pdf`} className="flex items-center gap-2 px-6 py-3 rounded-full text-white font-bold shadow-md hover:scale-105 transition-transform bg-brand-sintese">
+          {({ loading }) => (loading ? "Gerando..." : <><FileDown size={20} /> BAIXAR PDF</>)}
+        </PDFDownloadLink>
+        <button onClick={() => router.back()} className="text-sm text-gray-500 underline">Voltar</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full relative pb-20">
+      <div className="flex items-center gap-4">
+        <button onClick={() => router.back()} className="p-3 rounded-full transition-colors bg-brand-sintese/20 text-brand-sintese hover:bg-brand-sintese/30">
+          <ArrowLeft className="w-6 h-6" />
+        </button>
+        <div>
+          <Typography variant="h4" className="font-bold uppercase tracking-wide text-brand-sintese">Síntese</Typography>
+          <Typography variant="paragraph" className="text-gray-500 text-sm">Relatório de fechamento ou evolução.</Typography>
+        </div>
+      </div>
+
+      <Card className="w-full shadow-lg border-t-4 bg-white border-brand-sintese">
+        <CardBody className="p-0">
+          <div className="p-6 md:p-10 border-b border-gray-100 bg-gray-50/50">
+            <div className="flex items-center gap-3 mb-6 pb-6 border-b border-gray-200">
+              <div className="p-2 rounded-lg bg-brand-sintese/20"><FileText className="w-6 h-6 text-brand-sintese" /></div>
+              <Typography variant="h6" className="font-bold text-brand-sintese">Dados da Síntese</Typography>
+            </div>
+            <SearchableSelect
+              label="Selecione a Paciente"
+              options={patientOptions}
+              value={selectedPatient}
+              onChange={setSelectedPatient}
+              onSearch={handleSearchPatient}
+              isLoading={loadingPatients}
+              required
+              disabled={!!preSelectedPatientId}
+              placeholder="Busque pelo nome..."
+              accentColorClass="brand-sintese"
+            />
+          </div>
+          <div className="px-6 md:px-10 py-8">
+            <FormularioBuilder modeloJson={MOCK_SINTESE as any} onFinalizar={handleFinalizar} themeKey="sintese" />
+          </div>
+        </CardBody>
+      </Card>
+    </div>
+  );
 }

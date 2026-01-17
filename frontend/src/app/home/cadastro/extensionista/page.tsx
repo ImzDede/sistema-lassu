@@ -18,12 +18,7 @@ export default function NewExtensionist() {
   const { showFeedback } = useFeedback();
   const { loading: formLoading, handleSubmit } = useFormHandler();
 
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    registration: "",
-    phone: "",
-  });
+  const [formData, setFormData] = useState({ name: "", email: "", registration: "", phone: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -44,7 +39,6 @@ export default function NewExtensionist() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    // Limpa erro visual ao digitar
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: "" }));
 
     if (name === "phone") {
@@ -64,7 +58,6 @@ export default function NewExtensionist() {
     setErrors({});
     const nextErrors: Record<string, string> = {};
     
-    // Validação
     if (!formData.name?.trim()) nextErrors.name = "Campo obrigatório.";
     if (!formData.email?.trim()) nextErrors.email = "Campo obrigatório.";
     
@@ -105,35 +98,30 @@ export default function NewExtensionist() {
     <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full relative">
 
       <div className="flex items-center gap-4">
+        {/* BOTÃO DE VOLTAR */}
         <button
           onClick={() => router.back()}
-          className="p-3 rounded-full hover:bg-brand-purple/10 text-brand-purple transition-colors focus:outline-none"
+          className="p-3 rounded-full transition-colors focus:outline-none bg-brand-terapeuta/20 text-brand-terapeuta hover:bg-brand-terapeuta/30"
         >
           <ArrowLeft className="w-6 h-6" />
         </button>
         <div>
-          <Typography
-            variant="h4"
-            className="font-bold uppercase tracking-wide text-brand-dark"
-          >
+          <Typography variant="h4" className="font-bold uppercase tracking-wide text-brand-purple">
             Nova Terapeuta
           </Typography>
-          <Typography
-            variant="paragraph"
-            className="text-gray-500 font-normal text-sm"
-          >
+          <Typography variant="paragraph" className="text-gray-500 font-normal text-sm">
             Preencha os dados abaixo.
           </Typography>
         </div>
       </div>
 
-      <Card className="w-full shadow-lg border-t-4 border-brand-purple bg-brand-surface">
+      <Card className="w-full shadow-lg border-t-4 bg-brand-surface border-brand-terapeuta">
         <CardBody className="p-6 md:p-10">
-          <div className="flex items-center gap-3 mb-8 pb-4 border-b border-gray-100">
-            <div className="p-2 bg-brand-purple/10 rounded-lg">
-              <UserPlus className="w-6 h-6 text-brand-purple" />
+          <div className="flex items-center gap-3 mb-8 pb-4 border-b border-gray-300">
+            <div className="p-2 rounded-lg bg-brand-terapeuta/20">
+              <UserPlus className="w-6 h-6 text-brand-terapeuta" />
             </div>
-            <Typography variant="h6" className="font-bold text-brand-dark">
+            <Typography variant="h6" className="font-bold text-brand-purple">
               Informações Pessoais
             </Typography>
           </div>
@@ -196,12 +184,18 @@ export default function NewExtensionist() {
                   type="button"
                   onClick={() => router.back()}
                   fullWidth
+                  className="bg-transparent hover:bg-opacity-10 border transition-colors border-brand-terapeuta text-brand-terapeuta"
                 >
                   CANCELAR
                 </Button>
               </div>
               <div className="w-full lg:w-1/2">
-                <Button type="submit" loading={formLoading} fullWidth>
+                <Button 
+                  type="submit" 
+                  loading={formLoading} 
+                  fullWidth
+                  className="bg-brand-terapeuta"
+                >
                   {formLoading ? "SALVANDO..." : "CADASTRAR EXTENSIONISTA"}
                 </Button>
               </div>

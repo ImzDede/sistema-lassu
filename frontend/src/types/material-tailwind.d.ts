@@ -52,4 +52,5 @@ declare module "@material-tailwind/react" {
 
   export interface ProgressProps extends GenericMissingProps {}
   export interface TextareaProps extends GenericMissingProps {}
+  export interface RadioProps extends GenericMissingProps {}
 }

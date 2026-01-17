@@ -1,16 +1,14 @@
 import React from "react";
-import { User } from "lucide-react";
+import { User, ChevronRight } from "lucide-react"; // 1. Importei ChevronRight
 import { Card, CardBody, Typography, Avatar } from "@material-tailwind/react";
 
 type SessionListCardProps = {
-  therapistName: string; // Ex: "RAQUEL MENDES"
-  patientName: string;   // Ex: "Melissa Saldanha"
+  therapistName: string;
+  patientName: string;
   patientAvatarUrl?: string | null;
-  
-  sessionLabel: string;  // Ex: "1ª Sessão"
-  roomLabel: string;     // Ex: "Sala 02"
-  timeLabel: string;     // Ex: "09:00"
-
+  sessionLabel: string;
+  roomLabel: string;
+  timeLabel: string;
   onClick?: () => void;
   className?: string;
 };
@@ -34,9 +32,9 @@ export default function SessionListCard({
         ${className}
       `}
     >
-      {/* Faixa Superior (Badge) - Centralizada e Sobreposta (Overlay) */}
-      <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10 max-w-[80%]">
-        <div className="bg-brand-purple/10 border border-brand-purple/20 px-4 py-1 rounded-full shadow-sm backdrop-blur-sm truncate">
+      {/* Faixa Superior (Badge) */}
+      <div className="absolute top-0 left-0 z-10 max-w-[80%]">
+        <div className="bg-brand-purple/10 border-b border-r border-brand-purple/20 px-4 py-1.5 rounded-br-xl rounded-tl-2xl backdrop-blur-sm truncate">
           <Typography
             variant="small"
             className="text-[10px] font-bold text-brand-purple uppercase tracking-widest leading-none whitespace-nowrap overflow-hidden text-ellipsis"
@@ -46,7 +44,7 @@ export default function SessionListCard({
         </div>
       </div>
 
-      <CardBody className="p-5 flex items-center gap-4">
+      <CardBody className="p-5 pt-10 flex items-center gap-4">
         {/* Coluna Esquerda: Avatar */}
         <div className="shrink-0">
           {patientAvatarUrl ? (
@@ -63,7 +61,7 @@ export default function SessionListCard({
           )}
         </div>
 
-        {/* Coluna Direita: Informações */}
+        {/* Coluna Central: Informações */}
         <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
           {/* Nome do Paciente */}
           <Typography
@@ -90,6 +88,13 @@ export default function SessionListCard({
             <span className="whitespace-nowrap text-brand-dark">
               {timeLabel}
             </span>
+          </div>
+        </div>
+
+        {/* 2. Coluna Direita: Ícone de Ação */}
+        <div className="shrink-0 pl-2">
+          <div className="text-gray-300 group-hover:text-brand-purple transition-colors duration-300">
+            <ChevronRight size={24} />
           </div>
         </div>
       </CardBody>

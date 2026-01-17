@@ -201,6 +201,7 @@ export default function PrimeiroAcesso() {
                 <EditableProfileAvatar 
                     avatarUrl={contextUser?.fotoUrl}
                     onEdit={undefined}
+                    editable={true}
                 />
 
                 <div className="mt-4 flex flex-col items-center gap-2">

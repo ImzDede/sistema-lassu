@@ -87,7 +87,7 @@ export default function PacientesPage() {
   return (
     <div className="flex flex-col w-full h-full gap-6">
       <div className="text-center lg:text-left">
-        <Typography variant="h3" className="font-bold uppercase text-brand-dark">Meus Pacientes</Typography>
+        <Typography variant="h3" className="font-bold uppercase text-brand-encaminhamento">Minhas Pacientes</Typography>
       </div>
 
       <SearchInputWithFilter
@@ -136,6 +136,7 @@ export default function PacientesPage() {
                         hasNext={pagination.hasNext}
                         hasPrev={pagination.hasPrev}
                         onPageChange={handlePageChange}
+                        accentColorClass="brand-encaminhamento"
                     />
                 </div>
               </>

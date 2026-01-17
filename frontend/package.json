@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@material-tailwind/react": "^2.1.10",
+    "@react-pdf/renderer": "^4.3.2",
     "axios": "^1.6.0",
     "date-fns": "^3.6.0",
     "jwt-decode": "^4.0.0",

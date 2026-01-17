@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
-import { Search, X, Check, ChevronDown } from "lucide-react";
-import { Spinner, Card, List, ListItem, Typography } from "@material-tailwind/react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
+import { Search, X, Check } from "lucide-react";
+import { Spinner, Card, List, ListItem } from "@material-tailwind/react";
 import Input from "@/components/Input";
 
 interface Option {
@@ -21,6 +21,7 @@ interface SearchableSelectProps {
   placeholder?: string;
   required?: boolean;
   disabled?: boolean;
+  accentColorClass?: string;
 }
 
 export default function SearchableSelect({
@@ -33,14 +34,20 @@ export default function SearchableSelect({
   placeholder = "Digite para buscar...",
   required = false,
   disabled = false,
+  accentColorClass,
 }: SearchableSelectProps) {
+  const accent = accentColorClass ?? "brand-purple";
+
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const wrapperRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Encontra a opção selecionada
-  const selectedOption = options.find((opt) => opt.id === value) || (value ? { label: "Item Selecionado", subLabel: "Carregado", id: value } as Option : undefined);
+  const selectedOption =
+    options.find((opt) => opt.id === value) ||
+    (value
+      ? ({ label: "Item Selecionado", subLabel: "Carregado", id: value } as Option)
+      : undefined);
 
   // Fecha ao clicar fora
   useEffect(() => {
@@ -64,19 +71,17 @@ export default function SearchableSelect({
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     debounceRef.current = setTimeout(() => {
-        if (isOpen || searchTerm) {
-            onSearch(searchTerm);
-        }
+      if (isOpen || searchTerm) onSearch(searchTerm);
     }, 500);
 
     return () => {
-        if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [searchTerm, onSearch, isOpen]);
 
-  const filteredOptions = onSearch 
-      ? options 
-      : options.filter((opt) => opt.label.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredOptions = onSearch
+    ? options
+    : options.filter((opt) => opt.label.toLowerCase().includes(searchTerm.toLowerCase()));
 
   const handleSelect = (option: Option) => {
     onChange(option.id);
@@ -94,6 +99,13 @@ export default function SearchableSelect({
     setIsOpen(true);
   };
 
+  const inputFocusClass = useMemo(
+    () => `focus-within:!border-${accent} focus-within:!ring-1 focus-within:!ring-${accent}`,
+    [accent]
+  );
+
+  const spinnerClass = `h-4 w-4 text-${accent}`;
+
   return (
     <div className="relative w-full flex flex-col gap-1.5" ref={wrapperRef}>
       {label && (
@@ -103,35 +115,34 @@ export default function SearchableSelect({
       )}
 
       {selectedOption && !isOpen ? (
-        // Estado: Item Selecionado (Visual Customizado, sem depender de CardListagem)
-        <div 
-            onClick={() => !disabled && setIsOpen(true)}
-            className={`
-                relative flex items-center justify-between p-3 border rounded-lg transition-all cursor-pointer bg-brand-purple/5 border-brand-purple
-                ${disabled ? "opacity-60 cursor-not-allowed" : "hover:shadow-md"}
-            `}
+        <div
+          onClick={() => !disabled && setIsOpen(true)}
+          className={`
+            relative flex items-center justify-between p-3 border rounded-lg transition-all cursor-pointer
+            bg-${accent}/5 border-${accent}
+            ${disabled ? "opacity-60 cursor-not-allowed" : "hover:shadow-md"}
+          `}
         >
-            <div className="flex flex-col">
-                <span className="font-bold text-brand-dark text-sm">{selectedOption.label}</span>
-                {selectedOption.subLabel && (
-                    <span className="text-xs text-gray-500">{selectedOption.subLabel}</span>
-                )}
-            </div>
-            
-            <button 
-                onClick={handleClear}
-                className="p-1.5 bg-white text-brand-purple rounded-full shadow-sm hover:bg-red-50 hover:text-red-500 transition-colors z-10"
-                title="Remover seleção"
-                type="button"
-            >
-                <X size={14} strokeWidth={2.5} />
-            </button>
+          <div className="flex flex-col">
+            <span className="font-bold text-brand-dark text-sm">{selectedOption.label}</span>
+            {selectedOption.subLabel && <span className="text-xs text-gray-500">{selectedOption.subLabel}</span>}
+          </div>
+
+          <button
+            onClick={handleClear}
+            className={`
+              p-1.5 bg-white text-${accent} rounded-full shadow-sm transition-colors z-10
+              hover:bg-red-50 hover:text-red-500
+            `}
+            title="Remover seleção"
+            type="button"
+          >
+            <X size={14} strokeWidth={2.5} />
+          </button>
         </div>
       ) : (
-        // Estado: Buscando (Input)
         <div className="relative">
           <Input
-            // Removemos label daqui pois renderizamos acima manualmente para manter consistência com o card de seleção
             value={searchTerm}
             disabled={disabled}
             onChange={(e) => {
@@ -142,21 +153,25 @@ export default function SearchableSelect({
             placeholder={placeholder}
             required={required && !value}
             autoComplete="off"
-            leftIcon={Search} // Novo padrão do Input
+            leftIcon={Search}
+            focusColorClass={inputFocusClass}
             rightIcon={
-                isLoading ? (
-                    <Spinner className="h-4 w-4 text-brand-purple" />
-                ) : (
-                    searchTerm && (
-                        <button onClick={() => setSearchTerm("")} className="text-gray-400 hover:text-gray-600">
-                            <X size={16} />
-                        </button>
-                    )
+              isLoading ? (
+                <Spinner className={spinnerClass} />
+              ) : (
+                searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm("")}
+                    className="text-gray-400 hover:text-gray-600"
+                    type="button"
+                  >
+                    <X size={16} />
+                  </button>
                 )
+              )
             }
           />
 
-          {/* Dropdown de Opções */}
           {isOpen && (
             <Card className="absolute z-50 w-full mt-1 max-h-60 overflow-y-auto shadow-xl border border-gray-100 rounded-lg bg-white">
               <List className="p-1">
@@ -165,15 +180,27 @@ export default function SearchableSelect({
                     <ListItem
                       key={opt.id}
                       onClick={() => handleSelect(opt)}
-                      className="text-sm font-medium rounded-md px-3 py-2.5 hover:bg-brand-purple/5 hover:text-brand-purple flex items-center justify-between group transition-colors"
+                      className={`
+                        text-sm font-medium rounded-md px-3 py-2.5 flex items-center justify-between group transition-colors
+                        hover:bg-${accent}/5 hover:text-${accent}
+                      `}
                     >
                       <div className="flex flex-col gap-0.5">
-                          <span className="font-bold text-gray-700 group-hover:text-brand-purple transition-colors">
-                            {opt.label}
+                        <span
+                          className={`
+                            font-bold text-gray-700 transition-colors
+                            group-hover:text-${accent}
+                          `}
+                        >
+                          {opt.label}
+                        </span>
+                        {opt.subLabel && (
+                          <span className="text-[10px] text-gray-400 uppercase tracking-wide">
+                            {opt.subLabel}
                           </span>
-                          {opt.subLabel && <span className="text-[10px] text-gray-400 uppercase tracking-wide">{opt.subLabel}</span>}
+                        )}
                       </div>
-                      {value === opt.id && <Check size={16} className="text-brand-purple" />}
+                      {value === opt.id && <Check size={16} className={`text-${accent}`} />}
                     </ListItem>
                   ))
                 ) : (

@@ -6,6 +6,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "solid" | "outline";
   fullWidth?: boolean;
   children: React.ReactNode;
+  accentColorClass?: string;
 }
 
 export default function Button({
@@ -15,17 +16,28 @@ export default function Button({
   className = "",
   disabled,
   children,
+  accentColorClass,
   ...props
 }: ButtonProps) {
-  const baseStyles = "h-12 px-6 rounded-full font-bold transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-brand-purple/50 active:scale-95";
-  
+  const accent = accentColorClass ?? "brand-purple";
+
+  const baseStyles =
+    `h-12 px-6 rounded-full font-bold transition-all duration-200 ` +
+    `flex items-center justify-center gap-2 focus:outline-none ` +
+    `focus:ring-2 focus:ring-${accent}/50 active:scale-95`;
+
   const variants = {
-    solid: "bg-brand-purple text-white hover:bg-brand-purple-dark disabled:bg-gray-300 disabled:text-gray-500",
-    outline: "bg-transparent border-2 border-brand-purple text-brand-purple hover:bg-brand-purple/5 disabled:border-gray-300 disabled:text-gray-400",
+    solid:
+      `bg-${accent} text-white ` +
+      `disabled:bg-gray-300 disabled:text-gray-500`,
+    outline:
+      `bg-transparent border-2 border-${accent} text-${accent} ` +
+      `hover:bg-${accent}/5 disabled:border-gray-300 disabled:text-gray-400`,
   };
 
   const widthStyle = fullWidth ? "w-full" : "w-full md:w-auto";
-  const opacityStyle = (disabled || loading) ? "opacity-70 cursor-not-allowed" : "cursor-pointer";
+  const opacityStyle =
+    disabled || loading ? "opacity-70 cursor-not-allowed" : "cursor-pointer";
 
   return (
     <button

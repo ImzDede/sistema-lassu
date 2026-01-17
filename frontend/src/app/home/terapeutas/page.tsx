@@ -125,7 +125,7 @@ export default function TerapeutasPage() {
   return (
     <div className="flex flex-col w-full h-full gap-6">
       <div className="text-center lg:text-left">
-        <Typography variant="h3" className="font-bold uppercase text-brand-dark">TERAPEUTAS</Typography>
+        <Typography variant="h3" className="font-bold uppercase text-brand-encaminhamento">TERAPEUTAS</Typography>
       </div>
 
       <SearchInputWithFilter
@@ -157,6 +157,7 @@ export default function TerapeutasPage() {
                         capacity={5}
                         onClick={() => router.push(`/home/terapeutas/${tUser.id}`)}
                         className={!tUser.ativo ? "opacity-60 grayscale" : ""}
+                        accentColor='brand-encaminhamento'
                       />
                     ))}
                 </div>
@@ -168,6 +169,7 @@ export default function TerapeutasPage() {
                         hasNext={pagination.hasNext}
                         hasPrev={pagination.hasPrev}
                         onPageChange={handlePageChange}
+                        accentColorClass="brand-encaminhamento"
                     />
                 </div>
               </>

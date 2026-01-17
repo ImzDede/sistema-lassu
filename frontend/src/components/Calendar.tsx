@@ -124,8 +124,8 @@ export default function CalendarWidget({
     <Card className="w-full shadow-sm border border-brand-purple/10 bg-brand-surface">
       <CardBody className="p-4">
         <div className="flex items-center justify-between mb-4">
-          <Typography variant="h6" className="capitalize font-bold text-brand-dark font-heading">
-            {monthNames[month]} <span className="text-gray-400 font-normal">{year}</span>
+          <Typography variant="h6" className="capitalize font-bold text-brand-purple font-heading">
+            {monthNames[month]} <span className="text-brand-purple font-normal">{year}</span>
           </Typography>
           <div className="flex gap-1">
             <IconButton variant="text" size="sm" onClick={handlePrevMonth} className="rounded-full hover:bg-brand-purple/10 text-gray-500">

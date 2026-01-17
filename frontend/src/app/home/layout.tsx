@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Spinner, IconButton, Typography } from "@material-tailwind/react";
@@ -11,13 +11,15 @@ import { NotificationProvider } from "@/contexts/NotificationContext";
 import SidebarDesktop from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import NotificationBell from "@/components/NotificationBell";
+import { useAppTheme } from "@/hooks/useAppTheme";
 
 function HomeInternal({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const [showDesktopSidebar, setShowDesktopSidebar] = useState(true);
+  const { textClass } = useAppTheme();
 
-  // Redirecionamento de Primeiro Acesso
   useEffect(() => {
     if (!isLoading && user && user.primeiroAcesso) {
       router.replace("/primeiroAcesso");
@@ -33,10 +35,10 @@ function HomeInternal({ children }: { children: React.ReactNode }) {
   }
 
   const firstName = user?.nome ? user.nome.split(" ")[0] : "Usuário";
+  const isHomePage = pathname === "/home";
 
   return (
     <div className="min-h-screen bg-brand-bg flex flex-col lg:flex-row font-sans overflow-hidden">
-      
       <SidebarDesktop
         isVisible={showDesktopSidebar}
         toggleSidebar={() => setShowDesktopSidebar(!showDesktopSidebar)}
@@ -46,7 +48,7 @@ function HomeInternal({ children }: { children: React.ReactNode }) {
       <main className="flex-1 flex flex-col relative h-screen overflow-y-auto bg-brand-bg scroll-smooth">
         <header className="flex justify-between items-center bg-brand-bg/95 backdrop-blur-md sticky top-0 z-40 px-6 py-4 shadow-sm lg:shadow-none">
           <div className="flex items-center gap-4">
-            
+            {/* Toggle Sidebar Desktop */}
             {!showDesktopSidebar && (
               <IconButton
                 variant="text"
@@ -58,28 +60,44 @@ function HomeInternal({ children }: { children: React.ReactNode }) {
             )}
 
             {/* Logo Mobile */}
-            <div className="lg:hidden">
-              <Link href="/home">
-                <Image
-                  src="/lassuLogoVerticalCor.svg"
-                  alt="Logo"
-                  width={80}
-                  height={30}
-                  className="w-28 h-auto cursor-pointer"
-                  priority
-                />
-              </Link>
+            <div className="lg:hidden flex flex-col items-start gap-1">
+              {isHomePage && (
+                <Link href="/home">
+                  <Image
+                    src="/lassuLogoVerticalCor.svg"
+                    alt="Logo"
+                    width={80}
+                    height={30}
+                    className="w-20 h-auto cursor-pointer"
+                    priority
+                  />
+                </Link>
+              )}
+              {/* Mobile Greeting */}
+              <Typography
+                variant="small"
+                className={`pt-4 font-bold text-xs ${isHomePage ? "block" : "hidden"} ${textClass}`}
+              >
+                Olá, {firstName}!
+              </Typography>
             </div>
 
-            <div className="hidden lg:flex flex-col ml-2 lg:ml-0">
-              <Typography variant="h6" className="font-bold text-brand-dark lg:text-xl">
+            {/* 3. Desktop Greeting */}
+            <div className="hidden lg:flex flex-col ml-0">
+              <Typography
+                variant="h6"
+                className={`font-bold lg:text-xl ${textClass}`}
+              >
                 Olá, {firstName}!
               </Typography>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
-            <NotificationBell />
+            {/* Notificações */}
+            <div className={`${isHomePage ? "block" : "hidden lg:block"}`}>
+              <NotificationBell />
+            </div>
           </div>
         </header>
 
@@ -87,13 +105,17 @@ function HomeInternal({ children }: { children: React.ReactNode }) {
           {children}
         </div>
       </main>
-      
+
       <BottomNav user={user} />
     </div>
   );
 }
 
-export default function HomeLayout({ children }: { children: React.ReactNode }) {
+export default function HomeLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <AuthProvider>
       <NotificationProvider>

@@ -7,22 +7,27 @@ import Button from "@/components/Button";
 import Select from "@/components/SelectBox";
 import InfoBox from "@/components/InfoBox";
 import { TimeSlot } from "@/types/disponibilidade";
-import { daysOptions, hoursStartStrings, hoursEndStrings } from "@/utils/constants";
+import {
+  daysOptions,
+  hoursStartStrings,
+  hoursEndStrings,
+} from "@/utils/constants";
 
 interface AvailabilityEditorProps {
   availability: TimeSlot[];
   setAvailability: React.Dispatch<React.SetStateAction<TimeSlot[]>>;
   onError?: (msg: string) => void;
   infoMessage?: string;
+  accentColorClass?: string;
 }
 
-export default function AvailabilityEditor({ 
-  availability, 
-  setAvailability, 
+export default function AvailabilityEditor({
+  availability,
+  setAvailability,
   onError,
-  infoMessage
+  infoMessage,
+  accentColorClass = "brand-purple",
 }: AvailabilityEditorProps) {
-
   const addSlot = () => {
     const newSlot: TimeSlot = {
       id: Math.random().toString(36).slice(2, 11),
@@ -49,21 +54,25 @@ export default function AvailabilityEditor({
     );
   };
 
+  // Classe de foco para os selects
+  const focusClass = `focus-within:!border-${accentColorClass} focus-within:!ring-1 focus-within:!ring-${accentColorClass}`;
+
   return (
     <div className="w-full flex flex-col gap-4">
       <div className="flex flex-col gap-4 w-full">
         {availability.map((slot) => (
           <div
             key={slot.id}
-            className="flex w-full bg-brand-bg rounded-lg border border-gray-200 transition-colors hover:border-brand-pink/50 group"
+            className={`flex w-full bg-brand-bg rounded-lg border border-gray-200 transition-colors group`}
           >
             <div className="flex-1 p-4 flex flex-col gap-3">
-              <div className="w-full"> 
+              <div className="w-full">
                 <Select
                   label="Dia da Semana"
                   options={daysOptions}
                   value={slot.day}
                   onChange={(val: string) => updateSlot(slot.id, "day", val)}
+                  accentColorClass={accentColorClass}
                 />
               </div>
 
@@ -73,11 +82,18 @@ export default function AvailabilityEditor({
                     label="Início"
                     options={hoursStartStrings}
                     value={slot.start}
-                    onChange={(val: string) => updateSlot(slot.id, "start", val)}
+                    onChange={(val: string) =>
+                      updateSlot(slot.id, "start", val)
+                    }
+                    accentColorClass={accentColorClass}
                   />
                 </div>
-                
-                <span className="hidden md:block text-brand-purple font-bold shrink-0">-</span>
+
+                <span
+                  className={`hidden md:block text-${accentColorClass} font-bold shrink-0`}
+                >
+                  -
+                </span>
 
                 <div className="w-full md:w-1/2">
                   <Select
@@ -85,22 +101,23 @@ export default function AvailabilityEditor({
                     options={hoursEndStrings}
                     value={slot.end}
                     onChange={(val: string) => updateSlot(slot.id, "end", val)}
+                    accentColorClass={accentColorClass}
                   />
                 </div>
               </div>
             </div>
 
-            <div 
-              className="w-14 border-l border-gray-200 flex flex-col items-center justify-center bg-gray-50 hover:bg-feedback-error-bg transition-colors cursor-pointer rounded-r-lg" 
+            <div
+              className="w-14 border-l border-gray-200 flex flex-col items-center justify-center bg-gray-50 hover:bg-feedback-error-bg transition-colors cursor-pointer rounded-r-lg"
               onClick={() => removeSlot(slot.id)}
             >
-               <IconButton
-                  variant="text"
-                  className="rounded-full text-feedback-error-main hover:bg-transparent"
-                  title="Remover horário"
-                >
-                  <Trash2 size={20} />
-                </IconButton>
+              <IconButton
+                variant="text"
+                className="rounded-full text-feedback-error-main hover:bg-transparent"
+                title="Remover horário"
+              >
+                <Trash2 size={20} />
+              </IconButton>
             </div>
           </div>
         ))}
@@ -111,14 +128,19 @@ export default function AvailabilityEditor({
           variant="outline"
           onClick={addSlot}
           fullWidth
-          className="flex items-center justify-center gap-2 border-dashed border-2"
+          accentColorClass={accentColorClass}
+          className={`flex items-center justify-center gap-2 border-dashed border-2`}
         >
           <Plus size={18} /> ADICIONAR NOVO HORÁRIO
         </Button>
         <div className="mt-4">
-           <InfoBox>
-             {infoMessage || "Não se preocupe, você poderá alterar estes horários depois no seu Perfil."}
-           </InfoBox>
+          {/* InfoBox na cor do tema */}
+          <InfoBox
+            accentColor={accentColorClass}
+          >
+            {infoMessage ||
+              "Não se preocupe, você poderá alterar estes horários depois no seu Perfil."}
+          </InfoBox>
         </div>
       </div>
     </div>

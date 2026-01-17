@@ -88,8 +88,9 @@ export default function NotificationDialog({ open, onClose }: NotificationDialog
   const getStyleClasses = (title?: string) => {
     const t = (title || "").toLowerCase();
     if (t.includes("nova") || t.includes("novo") || t.includes("cadastrada")) return "bg-brand-purple border-brand-purple"; 
-    if (t.includes("anamnese") || t.includes("síntese")) return "bg-brand-peach border-brand-peach"; 
-    if (t.includes("sessão") || t.includes("atribuída")) return "bg-brand-pink border-brand-pink"; 
+    if (t.includes("anamnese")) return "bg-brand-anamnese/5 border-brand-anamnese"; 
+    if (t.includes("síntese")) return "bg-brand-sintese/5 border-brand-sintese"; 
+    if (t.includes("sessão") || t.includes("atribuída")) return "bg-brand-sessao border-brand-sessao"; 
     return "bg-gray-400 border-gray-400"; 
   };
 

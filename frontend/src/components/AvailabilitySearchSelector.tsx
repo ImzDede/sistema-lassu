@@ -8,11 +8,15 @@ import { daysOptions, hoursStartStrings, hoursEndStrings } from "@/utils/constan
 interface SearchSelectorProps {
   availability: TimeSlot[];
   setAvailability: React.Dispatch<React.SetStateAction<TimeSlot[]>>;
+  accentColorClass?: string;
+  focusColorClass?: string;
 }
 
 export default function AvailabilitySearchSelector({ 
   availability, 
-  setAvailability 
+  setAvailability,
+  accentColorClass = "brand-purple",
+  focusColorClass
 }: SearchSelectorProps) {
   
   const slot = availability[0];
@@ -25,7 +29,7 @@ export default function AvailabilitySearchSelector({
   if (!slot) return null;
 
   return (
-    <div className="bg-brand-bg p-4 rounded-xl border border-brand-purple/20 shadow-sm">
+    <div className={`bg-white p-4 rounded-xl border shadow-sm`}>
       <div className="flex flex-col gap-4">
         
         <div className="w-full">
@@ -34,6 +38,7 @@ export default function AvailabilitySearchSelector({
             options={daysOptions}
             value={slot.day}
             onChange={(val: string) => updateSlot("day", val)}
+            accentColorClass={accentColorClass}
           />
         </div>
 
@@ -44,10 +49,11 @@ export default function AvailabilitySearchSelector({
               options={hoursStartStrings}
               value={slot.start}
               onChange={(val: string) => updateSlot("start", val)}
+              accentColorClass={accentColorClass}
             />
           </div>
           
-          <span className="text-brand-purple hidden md:block font-bold self-end mb-3">-</span>
+          <span className={`text-${accentColorClass} hidden md:block font-bold self-end mb-3`}>-</span>
 
           <div className="mt-4 md:w-1/2 md:mt-0">
             <Select
@@ -55,6 +61,7 @@ export default function AvailabilitySearchSelector({
               options={hoursEndStrings}
               value={slot.end}
               onChange={(val: string) => updateSlot("end", val)}
+              accentColorClass={accentColorClass}
             />
           </div>
         </div>

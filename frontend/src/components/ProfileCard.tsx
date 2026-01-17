@@ -1,16 +1,16 @@
-// frontend/src/components/ProfileCard.tsx
 import React from "react";
 import { User } from "lucide-react";
 import { Typography, Chip, Avatar } from "@material-tailwind/react";
 
 interface ProfileCardProps {
   name: string;
-  subtitle: string; // Pode ser "38 anos" ou "Matrícula: 123"
+  subtitle: string;
   avatarUrl?: string | null;
-  status: string; // "ativo", "inativo", "atendimento", etc.
+  status: string;
   statusColor?: "green" | "red" | "purple" | "blue" | "orange";
-  children?: React.ReactNode; // Conteúdo do meio (Telefone, Email, Terapeuta Resp)
-  footer?: React.ReactNode; // Conteúdo do rodapé (Barra de progresso)
+  children?: React.ReactNode;
+  footer?: React.ReactNode;
+  stripeColorClass?: string;
 }
 
 export default function ProfileCard({ 
@@ -20,10 +20,10 @@ export default function ProfileCard({
   status, 
   statusColor = "purple",
   children,
-  footer 
+  footer,
+  stripeColorClass = "bg-brand-purple"
 }: ProfileCardProps) {
   
-  // Mapa de cores para o Chip
   const chipColors: Record<string, string> = {
       purple: "bg-brand-purple/10 text-brand-purple border-brand-purple/20",
       green: "bg-green-50 text-green-600 border-green-200",
@@ -36,8 +36,8 @@ export default function ProfileCard({
     <div className="w-full">
       <div className="flex flex-col md:flex-row gap-6 items-center bg-white p-6 rounded-2xl shadow-sm border border-brand-purple/10 relative overflow-hidden group hover:shadow-md transition-all">
         
-        {/* Faixa Roxa Superior */}
-        <div className="absolute top-0 left-0 w-full h-1.5 bg-brand-purple opacity-90" />
+        {/* 3. Faixa Superior Dinâmica */}
+        <div className={`absolute top-0 left-0 w-full h-1.5 ${stripeColorClass} opacity-90`} />
 
         {/* Avatar */}
         <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-brand-purple/10 border-4 border-white shadow-lg flex items-center justify-center text-brand-purple shrink-0 relative z-10 overflow-hidden">
@@ -68,14 +68,13 @@ export default function ProfileCard({
                 />
             </div>
 
-            {/* Conteúdo Variável (Telefone, Email, etc) */}
+            {/* Conteúdo Variável */}
             <div className="flex flex-col md:flex-row gap-4 mt-3 text-sm text-gray-600 justify-center md:justify-start items-center md:items-stretch flex-wrap">
                 {children}
             </div>
         </div>
       </div>
 
-      {/* Rodapé Opcional (Progresso) */}
       {footer && (
          <div className="mt-4 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
              {footer}

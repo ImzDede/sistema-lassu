@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import { Eye, EyeOff, LucideIcon } from "lucide-react";
 
-interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
+interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> {
   label?: string;
   error?: string;
   leftIcon?: LucideIcon;
   rightIcon?: React.ReactNode;
   fullWidth?: boolean;
+  focusColorClass?: string;
 }
 
 export default function Input({
@@ -17,41 +18,33 @@ export default function Input({
   type = "text",
   className = "",
   fullWidth = true,
+  focusColorClass = "focus-within:!border-brand-purple focus-within:!ring-brand-purple", 
   ...props
 }: InputProps) {
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === "password";
   const inputType = isPassword ? (showPassword ? "text" : "password") : type;
-
-  // Verifica se o campo está desabilitado ou somente leitura
   const isDisabledOrReadOnly = props.disabled || props.readOnly;
 
-  // Lógica para definir as cores da borda e do fundo
-  let borderAndBackgroundClass = "";
+  let containerClasses = "";
 
   if (isDisabledOrReadOnly) {
-    // ESTADO: Desabilitado
-    borderAndBackgroundClass = "bg-gray-200 border-gray-200 cursor-not-allowed";
+    containerClasses = "bg-gray-200 border-gray-200 cursor-not-allowed";
   } else if (error) {
-    // ESTADO: Erro
-    borderAndBackgroundClass = "bg-white border-feedback-error-text focus-within:ring-1 focus-within:ring-feedback-error-text focus-within:border-feedback-error-text";
+    containerClasses = "bg-white border-feedback-error-text focus-within:ring-1 focus-within:ring-feedback-error-text";
   } else {
-    // ESTADO: Normal
-    borderAndBackgroundClass = "bg-white border-gray-300 focus-within:border-brand-purple focus-within:ring-1 focus-within:ring-brand-purple";
+    containerClasses = `bg-white border-gray-300 focus-within:ring-1 ${focusColorClass}`;
   }
 
   return (
     <div className={`flex flex-col gap-1.5 ${fullWidth ? "w-full" : "w-auto"} ${className}`}>
       {label && (
-        <label className="text-sm font-semibold text-brand-dark ml-1">
+        <label className="text-sm font-semibold text-gray-800 ml-1">
           {label}
         </label>
       )}
 
-      <div className={`
-        relative flex items-center rounded-lg border transition-colors
-        ${borderAndBackgroundClass}
-      `}>
+      <div className={`relative flex items-center rounded-lg border transition-all ${containerClasses}`}>
         {LeftIcon && (
           <div className={`absolute left-3 pointer-events-none ${error ? "text-feedback-error-text" : "text-gray-400"}`}>
             <LeftIcon size={20} />
@@ -63,8 +56,8 @@ export default function Input({
           className={`
             w-full h-12 bg-transparent text-brand-dark placeholder-gray-400 outline-none text-base
             ${LeftIcon ? "pl-10" : "pl-4"} 
-            ${(isPassword || rightIcon) ? "pr-10" : "pr-4"}
-            rounded-lg
+            ${isPassword || rightIcon ? "pr-10" : "pr-4"}
+            rounded-lg border-none focus:ring-0  /* Remove estilos padrão do input nativo */
             ${isDisabledOrReadOnly ? "text-gray-500 cursor-not-allowed" : ""}
           `}
           {...props}
@@ -76,7 +69,7 @@ export default function Input({
               type="button"
               onClick={() => setShowPassword(!showPassword)}
               disabled={isDisabledOrReadOnly}
-              className="hover:text-brand-purple transition-colors focus:outline-none disabled:cursor-not-allowed disabled:hover:text-gray-400"
+              className="hover:text-gray-600 transition-colors focus:outline-none"
               tabIndex={-1}
             >
               {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -87,11 +80,7 @@ export default function Input({
         </div>
       </div>
 
-      {error && (
-        <span className="text-xs text-feedback-error-text font-bold ml-1 mt-0.5 animate-pulse">
-          {error}
-        </span>
-      )}
+      {error && <span className="text-xs text-feedback-error-text font-bold ml-1 mt-0.5 animate-pulse">{error}</span>}
     </div>
   );
 }

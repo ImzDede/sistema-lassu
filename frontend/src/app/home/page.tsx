@@ -83,12 +83,10 @@ export default function Home() {
 
   return (
     <div className="flex flex-col gap-8 h-full">
-      <Typography variant="h3" className="font-bold uppercase mb-2 text-center md:text-left mt-4 md:mt-0 text-brand-dark">INÍCIO</Typography>
-
       {/* SEÇÃO 1: LISTA PRINCIPAL (HOJE) */}
       <section className="w-full shadow-lg border-t-4 border-brand-purple bg-brand-surface p-4 md:p-6 rounded-xl">
         <div className="flex justify-between items-center mb-4 border-b border-gray-100 pb-2">
-          <h2 className="text-lg font-bold uppercase text-brand-dark">Hoje, {formattedDate}</h2>
+          <h2 className="text-lg font-bold uppercase text-brand-purple">Suas sessões de hoje, {formattedDate}</h2>
         </div>
 
         {(loadingUsers || loadingToday) ? (
@@ -157,7 +155,7 @@ export default function Home() {
 
       {/* SEÇÃO 2: CALENDÁRIO */}
       <section className="w-full shadow-lg border-t-4 border-brand-purple bg-brand-surface p-4 md:p-6 rounded-xl mb-8">
-        <h2 className="text-lg font-bold uppercase mb-4 text-brand-dark">Agenda</h2>
+        <h2 className="text-lg font-bold uppercase mb-4 text-brand-purple">Agenda</h2>
         <CalendarWidget 
             sessions={calendarSessions}
             onMonthChange={setCurrentCalendarDate} 

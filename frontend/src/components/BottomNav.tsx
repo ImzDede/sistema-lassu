@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Users, PlusSquare, User as UserIcon } from "lucide-react";
 import { User } from "@/types/usuarios";
+import { useAppTheme } from "@/hooks/useAppTheme";
 
 interface BottomNavProps {
   user: User | null;
@@ -12,6 +13,7 @@ interface BottomNavProps {
 
 export default function BottomNav({ user }: BottomNavProps) {
   const pathname = usePathname();
+  const { bgClass, textClass } = useAppTheme();
 
   if (!user) return null;
 
@@ -49,7 +51,14 @@ export default function BottomNav({ user }: BottomNavProps) {
   ];
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 w-full bg-brand-bg flex justify-around items-center pb-4 pt-3 z-50 border-t border-brand-purple/10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+    <nav 
+      className={`
+        lg:hidden fixed bottom-0 left-0 w-full flex justify-around items-center pb-3 pt-3 z-50 
+        border-t border-white/10 shadow-[0_-4px_10px_-1px_rgba(0,0,0,0.1)] 
+        transition-colors duration-500 ease-in-out
+        ${bgClass}
+      `}
+    >
       {navItems.map((item) => {
         if (!item.show) return null;
 
@@ -59,15 +68,33 @@ export default function BottomNav({ user }: BottomNavProps) {
           <Link
             key={item.href}
             href={item.href}
-            className="flex flex-col items-center justify-center w-full gap-1"
+            className="flex flex-col items-center justify-center w-full gap-1 group"
           >
-            <div className={`p-1.5 rounded-full transition-all ${isActive ? "bg-brand-purple/10 text-brand-purple" : "text-gray-400"}`}>
+            {/* Ícone */}
+            <div 
+              className={`
+                p-1.5 rounded-full transition-all duration-300
+                ${isActive 
+                  ? `bg-white shadow-sm ${textClass}`
+                  : "text-white/70 group-hover:text-white group-hover:bg-white/10"
+                }
+              `}
+            >
               <item.icon 
                 className={`w-6 h-6 ${isActive ? "stroke-[2.5px]" : "stroke-2"}`} 
               />
             </div>
             
-            <span className={`text-[10px] font-medium ${isActive ? "text-brand-purple font-bold" : "text-gray-400"}`}>
+            {/* Texto */}
+            <span 
+              className={`
+                text-[10px] font-medium transition-colors
+                ${isActive 
+                  ? "text-white font-bold"
+                  : "text-white/70 group-hover:text-white"
+                }
+              `}
+            >
               {item.label}
             </span>
           </Link>

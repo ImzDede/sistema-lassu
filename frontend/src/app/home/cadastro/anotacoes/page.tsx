@@ -1,145 +1,120 @@
 "use client";
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
-import { ArrowLeft, User, Calendar, Upload, File, X } from "lucide-react";
-import { Card, CardBody, Typography } from "@material-tailwind/react";
-import Button from "@/components/Button"; 
-import FileUploadBox from "@/components/FileUploadBox";
+import React, { useState, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowLeft, PenTool, List } from "lucide-react";
+import { Card, CardBody, Typography, Textarea } from "@material-tailwind/react";
+import Button from "@/components/Button";
+import SearchableSelect from "@/components/SearchableSelect";
+import Select from "@/components/SelectBox";
+import { useFormHandler } from "@/hooks/useFormHandler";
+import { usePatients } from "@/hooks/usePatients";
+import { useAuth } from "@/contexts/AuthContext";
+import { formatCPF } from "@/utils/format";
+import { useAppTheme } from "@/hooks/useAppTheme";
 
-
-export default function Anotacoes() {
+export default function AnotacoesPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const preSelectedPatientId = searchParams.get("patientId");
+  const preSelectedPatientName = searchParams.get("patientName");
+  const { user } = useAuth();
+  const { patients, fetchPatients, loading: loadingPatients } = usePatients();
+  const { loading: loadingSave, handleSubmit } = useFormHandler();
+
+  const { borderClass, textClass, lightBgClass } = useAppTheme();
+
+  const [selectedPatient, setSelectedPatient] = useState<string | null>(preSelectedPatientId || null);
+  const [sessionNumber, setSessionNumber] = useState("");
+  const [notes, setNotes] = useState("");
+
+  useEffect(() => {
+    if (user && !preSelectedPatientId) fetchPatients({ page: 1, limit: 10, status: "atendimento" } as any);
+  }, [user, fetchPatients, preSelectedPatientId]);
+
+  const handleSearchPatient = useCallback((term: string) => fetchPatients({ nome: term, page: 1, limit: 10, status: "atendimento" } as any), [fetchPatients]);
+  const patientOptions = patients.map((p) => ({ id: p.id, label: p.nome, subLabel: p.cpf ? `CPF: ${formatCPF(p.cpf)}` : "Sem CPF" }));
+
+  if (preSelectedPatientId && preSelectedPatientName && !patientOptions.find((p) => p.id === preSelectedPatientId)) {
+    patientOptions.unshift({ id: preSelectedPatientId, label: decodeURIComponent(preSelectedPatientName), subLabel: "Selecionado" });
+  }
   
-  const [formData, setFormData] = useState({
-    campo2: "",
-  });
+  const sessionOptions = [{ value: "1", label: "Sessão 1" }, { value: "2", label: "Sessão 2" }, { value: "3", label: "Sessão 3" }];
 
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
-    }
-  };
-
-  const handleRemoveFile = () => {
-    setSelectedFile(null);
-  };
-
-  // Função para salvar rascunho
-  const handleSaveDraft = async () => {
-    setLoading(true);
-    
-    // Aqui você pode adicionar a lógica de salvar
-    // Por exemplo: enviar para API
-    console.log("Salvando rascunho...", {
-      anotacoes: formData.campo2,
-      arquivo: selectedFile?.name
+  const handleSave = async () => {
+    await handleSubmit(async () => {
+      console.log("Salvando:", { patientId: selectedPatient, sessao: sessionNumber, texto: notes });
+      await new Promise((r) => setTimeout(r, 1000));
+      router.back();
     });
-
-    // Simulação de salvamento
-    setTimeout(() => {
-      setLoading(false);
-      alert("Rascunho salvo com sucesso!");
-    }, 1000);
   };
-
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full relative pb-20">
-      
-      {/* CABEÇALHO */}
       <div className="flex items-center gap-4">
-        <button
-          onClick={() => router.push("/home/cadastro")}
-          className="p-3 rounded-full hover:bg-brand-purple/10 text-brand-purple transition-colors"
-        >
+        <button onClick={() => router.back()} className={`p-3 rounded-full transition-colors ${lightBgClass} ${textClass} hover:bg-opacity-20`}>
           <ArrowLeft className="w-6 h-6" />
         </button>
-
         <div>
-          <Typography variant="h4" className="font-bold uppercase tracking-wide text-brand-dark">
-            Anotações
-          </Typography>
-          <Typography variant="paragraph" className="text-gray-500 text-sm">
-            Descrição breve da página
-          </Typography>
+          <Typography variant="h4" className="font-bold uppercase tracking-wide text-brand-anotacoes">Anotações</Typography>
+          <Typography variant="paragraph" className="text-gray-500 text-sm">Registro livre.</Typography>
         </div>
       </div>
 
-      {/* CARD PRINCIPAL */}
-      <Card className="w-full shadow-lg border-t-4 border-brand-purple bg-brand-surface">
-
-        <CardBody className="p-6 md:p-10">
-          
-          <div className="flex flex-col gap-6">
-
-            {/* Retângulo 1: Nome da Paciente */}
-            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-300">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-brand-purple/10 rounded-lg">
-                    <User className="w-5 h-5 text-brand-purple" />
-                </div>
-
-                <Typography variant="small" className="text-gray-700 font-medium">
-                  Nome da paciente
-                </Typography>
-              </div>
-            </div>
-
-            {/* Retângulo 2: Informações de Consulta */}
-            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-300">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-brand-purple/10 rounded-lg">
-                  <Calendar className="w-5 h-5 text-brand-purple" />
-                </div>
-                <Typography variant="small" className="text-gray-700 font-medium">
-                  Informações de consulta/calendário
-                </Typography>
-              </div>
-            </div>
-          
-
-            {/* TEXTO SEPARADOR */}
-            <Typography variant="paragraph" className="text-brand-dark font-normal mt-2 mb-0">
-              Digite suas anotações rápidas aqui
-            </Typography>
-
-            {/* Retângulo 4: Input de Texto */}
-            <div className="bg-white p-4 rounded-lg shadow-sm border-2 border-gray-300 hover:border-gray-400 transition-colors">
-              <input
-                type="text"
-                name="campo2"
-                value={formData.campo2}
-                onChange={handleChange}
-                placeholder="Insira o texto..."
-                className="w-full outline-none text-gray-700 placeholder:text-gray-400"
-              />
-            </div>
-
+      <Card className={`w-full shadow-lg border-t-4 ${borderClass} bg-white`}>
+        <CardBody className="p-6 md:p-10 flex flex-col gap-6">
+          <div className="flex items-center gap-3 mb-2 pb-4 border-b border-gray-100">
+            <div className={`p-2 rounded-lg ${lightBgClass}`}><PenTool className={`w-6 h-6 ${textClass}`} /></div>
+            <Typography variant="h6" className="font-bold text-brand-anotacoes">Registro de Notas</Typography>
           </div>
 
+          <div className="w-full">
+            <SearchableSelect
+              label="Paciente"
+              options={patientOptions}
+              value={selectedPatient}
+              onChange={setSelectedPatient}
+              onSearch={handleSearchPatient}
+              isLoading={loadingPatients}
+              required
+              disabled={!!preSelectedPatientId}
+              placeholder="Busque pelo nome"
+              accentColorClass="brand-anotacoes"
+            />
+          </div>
+          <div className="w-full">
+            <Select
+              label="Referente à Sessão"
+              options={sessionOptions}
+              value={sessionNumber}
+              onChange={setSessionNumber}
+              placeholder="Selecione..."
+              leftIcon={List}
+              accentColorClass="brand-anotacoes"
+            />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 mb-2"><PenTool size={18} className={textClass} /><label className="text-sm font-bold text-gray-700">Conteúdo</label></div>
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={10}
+              placeholder="Escreva o que desejar registrar..."
+              className="!border-gray-300 focus:!border-brand-anotacoes focus:!ring-1 focus:!ring-brand-anotacoes bg-white"
+              labelProps={{ className: "hidden" }}
+            />
+          </div>
+
+          <div className="flex flex-col-reverse lg:flex-row gap-4 mt-2 border-t border-gray-100 pt-4">
+            <div className="w-full lg:w-1/2">
+              <Button variant="outline" onClick={() => router.back()} fullWidth accentColorClass="brand-anotacoes" className="bg-transparent hover:bg-opacity-10 border">CANCELAR</Button>
+            </div>
+            <div className="w-full lg:w-1/2">
+              <Button onClick={handleSave} loading={loadingSave} fullWidth accentColorClass="brand-anotacoes">SALVAR ANOTAÇÃO</Button>
+            </div>
+          </div>
         </CardBody>
       </Card>
-
-        {/* BOTÃO SALVAR RASCUNHO - FORA DO CARD */}
-            <Button
-                onClick={handleSaveDraft}
-                loading={loading}
-                fullWidth
-                className="h-12"
-                >
-                {loading ? "SALVANDO..." : "SALVAR RASCUNHO"}
-            </Button>
-
     </div>
   );
 }
-       

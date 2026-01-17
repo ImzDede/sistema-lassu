@@ -8,10 +8,11 @@ interface FolderAccordionProps {
   isOpen: boolean;
   onToggle: () => void;
   children?: ReactNode; 
-  tabColorClass?: string; 
+  tabColorClass?: string;
   showAddButton?: boolean;
   onAdd?: (e: React.MouseEvent) => void;
-  addLabel?: string; 
+  addLabel?: string;
+  accentColor?: string;
 }
 
 export default function FolderAccordion({
@@ -24,6 +25,7 @@ export default function FolderAccordion({
   showAddButton = false,
   onAdd,
   addLabel,
+  accentColor = "brand-purple",
 }: FolderAccordionProps) {
   
   return (
@@ -69,19 +71,21 @@ export default function FolderAccordion({
           <div className="p-4 flex flex-col gap-3">
             
             {children}
+
             {showAddButton && (
               <div 
                 onClick={onAdd}
-                className="
+                className={`
                   flex flex-col items-center justify-center py-6 mt-2 rounded-xl border-2 border-dashed border-gray-300 
-                  cursor-pointer hover:border-brand-purple hover:bg-brand-purple/5 group transition-all w-full
-                "
+                  cursor-pointer group transition-all w-full
+                  hover:border-${accentColor} hover:bg-${accentColor}/5
+                `}
               >
-                <div className="w-10 h-10 rounded-full bg-brand-purple text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                <div className={`w-10 h-10 rounded-full bg-${accentColor} text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform`}>
                   <Plus size={24} strokeWidth={3} />
                 </div>
                 {addLabel && (
-                  <span className="mt-2 text-xs font-bold text-gray-400 group-hover:text-brand-purple uppercase tracking-wider">
+                  <span className={`mt-2 text-xs font-bold text-gray-400 group-hover:text-${accentColor} uppercase tracking-wider`}>
                     {addLabel}
                   </span>
                 )}
