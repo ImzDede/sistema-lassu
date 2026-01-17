@@ -1,11 +1,7 @@
 const withMT = require("@material-tailwind/react/utils/withMT");
 
-// 1. DEFINIÇÃO DAS CORES
 const brandColors = [
   'brand-purple', 
-  'brand-pink', 
-  'brand-peach', 
-  'brand-terracota',
   'brand-sessao', 
   'brand-sintese', 
   'brand-anamnese', 
@@ -23,15 +19,13 @@ module.exports = withMT({
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   safelist: [
-    // 2. Garante classes normais e com !important (ex: !border-brand-anotacoes)
     {
-      pattern: new RegExp(`^!?((bg|text|border|ring|fill|stroke)-(${brandColors.join('|')}))`),
-      variants: ['hover', 'focus', 'focus-within', 'group-hover', 'active', 'disabled'],
+      pattern: new RegExp(`^!?((bg|text|border|ring)-(${brandColors.join('|')}))`),
+      variants: ['hover', 'focus', 'focus-within'], 
     },
-    // 3. Garante classes com opacidade (ex: bg-brand-anotacoes/20)
     {
-      pattern: new RegExp(`^!?((bg|text|border|ring)-(${brandColors.join('|')})/(5|10|20|30|50|70|90))`),
-      variants: ['hover', 'focus', 'focus-within', 'group-hover', 'active', 'disabled'],
+      pattern: new RegExp(`^!?((bg|text|border|ring)-(${brandColors.join('|')})/(5|10|20|30|50))`),
+      variants: ['hover', 'focus', 'focus-within'],
     }
   ],
   theme: {
@@ -42,17 +36,13 @@ module.exports = withMT({
       },
       colors: {
         brand: {
-          // --- Cores Base ---
           purple: "#A78FBF", 
           pink:   "#D9A3B6", 
           peach:  "#F2B694", 
           terracota: "#F2A9A2",
-          
           dark: "#5D4E6D",
           bg: "#FAF9FC",
           surface: "#FFFFFF",
-
-          // --- Cores Específicas ---
           sessao: "#6D538B", 
           sintese: "#F2B694", 
           anamnese: "#F2A9A2", 
