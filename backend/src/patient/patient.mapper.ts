@@ -1,4 +1,4 @@
-import { PatientGetResponseDTO, PatientListResponseDTO, PatientListRow, PatientResponseDTO, PatientRow, PatientUpdateResponseDTO, PatientUpdateRow } from "./patient.type";
+import { PatientGetResponseDTO, PatientListResponseDTO, PatientListRow, PatientResponseDTO, PatientRow, PatientUpdateResponseDTO, PatientUpdateRow, ReferResponseDTO, ReferRow } from "./patient.type";
 
 export class PatientMapper {
     static toComplete(data: { patientRow: PatientRow }): PatientResponseDTO {
@@ -63,5 +63,27 @@ export class PatientMapper {
                 }
             }
         })
+    }
+
+    static toRefer(data: { patientRow: PatientRow, referRow: ReferRow }): ReferResponseDTO {
+        const { patientRow, referRow } = data;
+        return {
+            patient: {
+                id: patientRow.id,
+                nome: patientRow.nome,
+                dataNascimento: patientRow.data_nascimento,
+                cpf: patientRow.cpf,
+                telefone: patientRow.telefone,
+                terapeutaId: patientRow.terapeuta_id,
+                status: patientRow.status,
+                createdAt: patientRow.created_at
+            },
+            refer: {
+                id: referRow.id,
+                destino: referRow.destino,
+                arquivoUrl: referRow.arquivo_url,
+                dataEncaminhamento: referRow.created_at
+            }
+        };
     }
 }

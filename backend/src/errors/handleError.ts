@@ -2,6 +2,7 @@ import { ErrorRequestHandler, NextFunction, Response, Request } from "express";
 import { HTTP_ERRORS } from "./messages";
 import { AppError } from "./AppError";
 import { ZodError } from "zod";
+import fs from "fs";
 import logger from "../utils/logger";
 
 export const handleError: ErrorRequestHandler = (
@@ -10,6 +11,15 @@ export const handleError: ErrorRequestHandler = (
     res: Response,
     next: NextFunction
 ) => {
+
+    if (req.file) {
+        fs.unlink(req.file.path, (err) => {
+            if (err) {
+                console.error("Erro ao deletar arquivo órfão:", err);
+            }
+        });
+    }
+
     if (err instanceof ZodError) {
         const details: Record<string, string[]> = {};
 

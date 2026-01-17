@@ -193,6 +193,18 @@ export class SessionRepository {
         return result.rows[0] ?? null
     }
 
+    async updateNotes(sessionId: number, data: { anotacoes: string | null }): Promise<SessionRow | null> {
+        const query = `
+            UPDATE sessoes 
+            SET anotacoes = $1 
+            WHERE id = $2
+            RETURNING id, anotacoes
+        `;
+
+        const result = await pool.query(query, [data.anotacoes, sessionId]);
+        return result.rows[0] ?? null
+    }
+
     async delete(sessionId: number) {
         await pool.query('DELETE FROM sessoes WHERE id = $1', [sessionId])
     }

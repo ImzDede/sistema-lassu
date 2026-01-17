@@ -1,4 +1,4 @@
-import { SessionCreateResponseDTO, SessionGetResponseDTO, SessionGetRow, SessionListResponseDTO, SessionRescheduleResponseDTO, SessionRow, SessionUpdateResponseDTO, SessionUpdateStatusResponseDTO } from "./session.type";
+import { SessionCreateResponseDTO, SessionGetResponseDTO, SessionGetRow, SessionListResponseDTO, SessionRescheduleResponseDTO, SessionRow, SessionUpdateNotesResponseDTO, SessionUpdateResponseDTO, SessionUpdateStatusResponseDTO } from "./session.type";
 
 export class SessionMapper {
     static toGet(data: { sessionRow: SessionGetRow }): SessionGetResponseDTO {
@@ -10,6 +10,7 @@ export class SessionMapper {
                 hora: sessionRow.hora,
                 sala: sessionRow.sala,
                 status: sessionRow.status,
+                anotacoes: sessionRow.anotacoes,
                 updatedAt: sessionRow.updated_at,
                 createdAt: sessionRow.created_at
             },
@@ -72,6 +73,16 @@ export class SessionMapper {
                 id: Number(sessionRow.id),
                 status: sessionRow.status,
                 updatedAt: sessionRow.updated_at
+            }
+        };
+    }
+
+    static toUpdateNotes(data: { sessionRow: SessionRow }): SessionUpdateNotesResponseDTO {
+        const { sessionRow } = data
+        return {
+            session: {
+                id: Number(sessionRow.id),
+                anotacoes: sessionRow.anotacoes
             }
         };
     }
