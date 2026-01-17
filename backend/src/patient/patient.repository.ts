@@ -1,8 +1,10 @@
-import { UUID } from "crypto";
-import pool from "../config/db";
-import { PatientIdRow, PatientListRow, PatientRow, PatientUpdateRow } from "./patient.type";
+import { PatientIdRow, PatientListRow, PatientRow, PatientUpdateRow, ReferRow } from "./patient.type";
+import { Pool, PoolClient } from "pg";
 
 export class PatientRepository {
+
+    constructor (private readonly client: Pool | PoolClient) {}
+
     async verifyCpfExist(cpf: string, ignoreId?: string): Promise<PatientIdRow | null> {
         let query = 'SELECT id FROM pacientes WHERE cpf = $1'
         let values = [cpf]
@@ -12,22 +14,22 @@ export class PatientRepository {
             values.push(ignoreId)
         }
 
-        const result = await pool.query(query, values)
+        const result = await this.client.query(query, values)
         return result.rows[0] ?? null;
     }
 
     async getName(id: string): Promise<string | null> {
-        const result = await pool.query('SELECT nome FROM pacientes WHERE id = $1', [id])
+        const result = await this.client.query('SELECT nome FROM pacientes WHERE id = $1', [id])
         return result.rows[0].nome ?? null;
     }
 
     async getTherapistId(patientId: string): Promise<string | null> {
-        const result = await pool.query('SELECT terapeuta_id FROM pacientes WHERE id = $1', [patientId]);
+        const result = await this.client.query('SELECT terapeuta_id FROM pacientes WHERE id = $1', [patientId]);
         return result.rows[0].terapeuta_id ?? null;
     }
 
     async getById(patientId: string): Promise<PatientRow | null> {
-        const result = await pool.query('SELECT * FROM pacientes WHERE id = $1', [patientId]);
+        const result = await this.client.query('SELECT * FROM pacientes WHERE id = $1', [patientId]);
         return result.rows[0] ?? null;
     }
 
@@ -68,7 +70,7 @@ export class PatientRepository {
         const sortColumn = params.orderBy;
 
         //Precisa vim antes de limit e offset serem adicionados
-        const resultCount = await pool.query(queryCount, values)
+        const resultCount = await this.client.query(queryCount, values)
 
         const limitParamIndex = values.length + 1;
         const offsetParamIndex = values.length + 2;
@@ -82,7 +84,7 @@ export class PatientRepository {
             LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}
         `;
 
-        const resultData = await pool.query(queryData, values);
+        const resultData = await this.client.query(queryData, values);
 
         return {
             patientRows: resultData.rows,
@@ -118,7 +120,7 @@ export class PatientRepository {
             data.terapeutaId,
         ]
 
-        const result = await pool.query(query, values);
+        const result = await this.client.query(query, values);
         return result.rows[0];
     }
 
@@ -151,19 +153,19 @@ export class PatientRepository {
             patientId
         ];
 
-        const result = await pool.query(query, values);
+        const result = await this.client.query(query, values);
         return result.rows[0] ?? null;
     }
 
     async updateStatus(patientId: string, status: string): Promise<PatientRow | null> {
         const query = `UPDATE pacientes SET status = $1 WHERE id = $2 RETURNING *;`;
-        const result = await pool.query(query, [status, patientId]);
+        const result = await this.client.query(query, [status, patientId]);
         return result.rows[0] ?? null;
     }
 
     async updateTherapist(patientId: string, newTherapistId: string): Promise<PatientRow | null> {
         const query = `UPDATE pacientes SET terapeuta_id = $1 WHERE id = $2 RETURNING *;`;
-        const result = await pool.query(query, [newTherapistId, patientId]);
+        const result = await this.client.query(query, [newTherapistId, patientId]);
         return result.rows[0] ?? null;
     }
 
@@ -174,7 +176,7 @@ export class PatientRepository {
             WHERE id = $1 AND deleted_at IS NULL 
             RETURNING *;
         `;
-        const result = await pool.query(query, [id]);
+        const result = await this.client.query(query, [id]);
         return result.rows[0] ?? null;
     }
 
@@ -185,8 +187,29 @@ export class PatientRepository {
             WHERE id = $1 AND deleted_at IS NOT NULL 
             RETURNING *;
         `;
-        const result = await pool.query(query, [id]);
+        const result = await this.client.query(query, [id]);
         return result.rows[0] ?? null;
+    }
+
+    async upsertRefer(patientId: string, destino: string, filename: string | null) {
+        const query = `
+            INSERT INTO encaminhamentos (paciente_id, destino, arquivo_url)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (paciente_id) 
+            DO UPDATE SET 
+                destino = EXCLUDED.destino, 
+                arquivo_url = COALESCE($3, encaminhamentos.arquivo_url),
+                created_at = NOW()
+            RETURNING *
+        `;
+        const result = await this.client.query(query, [patientId, destino, filename]);
+        return result.rows[0];
+    }
+
+    async getRefer(patientId: string): Promise<ReferRow | null> {
+        const query = `SELECT * FROM encaminhamentos WHERE paciente_id = $1`;
+        const result = await this.client.query(query, [patientId]);
+        return result.rows[0] || null;
     }
 
 }

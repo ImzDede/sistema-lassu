@@ -37,6 +37,12 @@ export const sessionUpdateStatusSchema = z.object({
 
 export type SessionUpdateStatusDTO = z.infer<typeof sessionUpdateStatusSchema>
 
+export const sessionUpdateNotesSchema = z.object({
+    anotacoes: z.string()
+})
+
+export type SessionUpdateNotesDTO = z.infer<typeof sessionUpdateNotesSchema>
+
 export const sessionUpdateSchema = z.object({
     dia: diaSchema,
     hora: horaSchema,

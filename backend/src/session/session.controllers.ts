@@ -43,6 +43,15 @@ export class SessionControllers {
         res.status(200).json(response(data));
     }
 
+    async updateNotes(req: Request, res: Response) {
+        const userId = req.validated.userId
+        const { targetId } = req.validated.params
+        const body = req.validated.body
+        const result = await sessionService.updateNotes(userId, targetId, body)
+        const data = SessionMapper.toUpdateNotes(result)
+        res.status(200).json(response(data));
+    }
+
     async update(req: Request, res: Response) {
         const userId = req.validated.userId
         const { targetId } = req.validated.params

@@ -37,8 +37,19 @@ export class PatientController {
 	async refer(req: Request, res: Response) {
 		const userId = req.validated.userId;
 		const { targetId } = req.validated.params;
-		const result = await patientService.refer(userId, targetId);
-		const data = PatientMapper.toComplete(result);
+		const body = req.validated.body;
+		const filename = req.file ? req.file.filename : null;
+		const result = await patientService.refer(userId, targetId, filename, body);
+		const data = PatientMapper.toRefer(result);
+		return res.status(200).json(response(data));
+	}
+
+	async getRefer(req: Request, res: Response) {
+		const userId = req.validated.userId;
+		const perms = userPermsSchema.parse(req.userPerms);
+		const { targetId } = req.validated.params;
+		const result = await patientService.getRefer(userId, targetId, perms);
+		const data = PatientMapper.toRefer(result);
 		return res.status(200).json(response(data));
 	}
 
