@@ -16,7 +16,7 @@ router.post('/', validate(sessionCreateSchema), sessionController.create);
 router.get('/', validate(sessionListSchema, 'query'), sessionController.list);
 
 
-router.use(validate(sessionTargetIdParamSchema, 'params'))
+router.use('/:targetId', validate(sessionTargetIdParamSchema, 'params'))
 
 router.get('/:targetId', sessionController.getById);
 router.put('/:targetId', validate(sessionUpdateSchema), sessionController.update);

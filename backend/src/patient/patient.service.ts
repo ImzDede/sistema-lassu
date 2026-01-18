@@ -7,7 +7,7 @@ import { NotificationService } from "../notification/notification.service";
 import { NOTIFICATION_MESSAGE } from "../notification/notification.messages";
 import { UserRepository } from "../user/user.repository";
 import { UserPermDTO } from "../user/user.schema";
-import { FormRepository } from "../form/form.repository";
+//import { FormRepository } from "../form/form.repository";
 import pool from "../config/db";
 import { withTransaction } from "../utils/withTransaction";
 
@@ -196,7 +196,7 @@ export class PatientService {
 
         return await withTransaction(async (client) => {
             const repository = new PatientRepository(client);
-            const formRepository = new FormRepository(client);
+            //const formRepository = new FormRepository(client);
 
             /*const totalForms = await formRepository.countFinalizedForms(patientId);
 

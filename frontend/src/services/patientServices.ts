@@ -1,5 +1,6 @@
 import api from "./apiServices";
 import { CreatePatientDTO, Patient, UpdatePatientDTO, PatientAggregatedResponse } from "@/types/paciente";
+import { ReferralResponse } from "@/types/referral";
 import { ApiResponse } from "@/types/api";
 
 interface PatientQueryParams {
@@ -39,9 +40,12 @@ export const patientService = {
     return response.data.data?.patient || response.data.data || response.data;
   },
 
-  // Encaminhar (Alta) - Apenas Terapeuta Dono
-  async referPatient(id: string): Promise<void> {
-    await api.patch(`/patients/${id}/refer`);
+  // Encaminhar
+  async referPatient(patientId: string, formData: FormData): Promise<ReferralResponse> {
+    const response = await api.post(`/patients/${patientId}/refer`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response.data.data || response.data; 
   },
 
   // Desfazer Encaminhamento - Apenas Admin

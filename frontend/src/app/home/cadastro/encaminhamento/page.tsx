@@ -1,14 +1,13 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Share, FileUp } from "lucide-react";
+import { ArrowLeft, Share } from "lucide-react";
 import { Card, CardBody, Typography, Textarea } from "@material-tailwind/react";
 import Button from "@/components/Button";
 import FileUploadBox from "@/components/FileUploadBox";
 import SearchableSelect from "@/components/SearchableSelect";
-import Select from "@/components/SelectBox";
-import { useFormHandler } from "@/hooks/useFormHandler";
+import { useEncaminhamento } from "@/hooks/useEncaminhamento";
 import { usePatients } from "@/hooks/usePatients";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatCPF } from "@/utils/format";
@@ -19,23 +18,25 @@ export default function EncaminhamentoPage() {
   const searchParams = useSearchParams();
   const preSelectedPatientId = searchParams.get("patientId");
   const preSelectedPatientName = searchParams.get("patientName");
+
   const { user } = useAuth();
   const { patients, fetchPatients, loading: loadingPatients } = usePatients();
-  const { loading: loadingSave, handleSubmit } = useFormHandler();
+  const { saveReferral, loading: loadingSave } = useEncaminhamento();
 
   const { borderClass, textClass, lightBgClass } = useAppTheme();
 
   const [selectedPatient, setSelectedPatient] = useState<string | null>(
-    preSelectedPatientId || null,
+    preSelectedPatientId || null
   );
-  const [encaminhamentoTipo, setEncaminhamentoTipo] = useState("");
   const [description, setDescription] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   useEffect(() => {
-    if (user && !preSelectedPatientId)
+    if (user && !preSelectedPatientId) {
       fetchPatients({ page: 1, limit: 10, status: "atendimento" } as any);
+    }
   }, [user, fetchPatients, preSelectedPatientId]);
+
   const handleSearchPatient = useCallback(
     (term: string) =>
       fetchPatients({
@@ -44,41 +45,42 @@ export default function EncaminhamentoPage() {
         limit: 10,
         status: "atendimento",
       } as any),
-    [fetchPatients],
+    [fetchPatients]
   );
-  const patientOptions = patients.map((p) => ({
-    id: p.id,
-    label: p.nome,
-    subLabel: p.cpf ? `CPF: ${formatCPF(p.cpf)}` : "Sem CPF",
-  }));
-  if (
-    preSelectedPatientId &&
-    preSelectedPatientName &&
-    !patientOptions.find((p) => p.id === preSelectedPatientId)
-  ) {
-    patientOptions.unshift({
-      id: preSelectedPatientId,
-      label: decodeURIComponent(preSelectedPatientName),
-      subLabel: "Selecionado",
-    });
-  }
-  const sessionOptions = [
-    { value: "Sessão 1", label: "1ª Sessão" },
-    { value: "Sessão 2", label: "2ª Sessão" },
-    { value: "Sessão 3", label: "3ª Sessão" },
-  ];
+
+  const patientOptions = useMemo(() => {
+    const opts = patients.map((p) => ({
+      id: p.id,
+      label: p.nome,
+      subLabel: p.cpf ? `CPF: ${formatCPF(p.cpf)}` : "Sem CPF",
+    }));
+
+    if (
+      preSelectedPatientId &&
+      preSelectedPatientName &&
+      !opts.find((p) => p.id === preSelectedPatientId)
+    ) {
+      opts.unshift({
+        id: preSelectedPatientId,
+        label: decodeURIComponent(preSelectedPatientName),
+        subLabel: "Selecionado",
+      });
+    }
+
+    return opts;
+  }, [patients, preSelectedPatientId, preSelectedPatientName]);
+
+  const canSubmit =
+    !!selectedPatient && description.trim().length > 0 && !loadingSave;
 
   const handleSave = async () => {
-    await handleSubmit(async () => {
-      console.log("Encaminhando:", {
-        patientId: selectedPatient,
-        sessao: encaminhamentoTipo,
-        motivo: description,
-        arquivo: selectedFile,
-      });
-      await new Promise((r) => setTimeout(r, 1000));
+    if (!selectedPatient) return;
+
+    const success = await saveReferral(selectedPatient, description, selectedFile);
+    if (success) {
+      await new Promise((r) => setTimeout(r, 500));
       router.back();
-    });
+    }
   };
 
   return (
@@ -109,10 +111,7 @@ export default function EncaminhamentoPage() {
             <div className={`p-2 rounded-lg ${lightBgClass}`}>
               <Share className={`w-6 h-6 ${textClass}`} />
             </div>
-            <Typography
-              variant="h6"
-              className="font-bold text-brand-encaminhamento"
-            >
+            <Typography variant="h6" className="font-bold text-brand-encaminhamento">
               Dados do Encaminhamento
             </Typography>
           </div>
@@ -131,43 +130,28 @@ export default function EncaminhamentoPage() {
               accentColorClass="brand-encaminhamento"
             />
           </div>
-          <div className="w-full">
-            <Select
-              label="Referente à Sessão"
-              options={sessionOptions}
-              value={encaminhamentoTipo}
-              onChange={setEncaminhamentoTipo}
-              placeholder="Selecione..."
-              accentColorClass="brand-encaminhamento"
-            />
-          </div>
+
           <div>
-            <Typography
-              variant="small"
-              className="font-bold text-gray-700 mb-2 flex gap-2"
-            >
-              Anexar Documento (Opcional)
+            <Typography variant="small" className="font-bold text-gray-700 mb-2 flex gap-2">
+              Anexar Documento <span className="text-gray-400 font-semibold">(Opcional)</span>
             </Typography>
+
             <FileUploadBox
               selectedFile={selectedFile}
-              onFileChange={(e) =>
-                e.target.files && setSelectedFile(e.target.files[0])
-              }
+              onFileChange={(e) => e.target.files && setSelectedFile(e.target.files[0])}
               onRemoveFile={() => setSelectedFile(null)}
             />
           </div>
+
           <div>
-            <Typography
-              variant="small"
-              className="font-bold text-gray-700 mb-2 flex gap-2"
-            >
+            <Typography variant="small" className="font-bold text-gray-700 mb-2 flex gap-2">
               Motivo / Destino
             </Typography>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={5}
-              placeholder="Descreva..."
+              placeholder="Descreva o motivo e o destino do encaminhamento..."
               className="!border-gray-300 focus:!border-brand-encaminhamento focus:!ring-1 focus:!ring-brand-encaminhamento bg-white"
               labelProps={{ className: "hidden" }}
             />
@@ -191,6 +175,8 @@ export default function EncaminhamentoPage() {
                 loading={loadingSave}
                 fullWidth
                 accentColorClass="brand-encaminhamento"
+                disabled={!canSubmit}
+                title={!canSubmit ? "Selecione um paciente e preencha o destino" : undefined}
               >
                 REGISTRAR ENCAMINHAMENTO
               </Button>
@@ -201,3 +187,4 @@ export default function EncaminhamentoPage() {
     </div>
   );
 }
+

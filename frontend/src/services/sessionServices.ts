@@ -1,9 +1,10 @@
+// src/services/sessionServices.ts
 import api from "./apiServices";
 import { CreateSessionDTO, Session } from "@/types/sessao";
 
 interface SessionServiceParams {
-  start?: string; 
-  end?: string;   
+  start?: string;
+  end?: string;
   status?: string;
   patientTargetId?: string;
   userTargetId?: string;
@@ -17,35 +18,42 @@ interface SessionServiceParams {
 export const sessionService = {
   async getAll(params?: SessionServiceParams): Promise<Session[]> {
     const response = await api.get("/sessions", { params });
+
     const rawData = response.data;
-    const rawList = rawData.data || rawData.sessions || rawData; 
+    const rawList = rawData.data || rawData.sessions || rawData;
 
     if (!Array.isArray(rawList)) return [];
 
     return rawList.map((item: any) => {
-        const sessionCore = item.session || item;
-        return {
-            ...sessionCore, 
-            usuarioId: item.therapist?.id || sessionCore.usuarioId,
-            profissionalNome: item.therapist?.nome || "Profissional",
-            pacienteId: item.patient?.id || sessionCore.pacienteId,
-            pacienteNome: item.patient?.nome || "Paciente",
-            anotacoes: sessionCore.anotacoes || ""
-        } as Session;
+      const sessionCore = item.session || item;
+      return {
+        ...sessionCore,
+        usuarioId: item.therapist?.id || sessionCore.usuarioId,
+        profissionalNome: item.therapist?.nome || "Profissional",
+        pacienteId: item.patient?.id || sessionCore.pacienteId,
+        pacienteNome: item.patient?.nome || "Paciente",
+        anotacoes: sessionCore.anotacoes || "",
+      } as Session;
     });
   },
 
   async getById(id: number): Promise<Session> {
-    const response = await api.get(`/sessions/${id}`);
-    const data = response.data.data || response.data;
-    const sessionCore = data.session || data;
-    
+    const response = await api.request({
+      method: "GET",
+      url: `/sessions/${id}`,
+      params: undefined,
+      data: undefined,
+    });
+
+    const dataWrapper = response.data?.data ?? response.data;
+    const sessionCore = dataWrapper.session ?? dataWrapper;
+
     return {
-        ...sessionCore,
-        pacienteId: data.patient?.id || sessionCore.pacienteId,
-        pacienteNome: data.patient?.nome || "Paciente",
-        usuarioId: data.therapist?.id || sessionCore.usuarioId,
-        anotacoes: sessionCore.anotacoes || ""
+      ...sessionCore,
+      pacienteId: dataWrapper.patient?.id || sessionCore.pacienteId,
+      pacienteNome: dataWrapper.patient?.nome || "Paciente",
+      usuarioId: dataWrapper.therapist?.id || sessionCore.usuarioId,
+      anotacoes: sessionCore.anotacoes || "",
     } as Session;
   },
 
@@ -61,10 +69,22 @@ export const sessionService = {
     return updated.session || updated;
   },
 
+  async updateNotes(id: number, anotacoes: string): Promise<Session> {
+    const response = await api.request({
+      method: "PATCH",
+      url: `/sessions/${id}/notes`,
+      data: { anotacoes },
+      params: undefined,
+    });
+
+    const dataWrapper = response.data?.data ?? response.data;
+    return dataWrapper.session || dataWrapper;
+  },
+
   async reschedule(id: number, data: any): Promise<Session> {
     const response = await api.put(`/sessions/${id}/reschedule`, data);
     const result = response.data.data || response.data;
-    return result.session || result; 
+    return result.session || result;
   },
 
   async updateStatus(id: number, status: string): Promise<Session> {
@@ -77,3 +97,4 @@ export const sessionService = {
     await api.delete(`/sessions/${id}`);
   },
 };
+
