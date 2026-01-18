@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, FileDown, FileText } from "lucide-react";
-import { Card, CardBody, Typography } from "@material-tailwind/react";
+import { Card, CardBody, Typography, Spinner } from "@material-tailwind/react";
 import { FormularioBuilder } from "@/components/FormularioBuilder";
 import SearchableSelect from "@/components/SearchableSelect";
 import { useFeedback } from "@/contexts/FeedbackContext";
@@ -12,120 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import { formatCPF } from "@/utils/format";
 import { SintesePDF } from "@/components/pdfs/SintesePDF";
-
-const MOCK_SINTESE = {
-  data: {
-    secoes: [
-      {
-        id: "sec-01",
-        titulo: "1. Avaliação da Sessão",
-        ordem: 1,
-        perguntas: [
-          {
-            id: "q-humor",
-            enunciado: "Estado de humor da paciente hoje",
-            tipo: "unica_escolha",
-            obrigatoria: true,
-            dependeDeOpcaoId: null,
-            opcoes: [
-              {
-                id: "opt-humor-estavel",
-                enunciado: "Estável",
-                requerTexto: false,
-              },
-              {
-                id: "opt-humor-deprimido",
-                enunciado: "Deprimido/Triste",
-                requerTexto: false,
-              },
-              {
-                id: "opt-humor-ansioso",
-                enunciado: "Ansioso/Agitado",
-                requerTexto: false,
-              },
-              {
-                id: "opt-humor-euforico",
-                enunciado: "Eufórico",
-                requerTexto: false,
-              },
-            ],
-          },
-          {
-            id: "q-cooperacao",
-            enunciado: "Nível de cooperação",
-            tipo: "unica_escolha",
-            obrigatoria: true,
-            dependeDeOpcaoId: null,
-            opcoes: [
-              { id: "opt-coop-alta", enunciado: "Alta", requerTexto: false },
-              { id: "opt-coop-media", enunciado: "Média", requerTexto: false },
-              {
-                id: "opt-coop-baixa",
-                enunciado: "Baixa / Resistente",
-                requerTexto: false,
-              },
-            ],
-          },
-        ],
-      },
-
-      {
-        id: "sec-02",
-        titulo: "2. Desenvolvimento",
-        ordem: 2,
-        perguntas: [
-          {
-            id: "q-temas",
-            enunciado: "Principais temas abordados",
-            tipo: "longo_texto",
-            obrigatoria: true,
-            dependeDeOpcaoId: null,
-            opcoes: [],
-          },
-          {
-            id: "q-intervencoes",
-            enunciado: "Intervenções realizadas",
-            tipo: "longo_texto",
-            obrigatoria: false,
-            dependeDeOpcaoId: null,
-            opcoes: [],
-          },
-        ],
-      },
-      {
-        id: "sec-03",
-        titulo: "3. Fechamento",
-        ordem: 3,
-        perguntas: [
-          {
-            id: "q-tarefas",
-            enunciado: "Tarefas de casa passadas?",
-            tipo: "unica_escolha",
-            obrigatoria: true,
-            dependeDeOpcaoId: null,
-            opcoes: [
-              { id: "opt-tarefa-nao", enunciado: "Não", requerTexto: false },
-              {
-                id: "opt-tarefa-sim",
-                enunciado: "Sim",
-                requerTexto: true,
-                labelTexto: "Descreva a tarefa",
-              },
-            ],
-          },
-          {
-            id: "q-prox-sessao",
-            enunciado: "Planejamento para próxima sessão",
-            tipo: "texto",
-            obrigatoria: false,
-            dependeDeOpcaoId: null,
-            opcoes: [],
-          },
-        ],
-      },
-    ],
-  },
-};
+import { useForm } from "@/hooks/useForm";
 
 export default function SintesePage() {
   const router = useRouter();
@@ -135,24 +22,48 @@ export default function SintesePage() {
   const { user } = useAuth();
   const { patients, fetchPatients, loading: loadingPatients } = usePatients();
   const { showFeedback } = useFeedback();
-
+  const { formData, fetchForm, saveForm, loading: loadingForm } = useForm();
   const [selectedPatient, setSelectedPatient] = useState<string | null>(preSelectedPatientId || null);
   const [formularioFinalizado, setFormularioFinalizado] = useState(false);
   const [respostasFinais, setRespostasFinais] = useState<any>({});
 
   useEffect(() => { if (user && !preSelectedPatientId) fetchPatients({ page: 1, limit: 10, status: "atendimento" } as any); }, [user, fetchPatients, preSelectedPatientId]);
+  
+  useEffect(() => {
+    if (selectedPatient) fetchForm("SINTESE", selectedPatient);
+  }, [selectedPatient, fetchForm]);
+
   const handleSearchPatient = useCallback((term: string) => fetchPatients({ nome: term, page: 1, limit: 10, status: "atendimento" } as any), [fetchPatients]);
   const patientOptions = patients.map((p) => ({ id: p.id, label: p.nome, subLabel: p.cpf ? `CPF: ${formatCPF(p.cpf)}` : "Sem CPF" }));
+  
   if (preSelectedPatientId && preSelectedPatientName && !patientOptions.find((p) => p.id === preSelectedPatientId)) {
     patientOptions.unshift({ id: preSelectedPatientId, label: decodeURIComponent(preSelectedPatientName), subLabel: "Selecionado" });
   }
 
-  const handleFinalizar = (respostas: any) => {
-    if (!selectedPatient) { showFeedback("Por favor, selecione um paciente.", "error"); return; }
-    setRespostasFinais(respostas);
-    setFormularioFinalizado(true);
-    showFeedback("Síntese salva!", "success");
+  const handleSalvarRascunho = async (respostas: any) => {
+    if (!selectedPatient) return;
+    await saveForm("SINTESE", selectedPatient, respostas, false);
   };
+
+  const handleFinalizar = async (respostas: any) => {
+    if (!selectedPatient) { showFeedback("Selecione um paciente.", "error"); return; }
+    const sucesso = await saveForm("SINTESE", selectedPatient, respostas, true);
+    if (sucesso) {
+      setRespostasFinais(respostas);
+      setFormularioFinalizado(true);
+    }
+  };
+
+  const getDadosIniciais = () => {
+    if (!formData) return {};
+    const iniciais: any = {};
+    formData.secoes.forEach(secao => {
+      secao.perguntas.forEach(perg => {
+         if (perg.resposta) iniciais[perg.id] = perg.resposta; 
+      });
+    });
+    return iniciais;
+  }
 
   if (formularioFinalizado) {
     const nomePaciente = patientOptions.find((p) => p.id === selectedPatient)?.label || "Paciente";
@@ -200,7 +111,21 @@ export default function SintesePage() {
             />
           </div>
           <div className="px-6 md:px-10 py-8">
-            <FormularioBuilder modeloJson={MOCK_SINTESE as any} onFinalizar={handleFinalizar} themeKey="sintese" />
+            {!selectedPatient ? (
+                <div className="text-center text-gray-500 py-10">Selecione uma paciente.</div>
+            ) : loadingForm ? (
+                <div className="flex justify-center py-10"><Spinner className="h-8 w-8 text-brand-sintese" /></div>
+            ) : formData ? (
+                <FormularioBuilder 
+                    modeloJson={{ data: formData } as any} 
+                    dadosIniciais={getDadosIniciais()}
+                    onFinalizar={handleFinalizar} 
+                    onSalvarRascunho={handleSalvarRascunho}
+                    themeKey="sintese" 
+                />
+            ) : (
+                <div className="text-center text-red-500 py-10">Erro ao carregar síntese.</div>
+            )}
           </div>
         </CardBody>
       </Card>
