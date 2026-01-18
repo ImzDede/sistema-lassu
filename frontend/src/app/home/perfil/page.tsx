@@ -43,7 +43,7 @@ export default function Perfil() {
       show: true,
     },
     {
-      label: "SENHA",
+      label: "SEGURANÇA",
       icon: <Lock size={18} />,
       href: "/home/perfil/senha",
       show: true,
@@ -65,7 +65,7 @@ export default function Perfil() {
 
   return (
     <div className="flex flex-col w-full min-h-full pb-20 lg:pb-0 font-sans">
-      <div className="mb-6 lg:mb-8 flex items-center justify-center lg:justify-start">
+      <div className="hidden md:flex mb-6 lg:mb-8 items-center justify-center lg:justify-start">
         <div>
           <Typography
             variant="h3"
@@ -99,11 +99,11 @@ export default function Perfil() {
             <div className="text-center w-full mb-8">
               <Typography
                 variant="h5"
-                className="font-bold uppercase text-brand-dark"
+                className="text-base lg:text-xl font-bold uppercase text-brand-peach"
               >
                 {user?.nome || "Usuário"}
               </Typography>
-              <Typography className={`font-medium text-sm mt-1 ${textClass}`}>
+              <Typography className={`font-medium text-sm mt-1 text-gray-600`}>
                 Matrícula: {user?.matricula || "N/A"}
               </Typography>
               <div className="mt-2 flex justify-center">
@@ -155,7 +155,7 @@ export default function Perfil() {
                 <div className={`p-2 rounded-lg ${lightBgClass} ${textClass}`}>
                   <LogOut size={20} />
                 </div>
-                <span className="uppercase text-sm">SAIR DA CONTA</span>
+                <span className="text-xs uppercase">SAIR DA CONTA</span>
               </button>
             </div>
           </div>

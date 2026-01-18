@@ -9,42 +9,45 @@ const adaptarParaBackend = (
   pacienteId: string
 ): any => {
 
-  const respostasArray = Object.entries(respostasRaw).map(([perguntaId, valor]: [string, any]) => {
+  // reduce para criar o array e filtrar vazios ao mesmo tempo
+  const respostasArray = Object.entries(respostasRaw).reduce((acc: any[], [perguntaId, valor]: [string, any]) => {
     
     // 1. Múltipla escolha (Array)
-    if (Array.isArray(valor)) {
-      return {
+    if (Array.isArray(valor) && valor.length > 0) {
+      acc.push({
         perguntaId,
         opcoes: valor.map((item: any) => {
           const obj: any = { id: item.id };
           if (item.complemento) obj.complemento = item.complemento;
           return obj;
         })
-      };
+      });
+      return acc;
     }
 
-    // 2. Única escolha (Objeto)
+    // 2. Única escolha (Objeto com ID)
     if (valor && typeof valor === 'object' && valor.id) {
       const obj: any = { id: valor.id };
       if (valor.complemento) obj.complemento = valor.complemento;
       
-      return {
+      acc.push({
         perguntaId,
         opcoes: [obj] 
-      };
+      });
+      return acc;
     }
 
     // 3. Texto, Inteiro, Data (Primitivos)
     if (valor !== null && valor !== undefined && valor !== "") {
-      return { 
+      acc.push({ 
           perguntaId, 
           valor: String(valor)
-      };
+      });
+      return acc;
     }
 
-    // 4. Campo vazio
-    return { perguntaId, valor: null }; 
-  });
+    return acc;
+  }, []);
 
   return {
     pacienteId,
@@ -55,6 +58,7 @@ const adaptarParaBackend = (
 };
 
 export const formService = {
+  // --- ANAMNESE ---
   async getAnamnese(patientId: string): Promise<FormFilledDTO> {
     const response = await api.get(`/forms/anamnese/${patientId}`);
     return response.data.data || response.data;
@@ -62,10 +66,20 @@ export const formService = {
 
   async submitAnamnese(patientId: string, versaoId: string, rawData: any, finalizar: boolean): Promise<FormFilledDTO> {
     const payload = adaptarParaBackend(rawData, finalizar, versaoId, patientId);
-    const response = await api.put(`/forms/anamnese/${patientId}`, payload);
-    return response.data.data || response.data;
+    
+    try {
+      const response = await api.put(`/forms/anamnese/${patientId}`, payload, { timeout: 30000 });
+      return response.data.data || response.data;
+    } catch (error: any) {
+      // Mostra os detalhes do erro direto no console
+      if (error.response?.data?.error?.details) {
+        console.error("🚨 DETALHES DO ERRO DE VALIDAÇÃO:", JSON.stringify(error.response.data.error.details, null, 2));
+      }
+      throw error;
+    }
   },
 
+  // --- SÍNTESE ---
   async getSintese(patientId: string): Promise<FormFilledDTO> {
     const response = await api.get(`/forms/sintese/${patientId}`);
     return response.data.data || response.data;
@@ -73,7 +87,14 @@ export const formService = {
 
   async submitSintese(patientId: string, versaoId: string, rawData: any, finalizar: boolean): Promise<FormFilledDTO> {
      const payload = adaptarParaBackend(rawData, finalizar, versaoId, patientId);
-     const response = await api.put(`/forms/sintese/${patientId}`, payload);
-     return response.data.data || response.data;
+     try {
+       const response = await api.put(`/forms/sintese/${patientId}`, payload, { timeout: 30000 });
+       return response.data.data || response.data;
+     } catch (error: any) {
+       if (error.response?.data?.error?.details) {
+         console.error("🚨 DETALHES DO ERRO DE VALIDAÇÃO:", JSON.stringify(error.response.data.error.details, null, 2));
+       }
+       throw error;
+     }
   },
 };

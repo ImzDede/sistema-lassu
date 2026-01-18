@@ -23,22 +23,25 @@ export default function FeedbackAlert({
   }, [open, onClose]);
 
   const colorMap = {
+    // SUCESSO -> ROXO (Primary)
     green: {
-      bg: "bg-green-100",
-      text: "text-green-900",
-      border: "border-green-200",
+      bg: "bg-brand-purple/10",            
+      text: "text-brand-purple",           
+      border: "border-brand-purple/20",    
       icon: <CheckCircle className="h-6 w-6" />,
     },
+    // ERRO -> SALMÃO (Encaminhamento)
     red: {
-      bg: "bg-red-100",
-      text: "text-red-900",
-      border: "border-red-200",
+      bg: "bg-brand-encaminhamento/10",
+      text: "text-brand-encaminhamento",
+      border: "border-brand-encaminhamento/20",
       icon: <XCircle className="h-6 w-6" />,
     },
+    // ALERTA -> LARANJA (Síntese)
     orange: {
-      bg: "bg-orange-100",
-      text: "text-orange-900",
-      border: "border-orange-200",
+      bg: "bg-brand-sintese/10",
+      text: "text-brand-sintese",
+      border: "border-brand-sintese/20",
       icon: <AlertTriangle className="h-6 w-6" />,
     },
   };

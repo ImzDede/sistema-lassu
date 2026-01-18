@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, PenTool, List } from "lucide-react";
+import { ArrowLeft, Edit3, List } from "lucide-react";
 import { Card, CardBody, Typography, Textarea } from "@material-tailwind/react";
 import Button from "@/components/Button";
 import SearchableSelect from "@/components/SearchableSelect";
@@ -144,7 +144,7 @@ export default function AnotacoesPage() {
         <CardBody className="p-6 md:p-10 flex flex-col gap-6">
           <div className="flex items-center gap-3 mb-2 pb-4 border-b border-gray-100">
             <div className={`p-2 rounded-lg ${lightBgClass}`}>
-              <PenTool className={`w-6 h-6 ${textClass}`} />
+              <Edit3 className={`w-6 h-6 ${textClass}`} />
             </div>
             <Typography variant="h6" className="font-bold text-brand-anotacoes">
               Registro de Notas
@@ -185,7 +185,6 @@ export default function AnotacoesPage() {
 
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <PenTool size={18} className={textClass} />
               <label className="text-sm font-bold text-gray-700">
                 Conteúdo
               </label>

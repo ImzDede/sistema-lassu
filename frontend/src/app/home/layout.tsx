@@ -73,13 +73,6 @@ function HomeInternal({ children }: { children: React.ReactNode }) {
                   />
                 </Link>
               )}
-              {/* Mobile Greeting */}
-              <Typography
-                variant="small"
-                className={`pt-4 font-bold text-xs ${isHomePage ? "block" : "hidden"} ${textClass}`}
-              >
-                Olá, {firstName}!
-              </Typography>
             </div>
 
             {/* 3. Desktop Greeting */}

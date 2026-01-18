@@ -25,6 +25,7 @@ interface Pergunta {
   tipo:
     | "texto"
     | "inteiro"
+    | "data" // <--- Adicionado tipo data
     | "unica_escolha"
     | "multipla_escolha"
     | "longo_texto";
@@ -96,10 +97,10 @@ export const FormularioBuilder: React.FC<FormularioBuilderProps> = ({
   const twColor = themeKey ? THEME_TW_MAP[themeKey] : "brand-purple";
   const resolvedTemaCor = themeKey ? THEME_MT_MAP[themeKey] : temaCor;
 
-  // Input interno ainda precisa da classe completa, pois é assim que ele foi feito para ser flexível
   const resolvedInputFocusClass = `focus-within:!border-${twColor} focus-within:!ring-1 focus-within:!ring-${twColor}`;
   const resolvedTextareaFocusClass = `focus:!border-${twColor} focus:!ring-1 focus:!ring-${twColor}`;
 
+  // AutoSave (Rascunho)
   useEffect(() => {
     if (onSalvarRascunho) {
       const timer = setTimeout(() => onSalvarRascunho(respostas), 2000);
@@ -191,6 +192,7 @@ export const FormularioBuilder: React.FC<FormularioBuilderProps> = ({
     }
   };
 
+  // --- RENDERIZAÇÃO DOS INPUTS ---
   const renderInputs = (pergunta: Pergunta) => {
     if (!deveExibirPergunta(pergunta)) return null;
     const valorAtual = respostas[pergunta.id];
@@ -206,10 +208,16 @@ export const FormularioBuilder: React.FC<FormularioBuilderProps> = ({
             focusColorClass={resolvedInputFocusClass}
           />
         );
+
+      // 1. INPUT INTEIRO
       case "inteiro":
         return (
           <Input
             type="number"
+            min={0}
+            onKeyDown={(e) => {
+              if (e.key === "-" || e.key === "e") e.preventDefault();
+            }}
             label=""
             placeholder={pergunta.enunciado}
             value={typeof valorAtual === "string" ? valorAtual : ""}
@@ -217,6 +225,19 @@ export const FormularioBuilder: React.FC<FormularioBuilderProps> = ({
             focusColorClass={resolvedInputFocusClass}
           />
         );
+
+      // 2. INPUT DATA
+      case "data":
+        return (
+          <Input
+            type="date"
+            label=""
+            value={typeof valorAtual === "string" ? valorAtual : ""}
+            onChange={(e) => handleSimples(pergunta.id, e.target.value)}
+            focusColorClass={resolvedInputFocusClass}
+          />
+        );
+
       case "longo_texto":
         return (
           <Textarea
@@ -321,32 +342,39 @@ export const FormularioBuilder: React.FC<FormularioBuilderProps> = ({
     }
   };
 
-  const validarPassoAtual = () => {
-    if (!secaoAtual) return true;
-    const obrigatorias = secaoAtual.perguntas.filter(
-      (p) => p.obrigatoria && deveExibirPergunta(p),
-    );
-    for (const p of obrigatorias) {
-      const resp = respostas[p.id];
-      const isVazio =
-        !resp ||
-        (typeof resp === "string" && resp.trim() === "") ||
-        (Array.isArray(resp) && resp.length === 0) ||
-        (typeof resp === "object" && !Array.isArray(resp) && !resp.id);
-      if (isVazio) {
-        showFeedback(`A pergunta "${p.enunciado}" é obrigatória.`, "error");
-        return false;
+  // 3. VALIDAÇÃO GLOBAL (Só roda no Finalizar)
+  const validarTudoParaFinalizar = () => {
+    // Varre TODAS as seções, não só a atual
+    for (const secao of modeloJson.data.secoes) {
+      const obrigatorias = secao.perguntas.filter(
+        (p) => p.obrigatoria && deveExibirPergunta(p),
+      );
+
+      for (const p of obrigatorias) {
+        const resp = respostas[p.id];
+        const isVazio =
+          !resp ||
+          (typeof resp === "string" && resp.trim() === "") ||
+          (Array.isArray(resp) && resp.length === 0) ||
+          (typeof resp === "object" && !Array.isArray(resp) && !resp.id);
+
+        if (isVazio) {
+          showFeedback(
+            `A pergunta "${p.enunciado}" (na seção ${secao.titulo}) é obrigatória.`,
+            "error",
+          );
+          return false;
+        }
       }
     }
     return true;
   };
 
   const proximoPasso = () => {
-    if (validarPassoAtual()) {
-      setPassoAtual((prev) => prev + 1);
-      rolarParaTopo();
-    }
+    setPassoAtual((prev) => prev + 1);
+    rolarParaTopo();
   };
+
   const passoAnterior = () => {
     setPassoAtual((prev) => prev - 1);
     rolarParaTopo();
@@ -428,7 +456,7 @@ export const FormularioBuilder: React.FC<FormularioBuilderProps> = ({
               </Button>
               <Button
                 onClick={() => {
-                  if (validarPassoAtual()) onFinalizar(respostas);
+                  if (validarTudoParaFinalizar()) onFinalizar(respostas);
                 }}
                 fullWidth
                 accentColorClass={twColor}

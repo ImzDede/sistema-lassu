@@ -10,10 +10,10 @@ export function useForm() {
   const [formData, setFormData] = useState<FormFilledDTO | null>(null);
   const { showFeedback } = useFeedback();
 
-  // Função auxiliar para gerar a chave do LocalStorage
+  // Helper para chave do LocalStorage
   const getLocalKey = (type: FormType, patientId: string) => `rascunho_${type}_${patientId}`;
 
-  // 1. BUSCAR DADOS (Backend + LocalStorage)
+  // 1. BUSCAR DADOS (Merge Backend + LocalStorage)
   const fetchForm = useCallback(async (type: FormType, patientId: string) => {
     if (!patientId) return;
     const localKey = getLocalKey(type, patientId);
@@ -21,53 +21,48 @@ export function useForm() {
     try {
       setLoading(true);
       
-      // A. Busca a estrutura e dados do servidor
+      // Busca do Backend
       let data = type === "ANAMNESE" 
         ? await formService.getAnamnese(patientId)
         : await formService.getSintese(patientId);
 
-      // B. Verifica se tem um rascunho local mais recente
+      // Busca do LocalStorage (Rascunho Offline)
       const localRaw = localStorage.getItem(localKey);
       
       if (localRaw) {
         const localData = JSON.parse(localRaw);
-        
+        // Mescla as respostas locais na estrutura do banco
         data.secoes = data.secoes.map(secao => ({
             ...secao,
             perguntas: secao.perguntas.map(perg => {
-                // Se tiver resposta no LocalStorage para essa pergunta, usa ela
                 if (localData[perg.id] !== undefined) {
                     return { ...perg, resposta: localData[perg.id] };
                 }
                 return perg;
             })
         }));
-        
-        // Opcional: Avisar que carregou do backup local
-        // showFeedback("Rascunho recuperado do dispositivo.", "info");
       }
 
       setFormData(data);
     } catch (error: any) {
       console.error(`Erro ao buscar ${type}:`, error);
-      showFeedback("Erro ao carregar o formulário. Verifique sua conexão.", "error");
+      showFeedback("Erro ao carregar o formulário.", "error");
     } finally {
       setLoading(false);
     }
   }, [showFeedback]);
 
-  // 2. SALVAR (Híbrido: LocalStorage Primeiro -> Backend Depois)
+  // 2. SALVAR (Offline First -> Backend)
   const saveForm = async (type: FormType, patientId: string, rawData: any, finalizar: boolean) => {
     if (!patientId) return false;
     
-    // SEGURANÇA 1: Salva no LocalStorage (Offline support)
+    // 1. Salva no LocalStorage (Garantia Offline)
     const localKey = getLocalKey(type, patientId);
     localStorage.setItem(localKey, JSON.stringify(rawData));
 
-    // Validação básica de versão
+    // Validação de Versão
     if (!formData || !formData.versaoId) {
-        // Se não tiver versão, não dá pra mandar pro back, mas já salvamos localmente acima!
-        if (finalizar) showFeedback("Erro de versão. Recarregue a página.", "error");
+        if (finalizar) showFeedback("Erro: Versão não identificada. Recarregue a página.", "error");
         return false;
     }
 
@@ -76,38 +71,39 @@ export function useForm() {
     try {
       if (finalizar) setLoading(true);
 
-      // Tenta enviar para o Backend (Online)
+      // 2. Tenta enviar para o Backend
       const savedData = type === "ANAMNESE"
         ? await formService.submitAnamnese(patientId, versaoId, rawData, finalizar)
         : await formService.submitSintese(patientId, versaoId, rawData, finalizar);
 
-      // Sucesso no Backend!
       setFormData(savedData);
       
       if (finalizar) {
-        // Se finalizou com sucesso, LIMPA o rascunho local pra não ficar lixo
-        localStorage.removeItem(localKey);
-        showFeedback("Formulário finalizado e sincronizado!", "success");
-      } else {
-        // Apenas rascunho salvo na nuvem
-        // showFeedback("Salvo na nuvem", "success"); // Opcional, pode ser muito barulhento
+        localStorage.removeItem(localKey); // Limpa rascunho se finalizou
+        showFeedback("Formulário finalizado com sucesso!", "success");
       }
       return true;
 
     } catch (error: any) {
       console.error(`Erro ao salvar ${type}:`, error);
       
-      // FALHA NO BACKEND (Offline ou Erro 500)
+      // Identifica se é erro de conexão ou erro do servidor
+      const isErroDeRede = error.code === "ERR_NETWORK" || !error.response;
+
       if (finalizar) {
-        // Se tentou finalizar e deu erro, avisa forte
-        const msg = error.response?.data?.message || "Sem conexão. Salvo apenas no dispositivo.";
+        const msg = error.response?.data?.message || "Erro ao salvar formulário.";
         showFeedback(msg, "warning"); 
-        return false; // Não finalizou
+        return false;
       } else {
-        // Se for só AutoSave (Rascunho), falhar silenciosamente,
-        console.warn("Sem internet. Rascunho salvo apenas localmente.");
+        // Lógica de Log para AutoSave
+        if (isErroDeRede) {
+             console.warn("⚠️ Sem internet. Rascunho salvo localmente.");
+        } else {
+             console.warn("❌ Erro no AutoSave (Backend recusou):", error.response?.data);
+        }
       }
-      return true; // Retorna true porque "salvou" localmente
+      // Retorna true pois salvou no LocalStorage com sucesso
+      return true; 
     } finally {
       setLoading(false);
     }

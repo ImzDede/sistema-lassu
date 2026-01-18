@@ -343,7 +343,7 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
             ))
           ) : (
             <div className="text-center py-4 text-gray-400 text-xs uppercase tracking-wider">
-              Nenhuma sessão registrada
+
             </div>
           )}
         </FolderAccordion>
@@ -415,7 +415,7 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
           accentColor="brand-encaminhamento"
         >
           <div className="text-center py-4 text-gray-400 text-xs uppercase tracking-wider">
-            Sem histórico
+
           </div>
         </FolderAccordion>
 
@@ -433,7 +433,7 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
         >
           {/* Apenas exemplo, futuramente listar as anotações */}
           <div className="text-center py-4 text-gray-400 text-xs uppercase tracking-wider">
-            Nenhuma anotação
+
           </div>
         </FolderAccordion>
       </div>

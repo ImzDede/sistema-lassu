@@ -41,7 +41,7 @@ export const patientService = {
   },
 
   // Encaminhar
-  async referPatient(patientId: string, formData: FormData): Promise<ReferralResponse> {
+  async referPatient(patientId: string, formData?: FormData): Promise<ReferralResponse> {
     const response = await api.post(`/patients/${patientId}/refer`, formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });

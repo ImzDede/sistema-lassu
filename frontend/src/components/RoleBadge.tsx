@@ -13,13 +13,13 @@ export default function RoleBadge({ user }: RoleBadgeProps) {
 
   // Prioridade: Admin > Cadastro (Cadastro) > Atendimento > Colaboradora (Padrão)
   if (user.permAdmin) {
-    label = "Administradora";
+    label = "Professora";
     colorClass = "bg-brand-purple/10 text-brand-purple border border-brand-purple/20";
   } else if (user.permAtendimento && !user.permCadastro) {
-    label = "Atendimento";
+    label = "Terapeuta";
     colorClass = "bg-brand-peach/20 text-brand-dark border border-brand-peach/30";
   } else if (user.permCadastro) {
-    label = "Cadastro";
+    label = "Administrativo";
     colorClass = "bg-brand-pink/20 text-brand-dark border border-brand-pink/30";
   }
 

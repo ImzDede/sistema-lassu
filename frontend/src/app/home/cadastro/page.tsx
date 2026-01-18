@@ -5,11 +5,11 @@ import { Typography, Spinner } from "@material-tailwind/react";
 import { 
   Calendar, 
   FileText, 
-  ClipboardList, 
   Share, 
-  PenTool, 
+  Edit3, 
   Users, 
-  User 
+  User,
+  Stethoscope 
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import CardCadastro from "@/components/CardCadastro";
@@ -33,9 +33,9 @@ export default function Cadastro() {
   const items = {
     sessao: { label: "SESSÃO", href: "/home/cadastro/sessoes", icon: Calendar, color: "#6D538B" },
     sintese: { label: "SÍNTESE", href: "/home/cadastro/sintese", icon: FileText, color: "#F2B694" },
-    anamnese: { label: "ANAMNESE", href: "/home/cadastro/anamnese", icon: ClipboardList, color: "#F2A9A2" },
+    anamnese: { label: "ANAMNESE", href: "/home/cadastro/anamnese", icon: Stethoscope, color: "#F2A9A2" },
     encaminhamento: { label: "ENCAMINHAMENTO", href: "/home/cadastro/encaminhamento", icon: Share, color: "#D9A3B6" },
-    anotacao: { label: "ANOTAÇÃO", href: "/home/cadastro/anotacoes", icon: PenTool, color: "#71787E" },
+    anotacao: { label: "ANOTAÇÃO", href: "/home/cadastro/anotacoes", icon: Edit3, color: "#71787E" },
     paciente: { label: "PACIENTE", href: "/home/cadastro/paciente", icon: Users, color: "#C2A598" }, 
     usuario: { label: "TERAPEUTA", href: "/home/cadastro/extensionista", icon: User, color: "#A78FBF" }, 
   };
@@ -64,7 +64,7 @@ export default function Cadastro() {
       
       {/* Header */}
       <div className="text-center lg:text-left mb-8">
-        <Typography variant="h4" className="font-bold uppercase text-brand-dark tracking-wide">
+        <Typography variant="h4" className="font-bold uppercase text-brand-terracota tracking-wide">
           CADASTRO RÁPIDO
         </Typography>
         <Typography variant="paragraph" className="text-gray-500 font-normal text-sm mt-1">

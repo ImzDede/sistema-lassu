@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Lock, CheckCircle } from "lucide-react";
+import { ArrowLeft, Lock } from "lucide-react";
 import { Card, CardBody, Typography } from "@material-tailwind/react";
 import Input from "@/components/Input";
 import Button from "@/components/Button";
