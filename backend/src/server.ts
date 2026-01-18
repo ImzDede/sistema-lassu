@@ -25,7 +25,7 @@ app.use('/availability', availabilityRoutes);
 app.use('/notifications', notificationRoutes);
 app.use('/patients', patientRoutes);
 app.use('/sessions', sessionRoutes);
-//app.use('/forms', formRoutes);
+app.use('/forms', formRoutes);
 
 app.use(handleError)
 app.use('/arquivos', express.static(uploadConfig.directory));

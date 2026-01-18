@@ -154,6 +154,7 @@ CREATE TABLE formulario_preenchidos (
     paciente_id UUID REFERENCES pacientes(id) ON DELETE CASCADE,
     versao_id UUID REFERENCES formulario_versoes(id),
     status VARCHAR(20) DEFAULT 'rascunho' CHECK (status IN ('rascunho', 'finalizado')),
+    porcentagem_conclusao INT DEFAULT 0,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -164,7 +165,10 @@ CREATE TABLE formulario_respostas (
     formulario_id UUID REFERENCES formulario_preenchidos(id) ON DELETE CASCADE,
     pergunta_id UUID REFERENCES formulario_perguntas(id),
     texto_resposta TEXT,
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMP DEFAULT NOW(),
+
+    CONSTRAINT unique_resposta_por_pergunta 
+    UNIQUE (formulario_id, pergunta_id);
 );
 
 -- 8. Selecionados
