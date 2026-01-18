@@ -76,7 +76,9 @@ export function useForm() {
         ? await formService.submitAnamnese(patientId, versaoId, rawData, finalizar)
         : await formService.submitSintese(patientId, versaoId, rawData, finalizar);
 
-      setFormData(savedData);
+      if (savedData && savedData.secoes) {
+         setFormData(savedData);
+      }
       
       if (finalizar) {
         localStorage.removeItem(localKey); // Limpa rascunho se finalizou
