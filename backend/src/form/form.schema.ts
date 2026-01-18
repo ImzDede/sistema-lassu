@@ -75,14 +75,8 @@ const selectedOptionSchema = z.object({
 
 const answerItemSchema = z.object({
     perguntaId: z.string().uuid(HTTP_ERRORS.BAD_REQUEST.VALIDATION.UUID),
-    valor: z.string().optional().nullable(),
-    opcoes: z.array(selectedOptionSchema).optional()
-}).refine(data => {
-    const temValor = data.valor !== undefined && data.valor !== null && data.valor !== '';
-    const temOpcoes = data.opcoes && data.opcoes.length > 0;
-    return temValor || temOpcoes;
-}, {
-    message: "A resposta deve conter um 'valor' ou 'opcoes'."
+    valor: z.string().optional().nullable(), // Aceita string, null ou undefined
+    opcoes: z.array(selectedOptionSchema).optional() // Aceita array ou undefined
 });
 
 export const formSubmitSchema = z.object({

@@ -122,6 +122,10 @@ export class FormService {
             throw new AppError(HTTP_ERRORS.FORBIDDEN.PATIENT.NOT_YOURS, 403);
         }
 
+        if (patient.status == 'encaminhada') {
+            throw new AppError('Paciente já encaminhada, contate a adminstração.', 403);
+        }
+
         return await withTransaction(async (client) => {
             const repository = new FormRepository(client);
 
@@ -177,17 +181,9 @@ export class FormService {
                 status = 'finalizado';
             }
 
-            const filledRow = await repository.updateFilledForm(formRow.id, status, percentage);
-
-            const { sectionRows, questionRows, optionRows } = await this.getVersion(formRow.versao_id)
+            await repository.updateFilledForm(formRow.id, status, percentage);
 
             return {
-                filledRow,
-                sectionRows,
-                questionRows,
-                optionRows,
-                answerRows,
-                selectedOptionRows,
                 missing: missingMandatory
             };
         });
@@ -235,8 +231,8 @@ export class FormService {
         answeredIds: string[],
         selectedOptionIds: string[]
     ) {
-        let totalActiveQuestions = 0;
-        let totalAnswered = 0;
+        let totalActiveMandatory = 0;
+        let totalAnsweredMandatory = 0;
         const missingMandatory: string[] = [];
 
         for (const question of allQuestions) {
@@ -248,21 +244,21 @@ export class FormService {
                 }
             }
 
-            if (isActive) {
-                totalActiveQuestions++;
+            if (isActive && question.obrigatoria) {
+                totalActiveMandatory++;
 
                 const isAnswered = answeredIds.includes(question.id);
 
                 if (isAnswered) {
-                    totalAnswered++;
-                } else if (question.obrigatoria) {
-                    missingMandatory.push(question.enunciado);
+                    totalAnsweredMandatory++;
+                } else {
+                    missingMandatory.push(question.id);
                 }
             }
         }
 
-        const percentage = totalActiveQuestions > 0
-            ? Math.round((totalAnswered / totalActiveQuestions) * 100)
+        const percentage = totalActiveMandatory > 0
+            ? Math.round((totalAnsweredMandatory / totalActiveMandatory) * 100)
             : 0;
 
         return { percentage, missingMandatory };

@@ -36,9 +36,7 @@ export class FormController {
         const { targetId } = req.validated.params;
         const body = req.validated.body;
         const result = await service.submitResponse('ANAMNESE', userId, targetId, body);
-        const data = FormMapper.toGetFilled(result)
-        const { missing } = result
-        res.status(200).json(response(data, { missing }));
+        res.status(200).json(response(result));
     }
 
     async submitSintese(req: Request, res: Response) {
@@ -46,9 +44,7 @@ export class FormController {
         const { targetId } = req.validated.params;
         const body = req.validated.body;
         const result = await service.submitResponse('SINTESE', userId, targetId, body);
-        const data = FormMapper.toGetFilled(result)
-        const { missing } = result
-        res.status(200).json(response(data, { missing }));
+        res.status(200).json(response(result));
     }
 
     async getAnamnese(req: Request, res: Response) {

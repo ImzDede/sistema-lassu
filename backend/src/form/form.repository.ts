@@ -90,7 +90,7 @@ export class FormRepository {
             VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING *
         `
-        const values = [optionId, questionId, data.enunciado, data.ordem, data.requerTexto, data.labelTexto]
+        const values = [optionId, questionId, data.enunciado, data.ordem, data.requerTexto, data.labelTexto ?? null]
 
         const result = await this.client.query(query, values)
         return result.rows[0]
@@ -146,7 +146,7 @@ export class FormRepository {
         return result.rows[0]
     }
 
-    async updateFilledForm(id: string, status: 'rascunho' | 'finalizado',  percentage: number): Promise<FormFilledRow> {
+    async updateFilledForm(id: string, status: 'rascunho' | 'finalizado', percentage: number): Promise<FormFilledRow> {
         const query = `
             UPDATE formulario_preenchidos
             SET status = $1,

@@ -14,7 +14,8 @@ export type NotificationIdArrayDTO = z.infer<typeof notificationIdArraySchema>;
 
 export const notificationListSchema = paginationSchema.extend({
     orderBy: z.enum(['created_at']).default('created_at'),
-    lida: z.enum(['true', 'false']).optional()
+    lida: z.enum(['true', 'false']).optional(),
+    direction: z.enum(['ASC', 'DESC']).default('DESC')
 });
 
 export type NotificationListDTO = z.infer<typeof notificationListSchema>;

@@ -9,7 +9,7 @@ export type PatientRow = {
     cpf: string,
     telefone: string,
     terapeuta_id: string,
-    status: string,
+    status: 'atendimento' | 'encaminhada',
     created_at: string
 }
 
