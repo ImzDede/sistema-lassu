@@ -47,6 +47,27 @@ import ConfirmationDialog from "@/components/ConfirmationDialog";
 import { AnamnesePDF } from "@/components/pdfs/AnamnesePDF";
 import { SintesePDF } from "@/components/pdfs/SintesePDF";
 
+// Helper para formatar data ignorando timezone (UTC) - Resolve o problema do dia anterior
+const formatDateUTC = (dateString: string) => {
+  if (!dateString) return "-";
+  // Pega apenas a parte da data YYYY-MM-DD
+  const parts = dateString.split("T")[0].split("-");
+  // Retorna DD/MM/YYYY sem converter para local time
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+};
+
+// Helper para traduzir status e cor
+const getStatusConfig = (status: string) => {
+  switch (status) {
+    case "realizada": return { label: "Realizada", color: "text-green-600 font-bold" };
+    case "falta": return { label: "Falta", color: "text-red-500 font-bold" };
+    case "cancelada_paciente": return { label: "Canc. pelo Paciente", color: "text-orange-500 font-bold" };
+    case "cancelada_terapeuta": return { label: "Canc. pela Terapeuta", color: "text-orange-500 font-bold" };
+    case "agendada": 
+    default: return { label: "Agendada", color: "text-blue-500 font-medium" };
+  }
+};
+
 export default function PatientDetails({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { id } = params;
@@ -114,6 +135,7 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
           orderBy: "dia",
           direction: "ASC",
         });
+        console.log("DEBUG SESSÕES DO BACKEND:", list); // LOG DEBUG
         setSessionsList(Array.isArray(list) ? list : []);
       } catch (sessionErr) {
         setSessionsList([]);
@@ -174,10 +196,8 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
     );
   };
 
-  // --- LÓGICA DE VALIDAÇÃO (100% ou Finalizado) ---
+  // Lógica de formulário finalizado (100% ou status 'finalizado')
   const isFormFinalized = (formData: any, progress: number) => {
-    // Considera finalizado se status for 'finalizado', boolean 'finalizada' for true
-    // OU se o progresso for 100% (para garantir que ícone mude visualmente)
     return (
       formData?.status === 'finalizado' || 
       formData?.finalizada === true || 
@@ -190,7 +210,7 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
 
   const handleCreateReferral = () => {
     if (!anamneseFinalizada || !sinteseFinalizada) {
-        showFeedback("Para encaminhar, a Anamnese e a Síntese devem estar 100% concluídas e finalizadas.", "warning");
+        showFeedback("Para encaminhar, a Anamnese e a Síntese devem estar finalizadas.", "warning");
         return;
     }
     handleNavigate("encaminhamento", 0, "create");
@@ -293,6 +313,7 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 pb-20 font-sans">
+      {/* HEADER */}
       <div className="pt-8 pb-4 px-4 md:px-8 max-w-6xl mx-auto w-full flex justify-between">
         <div className="flex items-center gap-4">
           <button
@@ -340,6 +361,7 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
         </Menu>
       </div>
 
+      {/* PERFIL */}
       <div className="px-4 md:px-8 max-w-6xl mx-auto w-full mb-8">
         <ProfileCard
           name={patient.nome}
@@ -405,7 +427,10 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
         </ProfileCard>
       </div>
 
+      {/* PASTAS */}
       <div className="px-4 md:px-8 max-w-6xl mx-auto w-full flex flex-col gap-2">
+        
+        {/* 1. SESSÕES (CORRIGIDA DATA E STATUS) */}
         <FolderAccordion
           title="Sessões"
           tabColorClass="bg-brand-sessao"
@@ -418,33 +443,41 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
           accentColor="brand-sessao"
         >
           {sessionsList.length > 0 ? (
-            sessionsList.map((sessao, idx) => (
-              <FolderItemCard
-                key={sessao.id || idx}
-                title={`${idx + 1}ª Sessão`}
-                subtitle={
-                  <span>
-                    Sala {sessao.sala} |{" "}
-                    {sessao.dia
-                      ? new Date(sessao.dia).toLocaleDateString("pt-BR")
-                      : "-"}{" "}
-                    às {sessao.hora}:00
-                  </span>
-                }
-                icon={<Clock size={16} />}
-                highlight={idx === sessionsList.length - 1}
-                onEdit={
-                  canEditGeneral && !hasEncaminhamento
-                    ? () => handleNavigate("sessoes", sessao.id, "edit")
-                    : undefined
-                }
-              />
-            ))
+            sessionsList.map((sessao, idx) => {
+              // Pega a configuração de cor e label do status
+              const statusConfig = getStatusConfig(sessao.status);
+              
+              return (
+                <FolderItemCard
+                  key={sessao.id || idx}
+                  title={`${idx + 1}ª Sessão`}
+                  // SUBTÍTULO COM DATA CORRETA (UTC) E STATUS COLORIDO
+                  subtitle={
+                    <div className="flex flex-col gap-1 mt-1">
+                      <span>
+                        Sala {sessao.sala} | {formatDateUTC(sessao.dia)} às {sessao.hora}:00
+                      </span>
+                      <span className={`text-[10px] uppercase ${statusConfig.color}`}>
+                        {statusConfig.label}
+                      </span>
+                    </div>
+                  }
+                  icon={<Clock size={16} />}
+                  highlight={idx === sessionsList.length - 1}
+                  onEdit={
+                    canEditGeneral && !hasEncaminhamento
+                      ? () => handleNavigate("sessoes", sessao.id, "edit")
+                      : undefined
+                  }
+                />
+              );
+            })
           ) : (
             <div></div>
           )}
         </FolderAccordion>
 
+        {/* 2. ANAMNESE */}
         <FolderAccordion
           title="Anamnese"
           tabColorClass="bg-brand-anamnese"
@@ -458,11 +491,8 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
               title="Anamnese Inicial"
               variant="progress"
               progress={formsProgress.anamnese}
-              
-              // --- CORREÇÃO: COR DA BARRA ---
               progressColorClass="[&>div]:bg-brand-anamnese"
               
-              // --- CORREÇÃO: ÍCONE MUDAR COM 100% ---
               onView={
                 anamneseFinalizada || !canEditGeneral
                   ? () => handleNavigate("anamnese", "current", "view")
@@ -502,6 +532,7 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
           )}
         </FolderAccordion>
 
+        {/* 3. SÍNTESE */}
         <FolderAccordion
           title="Síntese"
           tabColorClass="bg-brand-sintese"
@@ -556,6 +587,7 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
           )}
         </FolderAccordion>
 
+        {/* 4. ENCAMINHAMENTO */}
         <FolderAccordion
           title="Encaminhamento"
           tabColorClass="bg-brand-encaminhamento"
@@ -587,6 +619,7 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
           )}
         </FolderAccordion>
 
+        {/* 5. ANOTAÇÕES */}
         <FolderAccordion
           title="Anotações"
           tabColorClass="bg-brand-anotacoes"
@@ -609,8 +642,7 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
                 title={note.titulo}
                 subtitle={
                   <span className="line-clamp-1">
-                    {new Date(note.data).toLocaleDateString("pt-BR")} |{" "}
-                    {note.resumo}
+                    {formatDateUTC(note.data)} | {note.resumo}
                   </span>
                 }
                 icon={<Edit3 size={16} />}

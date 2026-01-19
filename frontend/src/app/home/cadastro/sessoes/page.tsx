@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Users, Calendar, Clock, MapPin } from "lucide-react";
+import { ArrowLeft, Users, Calendar, Clock, MapPin, CheckCircle } from "lucide-react"; // Importei CheckCircle
 import { Card, CardBody, Typography, Spinner } from "@material-tailwind/react";
 import Button from "@/components/Button";
 import Input from "@/components/Input";
@@ -22,6 +22,7 @@ type FieldErrors = {
   dia?: string;
   hora?: string;
   sala?: string;
+  status?: string;
 };
 
 export default function RegisterSession() {
@@ -42,10 +43,20 @@ export default function RegisterSession() {
   const [selectedRoom, setSelectedRoom] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedHour, setSelectedHour] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("agendada");
   const [anotacoes, setAnotacoes] = useState("");
   const [isLoadingData, setIsLoadingData] = useState(false);
 
   const [errors, setErrors] = useState<FieldErrors>({});
+
+  // Opções de Status
+  const statusOptions = [
+    { label: "Agendada", value: "agendada" },
+    { label: "Realizada", value: "realizada" },
+    { label: "Falta", value: "falta" },
+    { label: "Cancelada pelo Paciente", value: "cancelada_paciente" },
+    { label: "Cancelada pela Terapeuta", value: "cancelada_terapeuta" },
+  ];
 
   const applyBackendErrors = (err: any) => {
     const details = err?.response?.data?.error?.details as Record<string, string[]> | undefined;
@@ -56,6 +67,7 @@ export default function RegisterSession() {
     if (details.dia?.length) next.dia = details.dia[0];
     if (details.hora?.length) next.hora = details.hora[0];
     if (details.sala?.length) next.sala = details.sala[0];
+    if (details.status?.length) next.status = details.status[0];
 
     if (Object.keys(next).length > 0) {
       setErrors(next);
@@ -76,6 +88,7 @@ export default function RegisterSession() {
           setSelectedHour(String(data.hora));
           setSelectedRoom(String(data.sala));
           setAnotacoes(data.anotacoes || "");
+          setSelectedStatus(data.status || "agendada");
 
           if (!preSelectedPatientName && data.pacienteId) {
             fetchPatients({ page: 1, limit: 1, status: "atendimento" } as any);
@@ -164,16 +177,24 @@ export default function RegisterSession() {
         hora: Number(selectedHour),
         sala: Number(selectedRoom),
         anotacoes: anotacoes,
+        status: selectedStatus, 
       };
 
       try {
         if (isEditing) {
+          // 1. Atualiza dados gerais da sessão
           await sessionService.update(Number(sessionId), {
             dia: payload.dia,
             hora: payload.hora,
             sala: payload.sala,
             anotacoes: payload.anotacoes,
           });
+
+          // 2. Atualiza o Status explicitamente usando a rota dedicada (PATCH)
+          if (payload.status) {
+            await sessionService.updateStatus(Number(sessionId), payload.status);
+          }
+
           showFeedback("Sessão atualizada com sucesso!", "success");
         } else {
           await sessionService.create(payload as any);
@@ -182,14 +203,11 @@ export default function RegisterSession() {
 
         setTimeout(() => router.back(), 800);
       } catch (error: any) {
-        // ✅ tenta mapear erros do back (Zod/AppError)
         const mapped = applyBackendErrors(error);
-
         if (error?.response?.status === 409) {
           showFeedback("Conflito: Horário ou Sala indisponível.", "error");
           return;
         }
-
         if (!mapped) showFeedback("Erro ao salvar sessão.", "error");
       }
     });
@@ -297,6 +315,23 @@ export default function RegisterSession() {
                 accentColorClass="brand-sessao"
                 error={errors.sala}
               />
+
+              {isEditing && (
+                <Select
+                  label="Status da Sessão"
+                  value={selectedStatus}
+                  onChange={(v) => {
+                    setSelectedStatus(v);
+                    setErrors((prev) => ({ ...prev, status: "" }));
+                  }}
+                  options={statusOptions}
+                  required
+                  placeholder="Selecione o status"
+                  leftIcon={CheckCircle}
+                  accentColorClass="brand-sessao"
+                  error={errors.status}
+                />
+              )}
             </div>
 
             <div className="flex flex-col-reverse lg:flex-row gap-4 mt-4 pt-4 border-t border-gray-200">
@@ -323,4 +358,3 @@ export default function RegisterSession() {
     </div>
   );
 }
-

@@ -37,17 +37,24 @@ export function FolderItemCard({
         border-y border-r border-gray-100 first:rounded-t-lg last:rounded-b-lg mb-[-1px]
       `}
     >
-      {/* Container Esquerdo (Ícone + Textos + Barra) */}
+      {/* Container Esquerdo */}
       <div className="flex items-center gap-4 flex-1 w-full min-w-0">
+        {icon && (
+          <div className={`p-2 rounded-full flex-shrink-0 ${highlight ? "bg-brand-purple/10 text-brand-purple" : "bg-gray-100 text-gray-500"}`}>
+            {icon}
+          </div>
+        )}
+        
         <div className="flex flex-col flex-1 w-full">
           <Typography variant="h6" color="blue-gray" className="font-bold text-sm truncate">
             {title}
           </Typography>
           
+          {/* CORREÇÃO AQUI: Trocado Typography por div e removido 'truncate' para permitir multiline (status) */}
           {variant === "default" && subtitle && (
-            <Typography variant="small" className="text-xs text-gray-500 font-normal mt-0.5 truncate">
+            <div className="text-xs text-gray-500 font-normal mt-0.5">
               {subtitle}
-            </Typography>
+            </div>
           )}
 
           {variant === "progress" && (
@@ -73,10 +80,10 @@ export function FolderItemCard({
         {onEdit && (
           <button 
             onClick={(e) => { e.stopPropagation(); onEdit(); }}
-            className="p-2 rounded-full transition-colors text-gray-600 hover:text-brand-purple hover:bg-brand-purple/10"
+            className="p-2 rounded-full transition-colors text-gray-500 hover:text-brand-purple hover:bg-brand-purple/10 focus:outline-none"
             title="Editar"
           >
-            <Edit2 size={18} />
+            <Edit2 size={20} />
           </button>
         )}
 
@@ -84,7 +91,7 @@ export function FolderItemCard({
         {onView && !onEdit && (
           <button 
             onClick={(e) => { e.stopPropagation(); onView(); }}
-            className="p-2 rounded-full transition-colors text-gray-400 hover:text-brand-purple hover:bg-brand-purple/10"
+            className="p-2 rounded-full transition-colors text-gray-500 hover:text-brand-purple hover:bg-brand-purple/10 focus:outline-none"
             title="Visualizar"
           >
             <Eye size={20} />
