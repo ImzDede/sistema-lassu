@@ -3,9 +3,9 @@ import { FormFilledDTO } from "@/types/form";
 
 // --- FUNÇÃO TRADUTORA (ADAPTER) ---
 const adaptarParaBackend = (
-  respostasRaw: any, 
-  finalizar: boolean, 
-  versaoId: string, 
+  respostasRaw: any,
+  finalizar: boolean,
+  versaoId: string,
   pacienteId: string
 ): any => {
 
@@ -58,7 +58,7 @@ export const formService = {
 
   async submitAnamnese(patientId: string, versaoId: string, rawData: any, finalizar: boolean): Promise<FormFilledDTO> {
     const payload = adaptarParaBackend(rawData, finalizar, versaoId, patientId);
-    
+
     try {
       const response = await api.put(`/forms/anamnese/${patientId}`, payload, { timeout: 30000 });
       return response.data.data || response.data;
@@ -77,15 +77,15 @@ export const formService = {
   },
 
   async submitSintese(patientId: string, versaoId: string, rawData: any, finalizar: boolean): Promise<FormFilledDTO> {
-     const payload = adaptarParaBackend(rawData, finalizar, versaoId, patientId);
-     try {
-       const response = await api.put(`/forms/sintese/${patientId}`, payload, { timeout: 30000 });
-       return response.data.data || response.data;
-     } catch (error: any) {
-       if (error.response?.data?.error?.details) {
-         console.error("🚨 DETALHES DO ERRO DE VALIDAÇÃO:", JSON.stringify(error.response.data.error.details, null, 2));
-       }
-       throw error;
-     }
+    const payload = adaptarParaBackend(rawData, finalizar, versaoId, patientId);
+    try {
+      const response = await api.put(`/forms/sintese/${patientId}`, payload, { timeout: 30000 });
+      return response.data.data || response.data;
+    } catch (error: any) {
+      if (error.response?.data?.error?.details) {
+        console.error("🚨 DETALHES DO ERRO DE VALIDAÇÃO:", JSON.stringify(error.response.data.error.details, null, 2));
+      }
+      throw error;
+    }
   },
 };

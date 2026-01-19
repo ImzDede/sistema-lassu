@@ -1,7 +1,9 @@
-import pool from "../config/db";
+import { Pool, PoolClient } from "pg";
 import { AvailabilityRow } from "./availability.type";
 
 export class AvailabilityRepository {
+    constructor (private readonly client: Pool | PoolClient) {}
+
     async create(
         userId: string,
         data: {
@@ -15,7 +17,7 @@ export class AvailabilityRepository {
                 RETURNING dia_semana, hora_inicio, hora_fim;
             `;
 
-        const result = await pool.query(query, [userId, data.diaSemana, data.horaInicio, data.horaFim])
+        const result = await this.client.query(query, [userId, data.diaSemana, data.horaInicio, data.horaFim])
         return result.rows[0];
     }
 
@@ -26,11 +28,11 @@ export class AvailabilityRepository {
             WHERE usuario_id = $1
         `;
 
-        const result = await pool.query(query, [userId]);
+        const result = await this.client.query(query, [userId]);
         return result.rows;
     }
 
     async deleteByUser(userId: string) {
-        await pool.query('DELETE FROM disponibilidades WHERE usuario_id = $1', [userId]);
+        await this.client.query('DELETE FROM disponibilidades WHERE usuario_id = $1', [userId]);
     }
 }

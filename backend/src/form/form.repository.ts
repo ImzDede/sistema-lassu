@@ -5,9 +5,9 @@ export class FormRepository {
 
     constructor(private readonly client: PoolClient | Pool) { }
 
-    async getIdModelByTitle(modelTitle: string): Promise<{ id: string } | null> {
+    async getIdModelByTitle(modelTitle: 'ANAMNESE' | 'SINTESE'): Promise<string> {
         const result = await this.client.query(`SELECT id FROM formulario_modelos WHERE titulo = $1`, [modelTitle]);
-        return result.rows[0] ?? null
+        return result.rows[0].id
     }
 
     async getVersionIdActive(modelId: string): Promise<string> {
@@ -157,6 +157,142 @@ export class FormRepository {
         `;
         const result = await this.client.query(query, [status, percentage, id]);
         return result.rows[0]
+    }
+
+    async upsertAnswersBatch(
+        answerIds: string[],
+        formId: string,
+        questionIds: string[],
+        values: (string | null)[]
+    ) {
+        // CORRIGIDO: valor -> texto_resposta
+        const query = `
+        INSERT INTO formulario_respostas (
+            id,
+            formulario_id,
+            pergunta_id,
+            texto_resposta
+        )
+        SELECT
+            unnest($1::uuid[]),
+            $2,
+            unnest($3::uuid[]),
+            unnest($4::text[])
+        ON CONFLICT (formulario_id, pergunta_id)
+        DO UPDATE SET texto_resposta = EXCLUDED.texto_resposta
+        RETURNING id, pergunta_id;
+    `;
+
+        const { rows } = await this.client.query(query, [
+            answerIds,
+            formId,
+            questionIds,
+            values
+        ]);
+
+        return rows as Array<{ id: string; pergunta_id: string }>;
+    }
+
+    async clearSelectedOptionsBatch(
+        answerIds: string[]
+    ) {
+        // CORRIGIDO: formulario_resposta_opcoes -> formulario_selecionados
+        const query = `
+            DELETE FROM formulario_selecionados
+            WHERE resposta_id = ANY($1::uuid[]);
+        `;
+
+        await this.client.query(query, [answerIds]);
+    }
+
+    async insertSelectedOptionsBatch(
+        answerIds: string[],
+        optionIds: string[],
+        complements: (string | null)[]
+    ) {
+        // CORRIGIDO: 
+        // Tabela: formulario_resposta_opcoes -> formulario_selecionados
+        // Coluna: complemento -> texto_complemento
+        const query = `
+            INSERT INTO formulario_selecionados (
+                resposta_id,
+                opcao_id,
+                texto_complemento
+            )   
+            SELECT
+                unnest($1::uuid[]),
+                unnest($2::uuid[]),
+                unnest($3::text[]);
+        `;
+
+        await this.client.query(query, [
+            answerIds,
+            optionIds,
+            complements
+        ]);
+    }
+
+    async calculateFormMetadata(
+        formId: string,
+        versionId: string
+    ): Promise<{ percentage: number; missingMandatory: string[] }> {
+
+        const query = `
+    WITH active_mandatory AS (
+      SELECT q.id
+      FROM formulario_perguntas q
+      JOIN formulario_secoes s ON q.secao_id = s.id 
+      
+      LEFT JOIN formulario_selecionados ro
+        ON ro.opcao_id = q.depende_de_opcao_id
+      LEFT JOIN formulario_respostas r
+        ON r.id = ro.resposta_id
+       AND r.formulario_id = $1
+       
+      WHERE s.versao_id = $2
+        AND q.obrigatoria = true
+        AND (
+          q.depende_de_opcao_id IS NULL 
+          OR r.id IS NOT NULL           
+        )
+    ),
+    answered AS (
+      SELECT DISTINCT fr.pergunta_id
+      FROM formulario_respostas fr
+      LEFT JOIN formulario_selecionados fs ON fr.id = fs.resposta_id
+      WHERE fr.formulario_id = $1
+      AND (
+          fr.texto_resposta IS NOT NULL   
+          OR fs.resposta_id IS NOT NULL -- <--- CORREÇÃO: fs.id -> fs.resposta_id
+      )
+    )
+    SELECT
+      COUNT(*) AS total_mandatory,
+      COUNT(a.pergunta_id) AS answered_mandatory,
+      ARRAY_AGG(am.id)
+        FILTER (WHERE a.pergunta_id IS NULL) AS missing
+    FROM active_mandatory am
+    LEFT JOIN answered a ON a.pergunta_id = am.id;
+  `;
+
+        const { rows } = await this.client.query(query, [
+            formId,
+            versionId
+        ]);
+
+        const row = rows[0];
+
+        const percentage =
+            row.total_mandatory > 0
+                ? Math.round(
+                    (row.answered_mandatory / row.total_mandatory) * 100
+                )
+                : 0;
+
+        return {
+            percentage,
+            missingMandatory: row.missing ?? []
+        };
     }
 
     async clearSelectedOptions(answerId: string) {

@@ -17,8 +17,8 @@ export class PatientMapper {
         }
     }
 
-    static toGet(data: { patientRow: PatientRow, therapistName: string }): PatientGetResponseDTO {
-        const { patientRow, therapistName } = data
+    static toGet(data: { patientRow: PatientRow, therapistName: string, anamnesePorcentagem: number, sintesePorcentagem:number }): PatientGetResponseDTO {
+        const { patientRow, therapistName, anamnesePorcentagem, sintesePorcentagem } = data
         return {
             patient: {
                 id: patientRow.id,
@@ -32,6 +32,10 @@ export class PatientMapper {
             therapist: {
                 id: patientRow.terapeuta_id,
                 nome: therapistName
+            },
+            forms: {
+                anamnesePorcentagem,
+                sintesePorcentagem
             }
         }
     }
@@ -49,7 +53,7 @@ export class PatientMapper {
         }
     }
 
-    static toList(data: { patientRows: PatientListRow[] }): PatientListResponseDTO {
+    static toList(data: { patientRows: PatientListRow[] }, userId: string): PatientListResponseDTO {
         const { patientRows } = data
         return patientRows.map((row) => {
             return {
@@ -59,7 +63,8 @@ export class PatientMapper {
                     dataNascimento: row.data_nascimento,
                     terapeutaId: row.terapeuta_id,
                     status: row.status,
-                    createdAt: row.created_at
+                    createdAt: row.created_at,
+                    isMine: userId == row.terapeuta_id
                 }
             }
         })

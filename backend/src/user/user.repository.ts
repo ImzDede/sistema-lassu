@@ -1,8 +1,10 @@
-import pool from "../config/db";
+import { Pool, PoolClient } from "pg";
 import { AvailableUserRow, UserCreateRow, UserFirstAccessRow, UserIdRow, UserListRow, UserLoginRow, UserMinRow, UserRow, UserUpdateProfileRow, UserUpdateRow, UserVerifyFirstAcessRow } from "./user.type";
 
 
 export class UserRepository {
+
+    constructor (private readonly client: Pool | PoolClient) {}
 
     async verifyEmailExist(email: string, ignoreId?: string): Promise<UserIdRow | null> {
         let query = 'SELECT id FROM usuarios WHERE email = $1'
@@ -13,7 +15,7 @@ export class UserRepository {
             values.push(ignoreId)
         }
 
-        const result = await pool.query(query, values)
+        const result = await this.client.query(query, values)
         return result.rows[0] ?? null;
     }
 
@@ -26,29 +28,29 @@ export class UserRepository {
             values.push(ignoreId)
         }
 
-        const result = await pool.query(query, values)
+        const result = await  this.client.query(query, values)
         return result.rows[0] ?? null;
     }
 
     async verifyIdExist(userId: string): Promise<UserIdRow | null> {
         let query = 'SELECT id FROM usuarios WHERE id = $1'
         let values = [userId]
-        const result = await pool.query(query, values)
+        const result = await  this.client.query(query, values)
         return result.rows[0] ?? null;
     }
 
     async getName(id: string): Promise<string | null> {
-        const result = await pool.query('SELECT nome FROM usuarios WHERE id = $1', [id])
+        const result = await  this.client.query('SELECT nome FROM usuarios WHERE id = $1', [id])
         return result.rows[0].nome ?? null;
     }
 
     async getByEmail(email: string): Promise<UserLoginRow | null> {
-        const result = await pool.query('SELECT id, nome, matricula, senha_hash, perm_atendimento, perm_cadastro, perm_admin, primeiro_acesso, ativo FROM usuarios WHERE email = $1', [email])
+        const result = await  this.client.query('SELECT id, nome, matricula, senha_hash, perm_atendimento, perm_cadastro, perm_admin, primeiro_acesso, ativo FROM usuarios WHERE email = $1', [email])
         return result.rows[0] ?? null;
     }
 
     async getById(id: string): Promise<UserRow | null> {
-        const result = await pool.query('SELECT * FROM usuarios WHERE id = $1', [id])
+        const result = await  this.client.query('SELECT * FROM usuarios WHERE id = $1', [id])
         return result.rows[0] ?? null;
     }
 
@@ -93,8 +95,8 @@ export class UserRepository {
         `;
 
         const [resultData, resultCount] = await Promise.all([
-            pool.query(queryData, values),
-            pool.query(queryCount, countValues)
+             this.client.query(queryData, values),
+             this.client.query(queryCount, countValues)
         ]);
 
         return {
@@ -131,13 +133,13 @@ export class UserRepository {
 			ORDER BY u.id;
         `;
 
-        const result = await pool.query(query, [data.diaSemana, data.horaInicio, data.horaFim]);
+        const result = await  this.client.query(query, [data.diaSemana, data.horaInicio, data.horaFim]);
         return result.rows;
     }
 
     async findAdmins(): Promise<UserRow[]> {
         const query = `SELECT * FROM usuarios WHERE perm_admin = true`;
-        const result = await pool.query(query);
+        const result = await  this.client.query(query);
         return result.rows;
     }
 
@@ -170,12 +172,12 @@ export class UserRepository {
             false       //Admin
         ]
 
-        const result = await pool.query(query, values);
+        const result = await  this.client.query(query, values);
         return result.rows[0];
     }
 
     async verifyFirstAccess(userId: string): Promise<UserVerifyFirstAcessRow | null> {
-        const result = await pool.query('SELECT senha_hash, primeiro_acesso FROM usuarios WHERE id = $1', [userId]);
+        const result = await  this.client.query('SELECT senha_hash, primeiro_acesso FROM usuarios WHERE id = $1', [userId]);
         return result.rows[0] ?? null;
     }
 
@@ -196,7 +198,7 @@ export class UserRepository {
             userId
         ];
 
-        const result = await pool.query(query, values);
+        const result = await  this.client.query(query, values);
         return result.rows[0] ?? null;
     }
 
@@ -231,7 +233,7 @@ export class UserRepository {
             id
         ];
 
-        const result = await pool.query(query, values);
+        const result = await  this.client.query(query, values);
         return result.rows[0] ?? null;
     }
 
@@ -262,7 +264,7 @@ export class UserRepository {
             id
         ];
 
-        const result = await pool.query(query, values);
+        const result = await  this.client.query(query, values);
         return result.rows[0] ?? null;
     }
 
@@ -280,7 +282,7 @@ export class UserRepository {
             id
         ];
 
-        const result = await pool.query(query, values);
+        const result = await  this.client.query(query, values);
         return result.rows[0] ?? null;
     }
 }

@@ -10,7 +10,6 @@ import { useFeedback } from "@/contexts/FeedbackContext";
 import { usePatients } from "@/hooks/usePatients";
 import { useAuth } from "@/contexts/AuthContext";
 import { useForm } from "@/hooks/useForm";
-import { formatCPF } from "@/utils/format";
 
 export default function AnamnesePage() {
   const router = useRouter();

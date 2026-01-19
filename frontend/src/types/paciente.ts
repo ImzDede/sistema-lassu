@@ -36,4 +36,8 @@ export interface PatientAggregatedResponse {
     id: string;
     nome: string;
   };
+  forms?: {
+    anamnesePorcentagem: number;
+    sintesePorcentagem: number;
+  };
 }

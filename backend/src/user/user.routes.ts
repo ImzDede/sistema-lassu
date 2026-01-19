@@ -22,11 +22,11 @@ router.post('/refresh', userController.refreshToken);
 // Cadastro
 router.get('/available', is('cadastro'), validate(getAvailableUsersSchema, 'query'), userController.getAvailable);
 router.post('/', is('cadastro'), validate(createUserSchema), userController.create);
+router.get('/', is('cadastro'), validate(userListSchema, 'query'), userController.get);
 
 //Admin
 router.use(is('admin'));
 
-router.get('/', validate(userListSchema, 'query'), userController.get);
 router.patch('/:targetId/reset-password', validate(UserTargetIdParamSchema, 'params'), userController.resetPassword);
 router.get('/:targetId', validate(UserTargetIdParamSchema, 'params'), userController.getById);
 router.put('/:targetId', validate(updateUserSchema), validate(UserTargetIdParamSchema, 'params'), userController.update);

@@ -12,7 +12,7 @@ import { SessionCreateDTO, SessionListDTO, SessionRescheduleDTO, SessionUpdateDT
 const repository = new SessionRepository()
 const notificationService = new NotificationService();
 const patientRepository = new PatientRepository(pool)
-const userRepository = new UserRepository()
+const userRepository = new UserRepository(pool)
 
 export class SessionService {
     async create(userId: string, data: SessionCreateDTO) {

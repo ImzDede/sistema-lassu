@@ -14,15 +14,11 @@ const patientRepository = new PatientRepository(pool)
 
 export class FormService {
 
-    async createVersion(modelTitle: string, data: FormUpdateStructureDTO) {
+    async createVersion(modelTitle: 'ANAMNESE' | 'SINTESE', data: FormUpdateStructureDTO) {
         return await withTransaction(async (client) => {
             const repository = new FormRepository(client);
 
-            const modelRow = await repository.getIdModelByTitle(modelTitle);
-            if (!modelRow) {
-                throw new AppError(`Modelo de formulário '${modelTitle}' não encontrado.`, 404);
-            }
-            const modelId = modelRow.id;
+            const modelId = await repository.getIdModelByTitle(modelTitle);
 
             await repository.disableAllVersions(modelId);
 
@@ -76,12 +72,8 @@ export class FormService {
         });
     }
 
-    async getVersionActive(modelTitle: string) {
-        const modelRow = await repository.getIdModelByTitle(modelTitle);
-        if (!modelRow) {
-            throw new AppError(`Modelo de formulário '${modelTitle}' não encontrado.`, 404);
-        }
-        const modelId = modelRow.id;
+    async getVersionActive(modelTitle: 'ANAMNESE' | 'SINTESE') {
+        const modelId = await repository.getIdModelByTitle(modelTitle);
 
         const versionId = (await repository.getVersionIdActive(modelId));
 
@@ -114,69 +106,145 @@ export class FormService {
         };
     }
 
-    async submitResponse(modelTitle: string, userId: string, patientId: string, data: FormSubmitDTO) {
+    async submitResponse(modelTitle: 'ANAMNESE' | 'SINTESE', userId: string, patientId: string, data: FormSubmitDTO) {
         const patient = await patientRepository.getById(patientId);
         if (!patient) throw new AppError(HTTP_ERRORS.NOT_FOUND.PATIENT, 404);
-
-        if (patient.terapeuta_id !== userId) {
-            throw new AppError(HTTP_ERRORS.FORBIDDEN.PATIENT.NOT_YOURS, 403);
-        }
-
-        if (patient.status == 'encaminhada') {
-            throw new AppError('Paciente já encaminhada, contate a adminstração.', 403);
-        }
+        if (patient.terapeuta_id !== userId) throw new AppError(HTTP_ERRORS.FORBIDDEN.PATIENT.NOT_YOURS, 403);
+        if (patient.status == 'encaminhada') throw new AppError('Paciente já encaminhada.', 403);
 
         return await withTransaction(async (client) => {
             const repository = new FormRepository(client);
 
-            const modelRow = await repository.getIdModelByTitle(modelTitle);
-            if (!modelRow) {
-                throw new AppError(`Modelo de formulário '${modelTitle}' não encontrado.`, 404);
-            }
-            const modelId = modelRow.id;
+            const modelId = await repository.getIdModelByTitle(modelTitle);
 
             let formRow = await repository.getFilledForm(modelId, patientId)
+            if (!formRow) throw new AppError(`Formulário não encontrado`, 404)
+            if (formRow.status == 'finalizado') throw new AppError('Formulário já finalizado.', 403);
 
-            if (!formRow) {
-                throw new AppError(`Formulário não encontrado`, 404)
-            }
+            // =========================================================
+            // 1. SEPARAR O QUE SALVA (Upsert) DO QUE APAGA (Delete)
+            // =========================================================
+            const answerIds: string[] = [];
+            const questionIds: string[] = [];
+            const values: (string | null)[] = [];
+            const answersToDeleteQuestionIds: string[] = [];
 
             for (const item of data.respostas) {
-                const textValue = item.valor === "null" ? null : (item.valor ?? null);
+                // Normaliza string vazia "" para NULL
+                let textValue = (item.valor === "null" || item.valor === "") ? null : (item.valor ?? null);
 
-                const answerRow = await repository.upsertAnswer(
-                    v4(),
-                    formRow.id,
-                    item.perguntaId,
-                    textValue
+                const hasOptions = item.opcoes && item.opcoes.length > 0;
+
+                // LÓGICA CRÍTICA: Se não tem texto E não tem opções -> É DELETE
+                if (!textValue && !hasOptions) {
+                    answersToDeleteQuestionIds.push(item.perguntaId);
+                } else {
+                    // Senão, é Upsert
+                    answerIds.push(v4());
+                    questionIds.push(item.perguntaId);
+                    values.push(textValue);
+                }
+            }
+
+            // 2. EXECUTAR DELETES (Limpa do banco para a % cair)
+            if (answersToDeleteQuestionIds.length > 0) {
+                await client.query(
+                    `DELETE FROM formulario_respostas WHERE formulario_id = $1 AND pergunta_id = ANY($2::uuid[])`,
+                    [formRow.id, answersToDeleteQuestionIds]
                 );
+            }
 
-                await repository.clearSelectedOptions(answerRow.id);
+            // 3. EXECUTAR UPSERTS (Salva novos valores)
+            let answerRows: { id: string, pergunta_id: string }[] = [];
+            if (answerIds.length > 0) {
+                answerRows = await repository.upsertAnswersBatch(
+                    answerIds,
+                    formRow.id,
+                    questionIds,
+                    values
+                );
+            }
+
+            // 4. ATUALIZAR OPÇÕES (Apenas para as respostas que existem)
+            const answerIdByQuestion = new Map<string, string>();
+            for (const row of answerRows) {
+                answerIdByQuestion.set(row.pergunta_id, row.id);
+            }
+
+            // Limpa opções velhas
+            const affectedAnswerIds = Array.from(answerIdByQuestion.values());
+            if (affectedAnswerIds.length > 0) {
+                await repository.clearSelectedOptionsBatch(affectedAnswerIds);
+            }
+
+            // Insere opções novas
+            const selectedAnswerIds: string[] = [];
+            const selectedOptionIds: string[] = [];
+            const selectedComplements: (string | null)[] = [];
+
+            for (const item of data.respostas) {
+                const answerId = answerIdByQuestion.get(item.perguntaId);
+                if (!answerId) continue;
 
                 if (item.opcoes && item.opcoes.length > 0) {
                     for (const opt of item.opcoes) {
-                        await repository.createSelectedOption(answerRow.id, opt.id, opt.complemento ?? null);
+                        selectedAnswerIds.push(answerId);
+                        selectedOptionIds.push(opt.id);
+                        selectedComplements.push(opt.complemento ?? null);
                     }
                 }
             }
 
+            if (selectedAnswerIds.length > 0) {
+                await repository.insertSelectedOptionsBatch(
+                    selectedAnswerIds,
+                    selectedOptionIds,
+                    selectedComplements
+                );
+            }
+
+            // =========================================================
+            // 5. FAXINA FINAL (Respostas Órfãs/Escondidas)
+            // =========================================================
             const allQuestions = await repository.getQuestionsByVersion(formRow.versao_id);
+            const allAnswers = await repository.getAllAnswers(formRow.id);
+            const allSelectedOptions = await repository.getAllSelectedOptions(formRow.id);
 
-            const answerRows = await repository.getAllAnswers(formRow.id)
-            const answeredIds = answerRows.map(r => r.pergunta_id);
-            const selectedOptionRows = await repository.getAllSelectedOptions(formRow.id)
-            const selectedOptionIds = selectedOptionRows.map(o => o.opcao_id);
+            const selectedIds = allSelectedOptions.map(o => o.opcao_id);
+            const orphansToDeleteIds: string[] = [];
 
-            const { missingMandatory, percentage } = this.calculateMetadata(allQuestions, answeredIds, selectedOptionIds)
+            for (const question of allQuestions) {
+                let isActive = true;
+                if (question.depende_de_opcao_id) {
+                    if (!selectedIds.includes(question.depende_de_opcao_id)) {
+                        isActive = false;
+                    }
+                }
+                if (!isActive) {
+                    const answerToDelete = allAnswers.find(a => a.pergunta_id === question.id);
+                    if (answerToDelete) {
+                        orphansToDeleteIds.push(answerToDelete.id);
+                    }
+                }
+            }
+
+            if (orphansToDeleteIds.length > 0) {
+                await client.query(
+                    `DELETE FROM formulario_respostas WHERE id = ANY($1)`,
+                    [orphansToDeleteIds]
+                );
+            }
+
+            // 6. CALCULAR METADADOS
+            const { missingMandatory, percentage } = await repository.calculateFormMetadata(
+                formRow.id,
+                formRow.versao_id
+            );
 
             let status: 'rascunho' | 'finalizado' = 'rascunho';
-
             if (data.finalizar) {
                 if (missingMandatory.length > 0) {
-                    throw new AppError(
-                        `Não é possível finalizar. Perguntas obrigatórias faltando.`,
-                        400
-                    );
+                    throw new AppError(`Não é possível finalizar. Faltam perguntas obrigatórias.`, 400);
                 }
                 status = 'finalizado';
             }
@@ -187,10 +255,9 @@ export class FormService {
                 missing: missingMandatory
             };
         });
-
     }
 
-    async getPatientForm(modelTitle: string, userId: string, patientId: string, perms: UserPermDTO) {
+    async getPatientForm(modelTitle: 'ANAMNESE' | 'SINTESE', userId: string, patientId: string, perms: UserPermDTO) {
         const patient = await patientRepository.getById(patientId);
         if (!patient) throw new AppError(HTTP_ERRORS.NOT_FOUND.PATIENT, 404);
 
@@ -198,14 +265,13 @@ export class FormService {
             throw new AppError(HTTP_ERRORS.FORBIDDEN.PATIENT.NOT_YOURS, 403);
         }
 
-        const modelRow = await repository.getIdModelByTitle(modelTitle);
-        if (!modelRow) throw new AppError('Modelo não encontrado', 404);
+        const modelId = await repository.getIdModelByTitle(modelTitle);
 
-        let filledRow = await repository.getFilledForm(modelRow.id, patientId);
+        let filledRow = await repository.getFilledForm(modelId, patientId);
         let versionId;
 
         if (!filledRow) {
-            const activeVersion = await repository.getVersionIdActive(modelRow.id);
+            const activeVersion = await repository.getVersionIdActive(modelId);
             filledRow = await repository.createFilledForm(v4(), patientId, activeVersion)
             versionId = activeVersion
         }
@@ -215,52 +281,17 @@ export class FormService {
         const { sectionRows, questionRows, optionRows } = await this.getVersion(versionId);
 
         const answerRows = filledRow ? await repository.getAllAnswers(filledRow.id) : [];
-        const answeredIds = answerRows.map(r => r.pergunta_id);
         const selectedOptionRows = filledRow ? await repository.getAllSelectedOptions(filledRow.id) : [];
-        const selectedOptionIds = selectedOptionRows.map(o => o.opcao_id);
 
-        const { missingMandatory, percentage } = this.calculateMetadata(questionRows, answeredIds, selectedOptionIds)
+        const { missingMandatory, percentage } =
+            await repository.calculateFormMetadata(
+                filledRow.id,
+                filledRow.versao_id
+            );
+
 
         filledRow.porcentagem_conclusao = percentage;
 
         return { filledRow, sectionRows, questionRows, optionRows, answerRows, selectedOptionRows, missing: missingMandatory };
-    }
-
-    private calculateMetadata(
-        allQuestions: QuestionRow[],
-        answeredIds: string[],
-        selectedOptionIds: string[]
-    ) {
-        let totalActiveMandatory = 0;
-        let totalAnsweredMandatory = 0;
-        const missingMandatory: string[] = [];
-
-        for (const question of allQuestions) {
-            let isActive = true;
-
-            if (question.depende_de_opcao_id) {
-                if (!selectedOptionIds.includes(question.depende_de_opcao_id)) {
-                    isActive = false;
-                }
-            }
-
-            if (isActive && question.obrigatoria) {
-                totalActiveMandatory++;
-
-                const isAnswered = answeredIds.includes(question.id);
-
-                if (isAnswered) {
-                    totalAnsweredMandatory++;
-                } else {
-                    missingMandatory.push(question.id);
-                }
-            }
-        }
-
-        const percentage = totalActiveMandatory > 0
-            ? Math.round((totalAnsweredMandatory / totalActiveMandatory) * 100)
-            : 0;
-
-        return { percentage, missingMandatory };
     }
 }

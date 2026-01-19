@@ -6,7 +6,7 @@ import { Search, ChevronDown, Check } from "lucide-react";
 export type FilterOption = {
   label: string;
   value: string;
-  placeholder?: string; // Texto que aparece no input quando selecionado
+  placeholder?: string;
 };
 
 interface SearchInputWithFilterProps {
@@ -46,7 +46,7 @@ export default function SearchInputWithFilter({
   return (
     <div ref={containerRef} className={`relative w-full ${className}`}>
       {/* Input Container (Visual Pill) */}
-      <div className="flex items-center w-full h-12 bg-gray-100 rounded-full px-4 border border-transparent focus-within:border-brand-purple focus-within:bg-white focus-within:ring-1 focus-within:ring-brand-purple transition-all">
+      <div className="flex items-center w-full h-12 bg-gray-100 rounded-full px-4 border border-transparent focus-within:border-brand-encaminhamento focus-within:bg-white focus-within:ring-1 focus-within:ring-brand-encaminhamento transition-all">
         
         {/* Ícone Lupa */}
         <Search className="text-gray-400 shrink-0 mr-3" size={20} />
@@ -67,7 +67,7 @@ export default function SearchInputWithFilter({
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-1 text-xs font-bold text-gray-500 hover:text-brand-purple uppercase tracking-wide px-2 py-1 rounded-md transition-colors"
+          className="flex items-center gap-1 text-xs font-bold text-gray-500 hover:text-brand-encaminhamento uppercase tracking-wide px-2 py-1 rounded-md transition-colors"
         >
           {currentOption.label}
           <ChevronDown size={14} className={`transition-transform ${isOpen ? "rotate-180" : ""}`} />
@@ -91,7 +91,7 @@ export default function SearchInputWithFilter({
                 }}
                 className={`
                   w-full text-left px-4 py-2.5 text-sm flex items-center justify-between
-                  ${isSelected ? "bg-brand-purple/5 text-brand-purple font-medium" : "text-gray-600 hover:bg-gray-50"}
+                  ${isSelected ? "bg-brand-purple/5 text-brand-encaminhamento font-medium" : "text-gray-600 hover:bg-gray-50"}
                 `}
               >
                 {opt.label}

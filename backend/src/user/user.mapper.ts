@@ -2,8 +2,8 @@ import { AvailabilityRow } from "../availability/availability.type";
 import { UserProfileResponseDTO, UserCreateResponseDTO, UserCreateRow, UserFirstAccessResponseDTO, UserFirstAccessRow, UserListAllResponseDTO, UserListRow, UserLoginResponseDTO, UserLoginRow, UserMinRow, UserRow, UserUpdateProfileResponseDTO, UserUpdateProfileRow, UserUpdateResponseDTO, UserUpdateRow, UserGetResponseDTO, UserMinResponseDTO, AvailableUserRow, UserAvailableResponseDTO } from "./user.type";
 
 export class UserMapper {
-  static toMyProfileResponse(data: { userRow: UserRow }): UserProfileResponseDTO {
-    const { userRow } = data
+  static toMyProfileResponse(data: { userRow: UserRow, patientsActive: number }): UserProfileResponseDTO {
+    const { userRow, patientsActive } = data
     return {
       user: {
         id: userRow.id,
@@ -18,12 +18,15 @@ export class UserMapper {
         ativo: userRow.ativo,
         primeiroAcesso: userRow.primeiro_acesso,
         createdAt: userRow.created_at
-      }
+      },
+      patients: {
+        ativas: patientsActive
+      },
     };
   }
 
-  static toGetResponse(data: { userRow: UserRow, availabilityRows: AvailabilityRow[] }): UserGetResponseDTO {
-    const { userRow, availabilityRows } = data
+  static toGetResponse(data: { userRow: UserRow, availabilityRows: AvailabilityRow[], patientsActive: number }): UserGetResponseDTO {
+    const { userRow, availabilityRows, patientsActive } = data
     return {
       user: {
         id: userRow.id,
@@ -38,6 +41,9 @@ export class UserMapper {
         ativo: userRow.ativo,
         primeiroAcesso: userRow.primeiro_acesso,
         createdAt: userRow.created_at
+      },
+      patients: {
+        ativas: patientsActive
       },
       availability: availabilityRows.map((row) => {
         return {
@@ -145,7 +151,10 @@ export class UserMapper {
               horaInicio: row.hora_inicio,
               horaFim: row.hora_fim
             }
-          })
+          }),
+        patients: {
+          ativas: userRow.patientsActive
+        },
       }
     })
   }
@@ -163,7 +172,10 @@ export class UserMapper {
           permCadastro: row.perm_cadastro,
           ativo: row.ativo,
           createdAt: row.created_at
-        }
+        },
+        patients: {
+          ativas: row.patientsActive
+        },
       }
     })
   }

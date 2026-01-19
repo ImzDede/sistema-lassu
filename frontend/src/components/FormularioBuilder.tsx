@@ -59,7 +59,7 @@ interface FormularioBuilderProps {
   onSalvarRascunho?: (respostas: any) => void;
   themeKey?: ThemeKey;
   temaCor?: string;
-  readOnly?: boolean; // <--- ADICIONADO AQUI
+  readOnly?: boolean;
 }
 
 const THEME_TW_MAP: Record<ThemeKey, string> = {
@@ -89,7 +89,7 @@ export const FormularioBuilder: React.FC<FormularioBuilderProps> = ({
   onSalvarRascunho,
   themeKey,
   temaCor = "purple",
-  readOnly = false, // <--- RECEBENDO AQUI COM VALOR PADRÃO FALSE
+  readOnly = false,
 }) => {
   const [passoAtual, setPassoAtual] = useState(0);
   const [respostas, setRespostas] = useState<any>(dadosIniciais);
@@ -435,7 +435,7 @@ export const FormularioBuilder: React.FC<FormularioBuilderProps> = ({
             isUltimoPasso ? "md:grid-cols-3" : "md:grid-cols-2",
           ].join(" ")}
         >
-          {/* BOTÃO VOLTAR (Sempre visível para navegar) */}
+          {/* BOTÃO VOLTAR */}
           <Button
             variant="outline"
             onClick={passoAnterior}
@@ -448,7 +448,7 @@ export const FormularioBuilder: React.FC<FormularioBuilderProps> = ({
           </Button>
 
           {!isUltimoPasso ? (
-            /* BOTÃO PRÓXIMO (Sempre visível para navegar) */
+            /* BOTÃO PRÓXIMO */
             <Button
               onClick={proximoPasso}
               fullWidth
@@ -458,7 +458,6 @@ export const FormularioBuilder: React.FC<FormularioBuilderProps> = ({
               PRÓXIMO
             </Button>
           ) : (
-            /* SE FOR O ÚLTIMO PASSO, SÓ MOSTRA OS BOTÕES DE SALVAR SE NÃO FOR READONLY */
             !readOnly && (
               <>
                 <Button

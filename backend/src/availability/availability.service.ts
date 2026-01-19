@@ -1,19 +1,34 @@
+import { PoolClient } from "pg";
+import pool from "../config/db";
 import { AppError } from "../errors/AppError";
 import { HTTP_ERRORS } from "../errors/messages";
+import { withTransaction } from "../utils/withTransaction";
 import { AvailabilityRepository } from "./availability.repository";
 import { AvailabilityDTO } from "./availability.schema";
 
-const repository = new AvailabilityRepository()
+const repository = new AvailabilityRepository(pool)
 
 export class AvailabilityService {
-    async save(userId: string, availabilities: AvailabilityDTO[]) {
-        const availabilitiesCorrect = this.validate(availabilities)
-        await repository.deleteByUser(userId)
+    async save(userId: string, availabilities: AvailabilityDTO[], txClient?: PoolClient) {
+            const executeLogic = async (client: PoolClient) => {
+            const repository = new AvailabilityRepository(client);
 
-        const promises = availabilitiesCorrect.map(row => repository.create(userId, row));
-        const availabilityRows = await Promise.all(promises);
+            const availabilitiesCorrect = this.validate(availabilities);
+            await repository.deleteByUser(userId);
 
-        return { availabilityRows }
+            const promises = availabilitiesCorrect.map(row => repository.create(userId, row));
+            const availabilityRows = await Promise.all(promises);
+
+            return { availabilityRows };
+        };
+
+        if (txClient) {
+            return await executeLogic(txClient);
+        }
+
+        return withTransaction(async (client) => {
+            return await executeLogic(client);
+        });
     }
 
     private validate(hours: AvailabilityDTO[]) {

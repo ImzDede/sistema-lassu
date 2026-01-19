@@ -17,7 +17,7 @@ import {
   Share,
   Stethoscope,
   Edit3,
-  FileDown, // Importado para o ícone de download
+  FileDown,
 } from "lucide-react";
 import {
   Spinner,
@@ -29,13 +29,13 @@ import {
   MenuItem,
   IconButton,
 } from "@material-tailwind/react";
-import { PDFDownloadLink } from "@react-pdf/renderer"; // Importado para gerar o PDF
+import { PDFDownloadLink } from "@react-pdf/renderer";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useFeedback } from "@/contexts/FeedbackContext";
 import { patientService } from "@/services/patientServices";
 import { sessionService } from "@/services/sessionServices";
-import { formService } from "@/services/formServices"; // Precisamos disso para saber se a anamnese existe
+import { formService } from "@/services/formServices";
 import { calculateAge } from "@/utils/date";
 import { formatCPF, formatPhone } from "@/utils/format";
 
@@ -55,7 +55,29 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
   const [patient, setPatient] = useState<any | null>(null);
   const [sessionsList, setSessionsList] = useState<any[]>([]);
 
-  // Novos estados para controlar os botões de download e status
+  // --- MOCK DE ANOTAÇÕES (Substituir pela chamada da API quando tiver) ---
+  const [notesList, setNotesList] = useState<any[]>([
+    {
+      id: 1,
+      titulo: "Anotação Inicial",
+      data: "2025-10-05",
+      resumo: "Observações sobre o comportamento inicial.",
+    },
+    {
+      id: 2,
+      titulo: "Evolução Quinzenal",
+      data: "2025-10-20",
+      resumo: "Melhora significativa na comunicação.",
+    },
+  ]);
+
+  // Progresso vindo do Back
+  const [formsProgress, setFormsProgress] = useState({
+    anamnese: 0,
+    sintese: 0,
+  });
+  const [totalProgress, setTotalProgress] = useState(0);
+
   const [anamneseData, setAnamneseData] = useState<any>(null);
   const [sinteseData, setSinteseData] = useState<any>(null);
   const [hasEncaminhamento, setHasEncaminhamento] = useState(false);
@@ -82,15 +104,30 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
     try {
       setLoading(true);
 
-      // 1. Busca Paciente
+      // 1. Busca Dados do Paciente
       const data = await patientService.getById(id);
       setPatient(data.patient);
+
+      // Nome da terapeuta vindo do JSON (data.therapist.nome)
       setTherapistName(data.therapist?.nome || "Não atribuído");
 
-      // Verifica se já foi encaminhada para controlar a UI
+      // 1.1 Processa Progresso (Do backend)
+      const forms = data.forms || {
+        anamnesePorcentagem: 0,
+        sintesePorcentagem: 0,
+      };
+      setFormsProgress({
+        anamnese: forms.anamnesePorcentagem,
+        sintese: forms.sintesePorcentagem,
+      });
+      // Média para o Perfil (Frontend calcula apenas a média visual)
+      setTotalProgress(
+        Math.round((forms.anamnesePorcentagem + forms.sintesePorcentagem) / 2),
+      );
+
       setHasEncaminhamento(data.patient.status === "encaminhada");
 
-      // 2. Busca Sessões (Lógica mantida intacta)
+      // 2. Busca Sessões
       try {
         const list = await sessionService.getAll({
           start: "2023-01-01",
@@ -101,24 +138,27 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
         });
         setSessionsList(Array.isArray(list) ? list : []);
       } catch (sessionErr) {
-        console.warn("Erro ao buscar sessões:", sessionErr);
         setSessionsList([]);
       }
 
-      // 3. Busca Status dos Formulários (Anamnese e Síntese) para o botão de download
+      // 3. Busca Forms
       try {
         const anamnese = await formService.getAnamnese(id);
         setAnamneseData(anamnese);
       } catch (e) {
-        /* Ignora se não existir */
+        /* Ignora */
       }
 
       try {
         const sintese = await formService.getSintese(id);
         setSinteseData(sintese);
       } catch (e) {
-        /* Ignora se não existir */
+        /* Ignora */
       }
+
+      // 4. Aqui você buscaria as anotações reais:
+      // const notes = await noteService.getAll(id);
+      // setNotesList(notes);
     } catch (error) {
       console.error(error);
       showFeedback("Erro ao carregar dados.", "error");
@@ -139,7 +179,6 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
     }
   };
 
-  // Função centralizada para navegação (View vs Edit vs Create)
   const handleNavigate = (
     type: string,
     itemId: string | number,
@@ -163,7 +202,6 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
     return respostas;
   };
 
-  // Componente de Botão de Download Inteligente
   const DownloadButton = ({
     doc,
     fileName,
@@ -193,7 +231,7 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
         fileName={fileName}
         className="p-1.5 text-gray-400 hover:text-brand-purple hover:bg-brand-purple/10 rounded-full transition-colors flex"
         onClick={(e) => {
-          e.stopPropagation(); // Impede abrir o card ao clicar no download
+          e.stopPropagation();
           setTimeout(
             () => showFeedback("Arquivo baixado com sucesso!", "success"),
             500,
@@ -205,7 +243,6 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
     );
   };
 
-  // --- Ações de Menu ---
   const handleActionClick = (action: "refer" | "unrefer" | "delete") => {
     setDialogAction(action);
     setDialogOpen(true);
@@ -217,12 +254,12 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
       if (dialogAction === "refer") {
         await patientService.referPatient(patient.id);
         setPatient({ ...patient, status: "encaminhada" });
-        setHasEncaminhamento(true); // Atualiza UI
+        setHasEncaminhamento(true);
         showFeedback("Paciente encaminhada com sucesso.", "success");
       } else if (dialogAction === "unrefer") {
         await patientService.unreferPatient(patient.id);
         setPatient({ ...patient, status: "atendimento" });
-        setHasEncaminhamento(false); // Atualiza UI
+        setHasEncaminhamento(false);
         showFeedback("Paciente reativada para atendimento.", "success");
       } else if (dialogAction === "delete") {
         await patientService.delete(patient.id);
@@ -240,6 +277,9 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
     !isMasterAdmin && (user?.permCadastro || user?.permAtendimento);
   const isEncaminhada = patient?.status === "encaminhada";
 
+  // Status Formatado
+  const statusDisplay = isEncaminhada ? "Encaminhada" : "Em Atendimento";
+
   if (loading || authLoading)
     return (
       <div className="flex justify-center h-[80vh] items-center bg-gray-50">
@@ -250,7 +290,6 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 pb-20 font-sans">
-      {/* HEADER */}
       <div className="pt-8 pb-4 px-4 md:px-8 max-w-6xl mx-auto w-full flex justify-between">
         <div className="flex items-center gap-4">
           <button
@@ -298,13 +337,12 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
         </Menu>
       </div>
 
-      {/* PERFIL */}
       <div className="px-4 md:px-8 max-w-6xl mx-auto w-full mb-8">
         <ProfileCard
           name={patient.nome}
           subtitle={`${patient.dataNascimento ? calculateAge(patient.dataNascimento) : "--"}`}
           avatarUrl={null}
-          status={patient.status}
+          status={statusDisplay}
           statusColor={patient.status === "atendimento" ? "purple" : "orange"}
           stripeColorClass={"bg-brand-encaminhamento"}
           footer={
@@ -320,11 +358,11 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
                   variant="small"
                   className="font-bold text-brand-encaminhamento"
                 >
-                  20%
+                  {totalProgress}%
                 </Typography>
               </div>
               <Progress
-                value={20}
+                value={totalProgress}
                 size="lg"
                 color="purple"
                 className="bg-gray-100 rounded-full"
@@ -354,6 +392,7 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
             />
           </div>
 
+          {/* RESPONSÁVEL: SÓ PARA ADMIN E CADASTRO */}
           {(user?.permAdmin || user?.permCadastro) && (
             <div className="flex items-center gap-2 bg-brand-encaminhamento/10 px-3 py-1.5 rounded-full border border-brand-encaminhamento text-brand-encaminhamento">
               <UserCheck size={16} className="text-brand-encaminhamento" />
@@ -365,7 +404,6 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
         </ProfileCard>
       </div>
 
-      {/* PASTAS */}
       <div className="px-4 md:px-8 max-w-6xl mx-auto w-full flex flex-col gap-2">
         {/* 1. SESSÕES */}
         <FolderAccordion
@@ -395,8 +433,6 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
                 }
                 icon={<Clock size={16} />}
                 highlight={idx === sessionsList.length - 1}
-                // Professora e Terapeuta podem ver, mas só terapeuta edita.
-                // Como sessão não tem visualização "readOnly" específica, usamos edit se tiver permissão
                 onEdit={
                   canEditGeneral
                     ? () => handleNavigate("sessoes", sessao.id, "edit")
@@ -406,6 +442,7 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
             ))
           ) : (
             <div className="text-center py-4 text-gray-400 text-xs uppercase tracking-wider">
+              Nenhuma sessão encontrada.
             </div>
           )}
         </FolderAccordion>
@@ -423,10 +460,8 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
             <FolderItemCard
               title="Anamnese Inicial"
               variant="progress"
-              progress={anamneseData.finalizada ? 100 : 50}
-              // Visualizar: Vai como View (readOnly)
+              progress={formsProgress.anamnese}
               onView={() => handleNavigate("anamnese", "current", "view")}
-              // Editar: Só se não estiver finalizada e for terapeuta
               onEdit={
                 canEditGeneral && !anamneseData.finalizada
                   ? () => handleNavigate("anamnese", "current", "edit")
@@ -472,7 +507,7 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
             <FolderItemCard
               title="Síntese Diagnóstica"
               variant="progress"
-              progress={sinteseData.finalizada ? 100 : 50}
+              progress={formsProgress.sintese}
               onView={() => handleNavigate("sintese", "current", "view")}
               onEdit={
                 canEditGeneral && !sinteseData.finalizada
@@ -513,30 +548,31 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
           icon={<Share size={18} />}
           isOpen={sections.encaminhamento}
           onToggle={() => toggleSection("encaminhamento")}
-          // SÓ MOSTRA O BOTÃO "+" SE NÃO TIVER ENCAMINHAMENTO
           showAddButton={canEditGeneral && !hasEncaminhamento}
           onAdd={() => handleNavigate("encaminhamento", 0, "create")}
           addLabel="Novo Encaminhamento"
           accentColor="brand-encaminhamento"
         >
+          {/* Lógica: Se status == encaminhada, mostra o card */}
           {hasEncaminhamento ? (
             <FolderItemCard
               title="Encaminhamento Realizado"
               subtitle="Paciente encaminhada"
               icon={<Share size={16} />}
               onView={() => handleNavigate("encaminhamento", "current", "view")}
-              // Se estiver encaminhada, talvez não queira editar, mas deixei a opção se precisar
               onEdit={
                 canEditGeneral
                   ? () => handleNavigate("encaminhamento", "current", "edit")
                   : undefined
               }
+              // Botão de download (simulado, pois não temos arquivo ainda)
               downloadComponent={
                 <DownloadButton exists={false} doc={null} fileName="" />
               }
             />
           ) : (
             <div className="text-center py-4 text-gray-400 text-xs uppercase tracking-wider">
+              Nenhum encaminhamento.
             </div>
           )}
         </FolderAccordion>
@@ -553,9 +589,32 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
           addLabel="Nova Anotação"
           accentColor="brand-anotacoes"
         >
-          {/* Exemplo de card de anotação - Futuramente listar do back */}
-          <div className="text-center py-4 text-gray-400 text-xs uppercase tracking-wider">
-          </div>
+          {/* MAP DAS ANOTAÇÕES (Usando lista mockada por enquanto) */}
+          {notesList.length > 0 ? (
+            notesList.map((note) => (
+              <FolderItemCard
+                key={note.id}
+                title={note.titulo}
+                subtitle={
+                  <span>
+                    {new Date(note.data).toLocaleDateString("pt-BR")} |{" "}
+                    {note.resumo}
+                  </span>
+                }
+                icon={<Edit3 size={16} />}
+                onView={() => handleNavigate("anotacoes", note.id, "view")}
+                onEdit={
+                  canEditGeneral
+                    ? () => handleNavigate("anotacoes", note.id, "edit")
+                    : undefined
+                }
+              />
+            ))
+          ) : (
+            <div className="text-center py-4 text-gray-400 text-xs uppercase tracking-wider">
+              Nenhuma anotação registrada.
+            </div>
+          )}
         </FolderAccordion>
       </div>
 
