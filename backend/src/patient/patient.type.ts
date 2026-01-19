@@ -81,7 +81,8 @@ export type PatientListResponseDTO = {
         dataNascimento: string,
         terapeutaId: string,
         status: string,
-        createdAt: string
+        createdAt: string,
+        isMine: boolean
     }
 }[]
 

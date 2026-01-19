@@ -53,7 +53,7 @@ export class PatientMapper {
         }
     }
 
-    static toList(data: { patientRows: PatientListRow[] }): PatientListResponseDTO {
+    static toList(data: { patientRows: PatientListRow[] }, userId: string): PatientListResponseDTO {
         const { patientRows } = data
         return patientRows.map((row) => {
             return {
@@ -63,7 +63,8 @@ export class PatientMapper {
                     dataNascimento: row.data_nascimento,
                     terapeutaId: row.terapeuta_id,
                     status: row.status,
-                    createdAt: row.created_at
+                    createdAt: row.created_at,
+                    isMine: userId == row.terapeuta_id
                 }
             }
         })

@@ -29,7 +29,7 @@ export class PatientController {
 		const userPerms = userPermsSchema.parse(req.userPerms)
 		const params = req.validated.query
 		const result = await patientService.list(userId, userPerms, params)
-		const data = PatientMapper.toList(result)
+		const data = PatientMapper.toList(result, userId)
 		const { patientRows, ...metaData } = result
 		res.status(200).json(response(data, metaData));
 	}
