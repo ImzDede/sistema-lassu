@@ -26,7 +26,7 @@ export default function EncaminhamentoPage() {
   const { borderClass, textClass, lightBgClass } = useAppTheme();
 
   const [selectedPatient, setSelectedPatient] = useState<string | null>(
-    preSelectedPatientId || null
+    preSelectedPatientId || null,
   );
   const [description, setDescription] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -45,14 +45,14 @@ export default function EncaminhamentoPage() {
         limit: 10,
         status: "atendimento",
       } as any),
-    [fetchPatients]
+    [fetchPatients],
   );
 
   const patientOptions = useMemo(() => {
     const opts = patients.map((p) => ({
       id: p.id,
       label: p.nome,
-      subLabel: p.cpf ? `CPF: ${formatCPF(p.cpf)}` : "Sem CPF",
+      subLabel: p.cpf ? formatCPF(p.cpf) : undefined
     }));
 
     if (
@@ -76,7 +76,11 @@ export default function EncaminhamentoPage() {
   const handleSave = async () => {
     if (!selectedPatient) return;
 
-    const success = await saveReferral(selectedPatient, description, selectedFile);
+    const success = await saveReferral(
+      selectedPatient,
+      description,
+      selectedFile,
+    );
     if (success) {
       await new Promise((r) => setTimeout(r, 500));
       router.back();
@@ -111,7 +115,10 @@ export default function EncaminhamentoPage() {
             <div className={`p-2 rounded-lg ${lightBgClass}`}>
               <Share className={`w-6 h-6 ${textClass}`} />
             </div>
-            <Typography variant="h6" className="font-bold text-brand-encaminhamento">
+            <Typography
+              variant="h6"
+              className="font-bold text-brand-encaminhamento"
+            >
               Dados do Encaminhamento
             </Typography>
           </div>
@@ -132,19 +139,28 @@ export default function EncaminhamentoPage() {
           </div>
 
           <div>
-            <Typography variant="small" className="font-bold text-gray-700 mb-2 flex gap-2">
-              Anexar Documento <span className="text-gray-400 font-semibold">(Opcional)</span>
+            <Typography
+              variant="small"
+              className="font-bold text-gray-700 mb-2 flex gap-2"
+            >
+              Anexar Documento{" "}
+              <span className="text-gray-400 font-semibold">(Opcional)</span>
             </Typography>
 
             <FileUploadBox
               selectedFile={selectedFile}
-              onFileChange={(e) => e.target.files && setSelectedFile(e.target.files[0])}
+              onFileChange={(e) =>
+                e.target.files && setSelectedFile(e.target.files[0])
+              }
               onRemoveFile={() => setSelectedFile(null)}
             />
           </div>
 
           <div>
-            <Typography variant="small" className="font-bold text-gray-700 mb-2 flex gap-2">
+            <Typography
+              variant="small"
+              className="font-bold text-gray-700 mb-2 flex gap-2"
+            >
               Motivo / Destino
             </Typography>
             <Textarea
@@ -176,7 +192,11 @@ export default function EncaminhamentoPage() {
                 fullWidth
                 accentColorClass="brand-encaminhamento"
                 disabled={!canSubmit}
-                title={!canSubmit ? "Selecione um paciente e preencha o destino" : undefined}
+                title={
+                  !canSubmit
+                    ? "Selecione um paciente e preencha o destino"
+                    : undefined
+                }
               >
                 REGISTRAR ENCAMINHAMENTO
               </Button>
@@ -187,4 +207,3 @@ export default function EncaminhamentoPage() {
     </div>
   );
 }
-

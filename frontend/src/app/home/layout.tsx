@@ -12,6 +12,7 @@ import SidebarDesktop from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import NotificationBell from "@/components/NotificationBell";
 import { useAppTheme } from "@/hooks/useAppTheme";
+import { FeedbackProvider } from "@/contexts/FeedbackContext";
 
 function HomeInternal({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -88,7 +89,9 @@ function HomeInternal({ children }: { children: React.ReactNode }) {
 
           <div className="flex items-center gap-4">
             {/* Notificações */}
-            <div className={`${isHomePage ? "block" : "hidden lg:block"}`}>
+            <div
+              className={`z-[1] ${isHomePage ? "block" : "hidden lg:block"}`}
+            >
               <NotificationBell />
             </div>
           </div>
@@ -111,9 +114,11 @@ export default function HomeLayout({
 }) {
   return (
     <AuthProvider>
-      <NotificationProvider>
-        <HomeInternal>{children}</HomeInternal>
-      </NotificationProvider>
+      <FeedbackProvider>
+        <NotificationProvider>
+          <HomeInternal>{children}</HomeInternal>
+        </NotificationProvider>
+      </FeedbackProvider>
     </AuthProvider>
   );
 }

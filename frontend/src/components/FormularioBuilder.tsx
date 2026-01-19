@@ -25,7 +25,7 @@ interface Pergunta {
   tipo:
     | "texto"
     | "inteiro"
-    | "data" // <--- Adicionado tipo data
+    | "data"
     | "unica_escolha"
     | "multipla_escolha"
     | "longo_texto";
@@ -59,6 +59,7 @@ interface FormularioBuilderProps {
   onSalvarRascunho?: (respostas: any) => void;
   themeKey?: ThemeKey;
   temaCor?: string;
+  readOnly?: boolean; // <--- ADICIONADO AQUI
 }
 
 const THEME_TW_MAP: Record<ThemeKey, string> = {
@@ -88,6 +89,7 @@ export const FormularioBuilder: React.FC<FormularioBuilderProps> = ({
   onSalvarRascunho,
   themeKey,
   temaCor = "purple",
+  readOnly = false, // <--- RECEBENDO AQUI COM VALOR PADRÃO FALSE
 }) => {
   const [passoAtual, setPassoAtual] = useState(0);
   const [respostas, setRespostas] = useState<any>(dadosIniciais);
@@ -100,13 +102,13 @@ export const FormularioBuilder: React.FC<FormularioBuilderProps> = ({
   const resolvedInputFocusClass = `focus-within:!border-${twColor} focus-within:!ring-1 focus-within:!ring-${twColor}`;
   const resolvedTextareaFocusClass = `focus:!border-${twColor} focus:!ring-1 focus:!ring-${twColor}`;
 
-  // AutoSave (Rascunho)
+  // AutoSave (Rascunho) - Só ativa se NÃO for readOnly
   useEffect(() => {
-    if (onSalvarRascunho) {
+    if (onSalvarRascunho && !readOnly) {
       const timer = setTimeout(() => onSalvarRascunho(respostas), 2000);
       return () => clearTimeout(timer);
     }
-  }, [respostas, onSalvarRascunho]);
+  }, [respostas, onSalvarRascunho, readOnly]);
 
   const secaoAtual = modeloJson.data.secoes[passoAtual];
 
@@ -120,12 +122,13 @@ export const FormularioBuilder: React.FC<FormularioBuilderProps> = ({
     const valores = Object.values(respostas);
     return valores.some((resp: any) => {
       if (Array.isArray(resp))
-        return resp.some((item) => item.id === pergunta.dependeDeOpcaoId);
+        return resp.some((item: any) => item.id === pergunta.dependeDeOpcaoId);
       return resp?.id === pergunta.dependeDeOpcaoId;
     });
   };
 
   const handleSimples = (perguntaId: string, valor: string) => {
+    if (readOnly) return; // Bloqueia edição
     setRespostas((prev: any) => ({ ...prev, [perguntaId]: valor }));
   };
 
@@ -134,6 +137,7 @@ export const FormularioBuilder: React.FC<FormularioBuilderProps> = ({
     opcaoId: string,
     textoExtra: string | null = null,
   ) => {
+    if (readOnly) return; // Bloqueia edição
     setRespostas((prev: any) => {
       const anterior = prev[perguntaId] || {};
       if (anterior.id === opcaoId && textoExtra !== null) {
@@ -155,6 +159,7 @@ export const FormularioBuilder: React.FC<FormularioBuilderProps> = ({
     isChecked: boolean,
     textoExtra: string | null = null,
   ) => {
+    if (readOnly) return; // Bloqueia edição
     setRespostas((prev: any) => {
       const listaAtual = prev[perguntaId] || [];
       if (isChecked) {
@@ -186,7 +191,7 @@ export const FormularioBuilder: React.FC<FormularioBuilderProps> = ({
   };
 
   const handleSalvarManual = () => {
-    if (onSalvarRascunho) {
+    if (onSalvarRascunho && !readOnly) {
       onSalvarRascunho(respostas);
       showFeedback("Rascunho salvo com sucesso!", "success");
     }
@@ -206,6 +211,7 @@ export const FormularioBuilder: React.FC<FormularioBuilderProps> = ({
             value={typeof valorAtual === "string" ? valorAtual : ""}
             onChange={(e) => handleSimples(pergunta.id, e.target.value)}
             focusColorClass={resolvedInputFocusClass}
+            disabled={readOnly} // <--- BLOQUEIO
           />
         );
 
@@ -223,6 +229,7 @@ export const FormularioBuilder: React.FC<FormularioBuilderProps> = ({
             value={typeof valorAtual === "string" ? valorAtual : ""}
             onChange={(e) => handleSimples(pergunta.id, e.target.value)}
             focusColorClass={resolvedInputFocusClass}
+            disabled={readOnly} // <--- BLOQUEIO
           />
         );
 
@@ -235,6 +242,7 @@ export const FormularioBuilder: React.FC<FormularioBuilderProps> = ({
             value={typeof valorAtual === "string" ? valorAtual : ""}
             onChange={(e) => handleSimples(pergunta.id, e.target.value)}
             focusColorClass={resolvedInputFocusClass}
+            disabled={readOnly} // <--- BLOQUEIO
           />
         );
 
@@ -247,6 +255,7 @@ export const FormularioBuilder: React.FC<FormularioBuilderProps> = ({
             rows={4}
             className={`!border-gray-300 bg-white ${resolvedTextareaFocusClass}`}
             labelProps={{ className: "hidden" }}
+            disabled={readOnly} // <--- BLOQUEIO
           />
         );
       case "unica_escolha":
@@ -267,6 +276,7 @@ export const FormularioBuilder: React.FC<FormularioBuilderProps> = ({
                     onChange={() => handleUnicaEscolha(pergunta.id, opt.id)}
                     color={resolvedTemaCor as any}
                     crossOrigin={undefined}
+                    disabled={readOnly} // <--- BLOQUEIO
                   />
                   {opt.requerTexto && selecionado && (
                     <div className="ml-9 mt-1 w-full md:w-1/2">
@@ -281,6 +291,7 @@ export const FormularioBuilder: React.FC<FormularioBuilderProps> = ({
                           )
                         }
                         focusColorClass={resolvedInputFocusClass}
+                        disabled={readOnly} // <--- BLOQUEIO
                       />
                     </div>
                   )}
@@ -314,6 +325,7 @@ export const FormularioBuilder: React.FC<FormularioBuilderProps> = ({
                     }
                     color={resolvedTemaCor as any}
                     crossOrigin={undefined}
+                    disabled={readOnly} // <--- BLOQUEIO
                   />
                   {opt.requerTexto && isChecked && (
                     <div className="ml-9 mt-1 w-full md:w-1/2">
@@ -329,6 +341,7 @@ export const FormularioBuilder: React.FC<FormularioBuilderProps> = ({
                           )
                         }
                         focusColorClass={resolvedInputFocusClass}
+                        disabled={readOnly} // <--- BLOQUEIO
                       />
                     </div>
                   )}
@@ -422,6 +435,7 @@ export const FormularioBuilder: React.FC<FormularioBuilderProps> = ({
             isUltimoPasso ? "md:grid-cols-3" : "md:grid-cols-2",
           ].join(" ")}
         >
+          {/* BOTÃO VOLTAR (Sempre visível para navegar) */}
           <Button
             variant="outline"
             onClick={passoAnterior}
@@ -432,7 +446,9 @@ export const FormularioBuilder: React.FC<FormularioBuilderProps> = ({
           >
             VOLTAR
           </Button>
+
           {!isUltimoPasso ? (
+            /* BOTÃO PRÓXIMO (Sempre visível para navegar) */
             <Button
               onClick={proximoPasso}
               fullWidth
@@ -442,29 +458,32 @@ export const FormularioBuilder: React.FC<FormularioBuilderProps> = ({
               PRÓXIMO
             </Button>
           ) : (
-            <>
-              <Button
-                onClick={handleSalvarManual}
-                variant="outline"
-                fullWidth
-                accentColorClass={twColor}
-                className="h-12 flex items-center justify-center gap-2 bg-transparent hover:bg-opacity-10 transition-colors"
-                title="Salvar Rascunho"
-              >
-                <Save size={18} />
-                <span>RASCUNHO</span>
-              </Button>
-              <Button
-                onClick={() => {
-                  if (validarTudoParaFinalizar()) onFinalizar(respostas);
-                }}
-                fullWidth
-                accentColorClass={twColor}
-                className="h-12 text-white shadow-none hover:shadow-md transition-all"
-              >
-                FINALIZAR
-              </Button>
-            </>
+            /* SE FOR O ÚLTIMO PASSO, SÓ MOSTRA OS BOTÕES DE SALVAR SE NÃO FOR READONLY */
+            !readOnly && (
+              <>
+                <Button
+                  onClick={handleSalvarManual}
+                  variant="outline"
+                  fullWidth
+                  accentColorClass={twColor}
+                  className="h-12 flex items-center justify-center gap-2 bg-transparent hover:bg-opacity-10 transition-colors"
+                  title="Salvar Rascunho"
+                >
+                  <Save size={18} />
+                  <span>RASCUNHO</span>
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (validarTudoParaFinalizar()) onFinalizar(respostas);
+                  }}
+                  fullWidth
+                  accentColorClass={twColor}
+                  className="h-12 text-white shadow-none hover:shadow-md transition-all"
+                >
+                  FINALIZAR
+                </Button>
+              </>
+            )
           )}
         </div>
       </div>

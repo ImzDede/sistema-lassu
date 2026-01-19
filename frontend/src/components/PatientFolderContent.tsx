@@ -1,31 +1,24 @@
 import React, { ReactNode } from "react";
-import { Edit2, Eye, Clock, ChevronRight } from "lucide-react";
-import { Card, Typography } from "@material-tailwind/react";
+import { Edit2, Eye, Clock, ChevronRight, FileDown } from "lucide-react";
+import { Card, Typography, Tooltip } from "@material-tailwind/react";
 
-// Variantes suportadas
 type FolderItemVariant = "simple" | "progress" | "session_admin";
 
 interface FolderItemCardProps {
   title: string;
-  subtitle?: ReactNode; // Aceita string ou JSX
+  subtitle?: ReactNode;
   variant?: FolderItemVariant;
-
-  // Progresso
-  progress?: number; // 0 a 100
-
-  // Ícone Overlay (ex: relógio)
+  progress?: number;
   highlight?: boolean;
+  icon?: ReactNode;
+  downloadComponent?: ReactNode; 
+  showChevron?: boolean;
+  className?: string;
 
   // Ações
-  icon?: ReactNode; // Ícone principal à esquerda (opcional)
   onEdit?: () => void;
   onView?: () => void;
   onClick?: () => void;
-
-  // Affordance (>)
-  showChevron?: boolean;
-
-  className?: string;
 }
 
 export function FolderItemCard({
@@ -38,6 +31,7 @@ export function FolderItemCard({
   onEdit,
   onView,
   onClick,
+  downloadComponent,
   showChevron = false,
   className = "",
 }: FolderItemCardProps) {
@@ -53,7 +47,6 @@ export function FolderItemCard({
         ${className}
       `}
     >
-      {/* Badge Overlay (ex: Relógio no canto superior direito) */}
       {highlight && (
         <div className="absolute -top-2 -right-2 bg-white p-1 rounded-full border border-gray-100 shadow-sm z-10 text-brand-purple">
           <Clock size={14} />
@@ -61,14 +54,12 @@ export function FolderItemCard({
       )}
 
       <div className="flex items-center gap-4">
-        {/* Ícone Opcional à Esquerda */}
         {icon && (
           <div className="text-brand-purple bg-brand-purple/5 p-2 rounded-lg">
             {icon}
           </div>
         )}
 
-        {/* Conteúdo Central */}
         <div className="flex-1 min-w-0">
           <div className="flex justify-between items-start">
             <div className="flex flex-col gap-1 min-w-0">
@@ -85,30 +76,39 @@ export function FolderItemCard({
 
             {/* Ações Rápidas (Direita) */}
             <div className="flex gap-2 pl-2 shrink-0 items-center">
+              
+              {downloadComponent && (
+                <div onClick={(e) => e.stopPropagation()}>
+                  {downloadComponent}
+                </div>
+              )}
+
               {onView && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onView();
-                  }}
-                  className="p-1.5 text-gray-400 hover:text-brand-purple hover:bg-brand-purple/10 rounded-full transition-colors"
-                  aria-label="Visualizar"
-                >
-                  <Eye size={16} />
-                </button>
+                <Tooltip content="Visualizar">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onView();
+                    }}
+                    className="p-1.5 text-gray-400 hover:text-brand-purple hover:bg-brand-purple/10 rounded-full transition-colors"
+                  >
+                    <Eye size={16} />
+                  </button>
+                </Tooltip>
               )}
 
               {onEdit && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit();
-                  }}
-                  className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-full transition-colors"
-                  aria-label="Editar"
-                >
-                  <Edit2 size={16} />
-                </button>
+                <Tooltip content="Editar">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit();
+                    }}
+                    className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-full transition-colors"
+                  >
+                    <Edit2 size={16} />
+                  </button>
+                </Tooltip>
               )}
 
               {(showChevron && isClickable) && (
@@ -119,7 +119,6 @@ export function FolderItemCard({
             </div>
           </div>
 
-          {/* Barra de Progresso */}
           {variant === "progress" && (
             <div className="mt-3 flex items-center gap-3">
               <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">

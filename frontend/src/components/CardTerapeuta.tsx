@@ -18,7 +18,7 @@ interface CardTerapeutaProps {
 export default function CardTerapeuta({
   name,
   registration,
-  secondaryLabel = "Matrícula",
+  secondaryLabel = "Matrícula/CRP",
   avatarUrl,
   occupiedSlots,
   capacity = 5,

@@ -8,6 +8,7 @@ interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "
   rightIcon?: React.ReactNode;
   fullWidth?: boolean;
   focusColorClass?: string;
+  preventPastDates?: boolean;
 }
 
 export default function Input({
@@ -18,7 +19,8 @@ export default function Input({
   type = "text",
   className = "",
   fullWidth = true,
-  focusColorClass = "focus-within:!border-brand-purple focus-within:!ring-brand-purple", 
+  focusColorClass = "focus-within:!border-brand-purple focus-within:!ring-brand-purple",
+  preventPastDates = false, 
   ...props
 }: InputProps) {
   const [showPassword, setShowPassword] = useState(false);
@@ -28,10 +30,17 @@ export default function Input({
 
   let containerClasses = "";
 
+  let minDateValue = props.min;
+  if (preventPastDates && type === "date") {
+     const hoje = new Date();
+     // Formata YYYY-MM-DD localmente
+     minDateValue = hoje.getFullYear() + '-' + String(hoje.getMonth() + 1).padStart(2, '0') + '-' + String(hoje.getDate()).padStart(2, '0');
+  }
+
   if (isDisabledOrReadOnly) {
     containerClasses = "bg-gray-200 border-gray-200 cursor-not-allowed";
   } else if (error) {
-    containerClasses = "bg-white border-feedback-error-text focus-within:ring-1 focus-within:ring-feedback-error-text";
+    containerClasses = "bg-white border-brand-encaminhamento focus-within:ring-1 focus-within:ring-brand-encaminhamento";
   } else {
     containerClasses = `bg-white border-gray-300 focus-within:ring-1 ${focusColorClass}`;
   }
@@ -46,13 +55,14 @@ export default function Input({
 
       <div className={`relative flex items-center rounded-lg border transition-all ${containerClasses}`}>
         {LeftIcon && (
-          <div className={`absolute left-3 pointer-events-none ${error ? "text-feedback-error-text" : "text-gray-400"}`}>
+          <div className={`absolute left-3 pointer-events-none ${error ? "text-brand-encaminhamento" : "text-gray-400"}`}>
             <LeftIcon size={20} />
           </div>
         )}
 
         <input
           type={inputType}
+          min={minDateValue}
           className={`
             w-full h-12 bg-transparent text-brand-dark placeholder-gray-400 outline-none text-base
             ${LeftIcon ? "pl-10" : "pl-4"} 
@@ -80,7 +90,7 @@ export default function Input({
         </div>
       </div>
 
-      {error && <span className="text-xs text-feedback-error-text font-bold ml-1 mt-0.5 animate-pulse">{error}</span>}
+      {error && <span className="text-xs text-brand-encaminhamento font-bold ml-1 mt-0.5 animate-pulse">{error}</span>}
     </div>
   );
 }

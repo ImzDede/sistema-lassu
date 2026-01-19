@@ -5,10 +5,11 @@ import { Search, X, Check } from "lucide-react";
 import { Spinner, Card, List, ListItem } from "@material-tailwind/react";
 import Input from "@/components/Input";
 
-interface Option {
+export interface Option {
   id: string;
   label: string;
   subLabel?: string;
+  cpf?: string; // <--- NOVO CAMPO CPF
 }
 
 interface SearchableSelectProps {
@@ -125,7 +126,16 @@ export default function SearchableSelect({
         >
           <div className="flex flex-col">
             <span className="font-bold text-brand-dark text-sm">{selectedOption.label}</span>
-            {selectedOption.subLabel && <span className="text-xs text-gray-500">{selectedOption.subLabel}</span>}
+            <div className="flex gap-2 text-xs text-gray-500">
+                {selectedOption.subLabel && <span>{selectedOption.subLabel}</span>}
+                {/* Exibe o CPF se existir */}
+                {selectedOption.cpf && (
+                    <>
+                     {selectedOption.subLabel && <span>•</span>}
+                     <span>CPF: {selectedOption.cpf}</span>
+                    </>
+                )}
+            </div>
           </div>
 
           <button
@@ -180,9 +190,10 @@ export default function SearchableSelect({
                     <ListItem
                       key={opt.id}
                       onClick={() => handleSelect(opt)}
+                      // MUDANÇA NO HOVER: Usamos bg-gray-100 para garantir visibilidade
                       className={`
                         text-sm font-medium rounded-md px-3 py-2.5 flex items-center justify-between group transition-colors
-                        hover:bg-${accent}/5 hover:text-${accent}
+                        hover:bg-gray-100 cursor-pointer
                       `}
                     >
                       <div className="flex flex-col gap-0.5">
@@ -194,11 +205,19 @@ export default function SearchableSelect({
                         >
                           {opt.label}
                         </span>
-                        {opt.subLabel && (
-                          <span className="text-[10px] text-gray-400 uppercase tracking-wide">
-                            {opt.subLabel}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-2">
+                            {opt.subLabel && (
+                            <span className="text-[10px] text-gray-400 uppercase tracking-wide">
+                                {opt.subLabel}
+                            </span>
+                            )}
+                             {/* Exibe o CPF na lista */}
+                            {opt.cpf && (
+                                <span className="text-[10px] text-gray-400 tracking-wide">
+                                  CPF: {opt.cpf}
+                                </span>
+                            )}
+                        </div>
                       </div>
                       {value === opt.id && <Check size={16} className={`text-${accent}`} />}
                     </ListItem>

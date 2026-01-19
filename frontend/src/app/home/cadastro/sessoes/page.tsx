@@ -91,7 +91,7 @@ export default function RegisterSession() {
     .map((p) => ({
       id: p.id,
       label: p.nome,
-      subLabel: p.cpf ? `CPF: ${formatCPF(p.cpf)}` : "Sem CPF",
+      subLabel: p.cpf ? formatCPF(p.cpf) : undefined
     }));
     
   if (preSelectedPatientId && preSelectedPatientName && !patientOptions.find(p => p.id === preSelectedPatientId)) {
@@ -207,6 +207,7 @@ export default function RegisterSession() {
                 onChange={(e) => setSelectedDate(e.target.value)} 
                 required 
                 leftIcon={Calendar}
+                preventPastDates
               />
               <Select 
                 label="Horário" 
@@ -226,6 +227,7 @@ export default function RegisterSession() {
                 placeholder="Selecione a sala..."
                 leftIcon={MapPin}
               />
+              {/*  
               {!isEditing && (
                   <Select 
                     label="Nº da Sessão (Opcional)" 
@@ -236,6 +238,7 @@ export default function RegisterSession() {
                     leftIcon={List}
                   />
               )}
+              */}
             </div>
 
             {/*<div className="w-full">

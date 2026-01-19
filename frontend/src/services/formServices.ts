@@ -9,20 +9,18 @@ const adaptarParaBackend = (
   pacienteId: string
 ): any => {
 
-  // reduce para criar o array e filtrar vazios ao mesmo tempo
-  const respostasArray = Object.entries(respostasRaw).reduce((acc: any[], [perguntaId, valor]: [string, any]) => {
+  const respostasArray = Object.entries(respostasRaw).map(([perguntaId, valor]: [string, any]) => {
     
     // 1. Múltipla escolha (Array)
-    if (Array.isArray(valor) && valor.length > 0) {
-      acc.push({
+    if (Array.isArray(valor)) {
+      return {
         perguntaId,
         opcoes: valor.map((item: any) => {
           const obj: any = { id: item.id };
           if (item.complemento) obj.complemento = item.complemento;
           return obj;
         })
-      });
-      return acc;
+      };
     }
 
     // 2. Única escolha (Objeto com ID)
@@ -30,24 +28,18 @@ const adaptarParaBackend = (
       const obj: any = { id: valor.id };
       if (valor.complemento) obj.complemento = valor.complemento;
       
-      acc.push({
+      return {
         perguntaId,
         opcoes: [obj] 
-      });
-      return acc;
+      };
     }
 
-    // 3. Texto, Inteiro, Data (Primitivos)
-    if (valor !== null && valor !== undefined && valor !== "") {
-      acc.push({ 
-          perguntaId, 
-          valor: String(valor)
-      });
-      return acc;
-    }
-
-    return acc;
-  }, []);
+    // 3. Texto, Inteiro, Data
+    return { 
+        perguntaId, 
+        valor: valor ? String(valor) : "" 
+    };
+  });
 
   return {
     pacienteId,
@@ -71,7 +63,6 @@ export const formService = {
       const response = await api.put(`/forms/anamnese/${patientId}`, payload, { timeout: 30000 });
       return response.data.data || response.data;
     } catch (error: any) {
-      // Mostra os detalhes do erro direto no console
       if (error.response?.data?.error?.details) {
         console.error("🚨 DETALHES DO ERRO DE VALIDAÇÃO:", JSON.stringify(error.response.data.error.details, null, 2));
       }

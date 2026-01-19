@@ -87,7 +87,7 @@ export default function AnotacoesPage() {
   const patientOptions = patients.map((p) => ({
     id: p.id,
     label: p.nome,
-    subLabel: p.cpf ? `CPF: ${formatCPF(p.cpf)}` : "Sem CPF",
+    subLabel: p.cpf ? formatCPF(p.cpf) : undefined
   }));
 
   if (

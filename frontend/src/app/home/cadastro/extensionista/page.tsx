@@ -153,7 +153,7 @@ export default function NewExtensionist() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Input
-                label="Matrícula"
+                label="Matrícula/CRP"
                 name="registration"
                 value={formData.registration}
                 onChange={handleChange}

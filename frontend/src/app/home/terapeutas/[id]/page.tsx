@@ -244,7 +244,7 @@ export default function TherapistDetails({
 
       <ProfileCard
         name={therapist.nome}
-        subtitle={`Matrícula: ${therapist.matricula || "--"}`}
+        subtitle={`Matrícula/CRP: ${therapist.matricula || "--"}`}
         avatarUrl={therapist.fotoUrl}
         status={therapist.ativo ? "Ativo" : "Inativo"}
         statusColor={therapist.ativo ? "green" : "red"}

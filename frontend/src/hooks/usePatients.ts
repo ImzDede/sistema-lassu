@@ -1,8 +1,11 @@
 import { useState, useCallback } from "react";
 import { patientService } from "@/services/patientServices";
 import { Patient, CreatePatientDTO, UpdatePatientDTO } from "@/types/paciente";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function usePatients() {
+  const { user } = useAuth();
+  
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -10,19 +13,18 @@ export function usePatients() {
   const fetchPatients = useCallback(async (filters?: { page?: number; nome?: string; status?: string; limit?: number; userTargetId?: string;}) => {
     setLoading(true);
     try {
+      const targetId = filters?.userTargetId ?? user?.id;
+
       const response = await patientService.getAll({
         page: filters?.page || 1,
-        limit: filters?.limit || 8, // Exibe 8 por página
+        limit: filters?.limit || 8,
         nome: filters?.nome,
         status: filters?.status,
-        userTargetId: filters?.userTargetId
+        userTargetId: targetId
       });
 
-      // Salva os pacientes
       setPatients(response.data || []);
-      
       setError(null);
-      
       return response.meta;
 
     } catch (err: any) {
@@ -32,8 +34,8 @@ export function usePatients() {
     } finally {
       setLoading(false);
     }
-  }, []);
-
+  }, [user?.id]);
+  
   //Criar
   const createPatient = async (data: CreatePatientDTO) => {
     setLoading(true);

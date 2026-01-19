@@ -11,13 +11,13 @@ import {
   Phone,
   UserCheck,
   Copy,
-  FileUp,
   UserPlus,
   Trash2,
   FileText,
   Share,
   Stethoscope,
   Edit3,
+  FileDown, // Importado para o ícone de download
 } from "lucide-react";
 import {
   Spinner,
@@ -29,16 +29,22 @@ import {
   MenuItem,
   IconButton,
 } from "@material-tailwind/react";
+import { PDFDownloadLink } from "@react-pdf/renderer"; // Importado para gerar o PDF
+
 import { useAuth } from "@/contexts/AuthContext";
 import { useFeedback } from "@/contexts/FeedbackContext";
 import { patientService } from "@/services/patientServices";
 import { sessionService } from "@/services/sessionServices";
+import { formService } from "@/services/formServices"; // Precisamos disso para saber se a anamnese existe
 import { calculateAge } from "@/utils/date";
 import { formatCPF, formatPhone } from "@/utils/format";
+
 import ProfileCard from "@/components/ProfileCard";
 import FolderAccordion from "@/components/FolderAccordion";
 import { FolderItemCard } from "@/components/PatientFolderContent";
 import ConfirmationDialog from "@/components/ConfirmationDialog";
+import { AnamnesePDF } from "@/components/pdfs/AnamnesePDF";
+import { SintesePDF } from "@/components/pdfs/SintesePDF";
 
 export default function PatientDetails({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -48,14 +54,17 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
 
   const [patient, setPatient] = useState<any | null>(null);
   const [sessionsList, setSessionsList] = useState<any[]>([]);
+
+  // Novos estados para controlar os botões de download e status
+  const [anamneseData, setAnamneseData] = useState<any>(null);
+  const [sinteseData, setSinteseData] = useState<any>(null);
+  const [hasEncaminhamento, setHasEncaminhamento] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [therapistName, setTherapistName] = useState<string>("Buscando...");
 
-  // Dialog de confirmação para ações do menu
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogAction, setDialogAction] = useState<
-    "refer" | "unrefer" | "delete" | null
-  >(null);
+  const [dialogAction, setDialogAction] = useState<any>(null);
 
   const [sections, setSections] = useState({
     sessoes: true,
@@ -72,22 +81,43 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
+
+      // 1. Busca Paciente
       const data = await patientService.getById(id);
       setPatient(data.patient);
       setTherapistName(data.therapist?.nome || "Não atribuído");
 
+      // Verifica se já foi encaminhada para controlar a UI
+      setHasEncaminhamento(data.patient.status === "encaminhada");
+
+      // 2. Busca Sessões (Lógica mantida intacta)
       try {
         const list = await sessionService.getAll({
           start: "2023-01-01",
           end: "2030-12-31",
           patientTargetId: id,
           orderBy: "dia",
-          direction: "DESC",
+          direction: "ASC",
         });
-        setSessionsList(list);
+        setSessionsList(Array.isArray(list) ? list : []);
       } catch (sessionErr) {
-        console.warn(sessionErr);
+        console.warn("Erro ao buscar sessões:", sessionErr);
         setSessionsList([]);
+      }
+
+      // 3. Busca Status dos Formulários (Anamnese e Síntese) para o botão de download
+      try {
+        const anamnese = await formService.getAnamnese(id);
+        setAnamneseData(anamnese);
+      } catch (e) {
+        /* Ignora se não existir */
+      }
+
+      try {
+        const sintese = await formService.getSintese(id);
+        setSinteseData(sintese);
+      } catch (e) {
+        /* Ignora se não existir */
       }
     } catch (error) {
       console.error(error);
@@ -101,7 +131,7 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
     if (!authLoading) loadData();
   }, [authLoading, loadData]);
 
-  // AÇÃO: Copiar Telefone
+  // --- Helpers ---
   const handleCopyPhone = () => {
     if (patient?.telefone) {
       navigator.clipboard.writeText(patient.telefone);
@@ -109,7 +139,73 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
     }
   };
 
-  // AÇÃO: Menu Dropdown
+  // Função centralizada para navegação (View vs Edit vs Create)
+  const handleNavigate = (
+    type: string,
+    itemId: string | number,
+    mode: "edit" | "view" | "create",
+  ) => {
+    if (!patient) return;
+    const idParam = mode === "create" ? "" : `&id=${itemId}`;
+    router.push(
+      `/home/cadastro/${type}?patientId=${patient.id}&patientName=${encodeURIComponent(patient.nome)}${idParam}&mode=${mode}`,
+    );
+  };
+
+  const getRespostasFormatadas = (formData: any) => {
+    if (!formData || !formData.secoes) return {};
+    const respostas: any = {};
+    formData.secoes.forEach((sec: any) => {
+      sec.perguntas.forEach((perg: any) => {
+        if (perg.resposta) respostas[perg.id] = perg.resposta;
+      });
+    });
+    return respostas;
+  };
+
+  // Componente de Botão de Download Inteligente
+  const DownloadButton = ({
+    doc,
+    fileName,
+    exists,
+  }: {
+    doc: any;
+    fileName: string;
+    exists: boolean;
+  }) => {
+    if (!exists) {
+      return (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            showFeedback("Não possui arquivo para baixar.", "warning");
+          }}
+          className="p-1.5 text-gray-300 hover:text-gray-400 hover:bg-gray-100 rounded-full transition-colors"
+          title="Indisponível"
+        >
+          <FileDown size={16} />
+        </button>
+      );
+    }
+    return (
+      <PDFDownloadLink
+        document={doc}
+        fileName={fileName}
+        className="p-1.5 text-gray-400 hover:text-brand-purple hover:bg-brand-purple/10 rounded-full transition-colors flex"
+        onClick={(e) => {
+          e.stopPropagation(); // Impede abrir o card ao clicar no download
+          setTimeout(
+            () => showFeedback("Arquivo baixado com sucesso!", "success"),
+            500,
+          );
+        }}
+      >
+        <FileDown size={16} />
+      </PDFDownloadLink>
+    );
+  };
+
+  // --- Ações de Menu ---
   const handleActionClick = (action: "refer" | "unrefer" | "delete") => {
     setDialogAction(action);
     setDialogOpen(true);
@@ -121,10 +217,12 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
       if (dialogAction === "refer") {
         await patientService.referPatient(patient.id);
         setPatient({ ...patient, status: "encaminhada" });
+        setHasEncaminhamento(true); // Atualiza UI
         showFeedback("Paciente encaminhada com sucesso.", "success");
       } else if (dialogAction === "unrefer") {
         await patientService.unreferPatient(patient.id);
         setPatient({ ...patient, status: "atendimento" });
+        setHasEncaminhamento(false); // Atualiza UI
         showFeedback("Paciente reativada para atendimento.", "success");
       } else if (dialogAction === "delete") {
         await patientService.delete(patient.id);
@@ -137,27 +235,10 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
     }
   };
 
-  const handleNavigateToCreate = (type: string) => {
-    if (!patient) return;
-    router.push(
-      `/home/cadastro/${type}?patientId=${patient.id}&patientName=${encodeURIComponent(patient.nome)}`,
-    );
-  };
-
-  const handleNavigateToEdit = (type: string, itemId: string | number) => {
-    if (!patient) return;
-    router.push(
-      `/home/cadastro/${type}?id=${itemId}&patientId=${patient.id}&patientName=${encodeURIComponent(patient.nome)}&mode=edit`,
-    );
-  };
-
   const isMasterAdmin = user?.permAdmin;
-  const canEdit =
+  const canEditGeneral =
     !isMasterAdmin && (user?.permCadastro || user?.permAtendimento);
-
-  // Status Helpers
   const isEncaminhada = patient?.status === "encaminhada";
-  const isAtendimento = patient?.status === "atendimento";
 
   if (loading || authLoading)
     return (
@@ -186,7 +267,6 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
           </Typography>
         </div>
 
-        {/* MENU DE AÇÕES (3 PONTINHOS) */}
         <Menu placement="bottom-end">
           <MenuHandler>
             <IconButton
@@ -197,18 +277,6 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
             </IconButton>
           </MenuHandler>
           <MenuList className="p-2 border border-gray-200 shadow-xl rounded-xl">
-            {/* 1. Encaminhar (Apenas Terapeuta Dono se estiver Ativo) */}
-            {!isMasterAdmin && isAtendimento && (
-              <MenuItem
-                onClick={() => handleActionClick("refer")}
-                className="flex items-center gap-2 text-brand-dark hover:bg-brand-purple/5 p-3"
-              >
-                <FileUp size={16} />{" "}
-                <span className="font-medium">Encaminhar</span>
-              </MenuItem>
-            )}
-
-            {/* 2. Reativar (Apenas Admin se estiver Encaminhada) */}
             {isMasterAdmin && isEncaminhada && (
               <MenuItem
                 onClick={() => handleActionClick("unrefer")}
@@ -218,9 +286,7 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
                 <span className="font-medium">Reativar Atendimento</span>
               </MenuItem>
             )}
-
             <hr className="my-1 border-gray-100" />
-
             <MenuItem
               onClick={() => handleActionClick("delete")}
               className="flex items-center gap-2 text-brand-encaminhamento hover:bg-red-50 hover:text-brand-encaminhamento/5 p-3"
@@ -252,7 +318,7 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
                 </Typography>
                 <Typography
                   variant="small"
-                  className="font-bold text-brand-purple"
+                  className="font-bold text-brand-encaminhamento"
                 >
                   20%
                 </Typography>
@@ -266,7 +332,6 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
             </div>
           }
         >
-          {/* CPF */}
           <div className="flex items-center gap-2 text-gray-600 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100">
             <CreditCard size={16} className="text-brand-purple" />
             <span className="text-sm font-mono">
@@ -274,7 +339,6 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
             </span>
           </div>
 
-          {/* TELEFONE */}
           <div
             onClick={handleCopyPhone}
             className="flex items-center gap-2 cursor-pointer hover:text-brand-purple transition-colors bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100 group"
@@ -290,17 +354,18 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
             />
           </div>
 
-          {/* TERAPEUTA RESPONSÁVEL */}
-          <div className="flex items-center gap-2 bg-brand-encaminhamento/10 px-3 py-1.5 rounded-full border border-brand-encaminhamento text-brand-encaminhamento">
-            <UserCheck size={16} className="text-brand-encaminhamento" />
-            <span className="font-medium text-sm truncate max-w-[150px]">
-              Resp: {therapistName}
-            </span>
-          </div>
+          {(user?.permAdmin || user?.permCadastro) && (
+            <div className="flex items-center gap-2 bg-brand-encaminhamento/10 px-3 py-1.5 rounded-full border border-brand-encaminhamento text-brand-encaminhamento">
+              <UserCheck size={16} className="text-brand-encaminhamento" />
+              <span className="font-medium text-sm truncate max-w-[150px]">
+                Resp: {therapistName}
+              </span>
+            </div>
+          )}
         </ProfileCard>
       </div>
 
-      {/* PASTAS (ACCORDIONS) */}
+      {/* PASTAS */}
       <div className="px-4 md:px-8 max-w-6xl mx-auto w-full flex flex-col gap-2">
         {/* 1. SESSÕES */}
         <FolderAccordion
@@ -309,8 +374,8 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
           icon={<Calendar size={18} />}
           isOpen={sections.sessoes}
           onToggle={() => toggleSection("sessoes")}
-          showAddButton={canEdit}
-          onAdd={() => handleNavigateToCreate("sessoes")}
+          showAddButton={canEditGeneral}
+          onAdd={() => handleNavigate("sessoes", 0, "create")}
           addLabel="Nova Sessão"
           accentColor="brand-sessao"
         >
@@ -318,32 +383,29 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
             sessionsList.map((sessao, idx) => (
               <FolderItemCard
                 key={sessao.id || idx}
-                title={`${sessionsList.length - idx}ª Sessão`}
+                title={`${idx + 1}ª Sessão`}
                 subtitle={
                   <span>
                     Sala {sessao.sala} |{" "}
                     {sessao.dia
-                      ? String(sessao.dia)
-                          .split("T")[0]
-                          .split("-")
-                          .reverse()
-                          .join("/")
+                      ? new Date(sessao.dia).toLocaleDateString("pt-BR")
                       : "-"}{" "}
                     às {sessao.hora}:00
                   </span>
                 }
                 icon={<Clock size={16} />}
-                highlight={idx === 0}
+                highlight={idx === sessionsList.length - 1}
+                // Professora e Terapeuta podem ver, mas só terapeuta edita.
+                // Como sessão não tem visualização "readOnly" específica, usamos edit se tiver permissão
                 onEdit={
-                  canEdit
-                    ? () => handleNavigateToEdit("sessoes", sessao.id)
+                  canEditGeneral
+                    ? () => handleNavigate("sessoes", sessao.id, "edit")
                     : undefined
                 }
               />
             ))
           ) : (
             <div className="text-center py-4 text-gray-400 text-xs uppercase tracking-wider">
-
             </div>
           )}
         </FolderAccordion>
@@ -357,22 +419,44 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
           onToggle={() => toggleSection("anamnese")}
           showAddButton={false}
         >
-          <FolderItemCard
-            title="Anamnese Inicial"
-            variant="progress"
-            progress={0}
-            onClick={() => handleNavigateToEdit("anamnese", "current")}
-            onEdit={
-              canEdit
-                ? () => handleNavigateToEdit("anamnese", "current")
-                : undefined
-            }
-            onView={
-              !canEdit
-                ? () => handleNavigateToEdit("anamnese", "current")
-                : undefined
-            }
-          />
+          {anamneseData && anamneseData.versaoId ? (
+            <FolderItemCard
+              title="Anamnese Inicial"
+              variant="progress"
+              progress={anamneseData.finalizada ? 100 : 50}
+              // Visualizar: Vai como View (readOnly)
+              onView={() => handleNavigate("anamnese", "current", "view")}
+              // Editar: Só se não estiver finalizada e for terapeuta
+              onEdit={
+                canEditGeneral && !anamneseData.finalizada
+                  ? () => handleNavigate("anamnese", "current", "edit")
+                  : undefined
+              }
+              downloadComponent={
+                <DownloadButton
+                  exists={!!anamneseData.finalizada}
+                  doc={
+                    <AnamnesePDF
+                      pacienteNome={patient.nome}
+                      respostas={getRespostasFormatadas(anamneseData)}
+                    />
+                  }
+                  fileName={`anamnese_${patient.nome}.pdf`}
+                />
+              }
+            />
+          ) : canEditGeneral ? (
+            <button
+              onClick={() => handleNavigate("anamnese", "current", "create")}
+              className="text-sm text-brand-anamnese hover:underline p-4 w-full text-left"
+            >
+              + Iniciar Anamnese
+            </button>
+          ) : (
+            <div className="p-4 text-gray-400 text-sm">
+              Nenhuma anamnese iniciada.
+            </div>
+          )}
         </FolderAccordion>
 
         {/* 3. SÍNTESE */}
@@ -384,22 +468,42 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
           onToggle={() => toggleSection("sintese")}
           showAddButton={false}
         >
-          <FolderItemCard
-            title="Síntese Diagnóstica"
-            variant="progress"
-            progress={0}
-            onClick={() => handleNavigateToEdit("sintese", "current")}
-            onEdit={
-              canEdit
-                ? () => handleNavigateToEdit("sintese", "current")
-                : undefined
-            }
-            onView={
-              !canEdit
-                ? () => handleNavigateToEdit("sintese", "current")
-                : undefined
-            }
-          />
+          {sinteseData && sinteseData.versaoId ? (
+            <FolderItemCard
+              title="Síntese Diagnóstica"
+              variant="progress"
+              progress={sinteseData.finalizada ? 100 : 50}
+              onView={() => handleNavigate("sintese", "current", "view")}
+              onEdit={
+                canEditGeneral && !sinteseData.finalizada
+                  ? () => handleNavigate("sintese", "current", "edit")
+                  : undefined
+              }
+              downloadComponent={
+                <DownloadButton
+                  exists={!!sinteseData.finalizada}
+                  doc={
+                    <SintesePDF
+                      pacienteNome={patient.nome}
+                      respostas={getRespostasFormatadas(sinteseData)}
+                    />
+                  }
+                  fileName={`sintese_${patient.nome}.pdf`}
+                />
+              }
+            />
+          ) : canEditGeneral ? (
+            <button
+              onClick={() => handleNavigate("sintese", "current", "create")}
+              className="text-sm text-brand-sintese hover:underline p-4 w-full text-left"
+            >
+              + Iniciar Síntese
+            </button>
+          ) : (
+            <div className="p-4 text-gray-400 text-sm">
+              Nenhuma síntese iniciada.
+            </div>
+          )}
         </FolderAccordion>
 
         {/* 4. ENCAMINHAMENTO */}
@@ -409,14 +513,32 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
           icon={<Share size={18} />}
           isOpen={sections.encaminhamento}
           onToggle={() => toggleSection("encaminhamento")}
-          showAddButton={canEdit}
-          onAdd={() => handleNavigateToCreate("encaminhamento")}
+          // SÓ MOSTRA O BOTÃO "+" SE NÃO TIVER ENCAMINHAMENTO
+          showAddButton={canEditGeneral && !hasEncaminhamento}
+          onAdd={() => handleNavigate("encaminhamento", 0, "create")}
           addLabel="Novo Encaminhamento"
           accentColor="brand-encaminhamento"
         >
-          <div className="text-center py-4 text-gray-400 text-xs uppercase tracking-wider">
-
-          </div>
+          {hasEncaminhamento ? (
+            <FolderItemCard
+              title="Encaminhamento Realizado"
+              subtitle="Paciente encaminhada"
+              icon={<Share size={16} />}
+              onView={() => handleNavigate("encaminhamento", "current", "view")}
+              // Se estiver encaminhada, talvez não queira editar, mas deixei a opção se precisar
+              onEdit={
+                canEditGeneral
+                  ? () => handleNavigate("encaminhamento", "current", "edit")
+                  : undefined
+              }
+              downloadComponent={
+                <DownloadButton exists={false} doc={null} fileName="" />
+              }
+            />
+          ) : (
+            <div className="text-center py-4 text-gray-400 text-xs uppercase tracking-wider">
+            </div>
+          )}
         </FolderAccordion>
 
         {/* 5. ANOTAÇÕES */}
@@ -426,37 +548,23 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
           icon={<Edit3 size={18} />}
           isOpen={sections.anotacoes}
           onToggle={() => toggleSection("anotacoes")}
-          showAddButton={canEdit}
-          onAdd={() => handleNavigateToCreate("anotacoes")}
+          showAddButton={canEditGeneral}
+          onAdd={() => handleNavigate("anotacoes", 0, "create")}
           addLabel="Nova Anotação"
           accentColor="brand-anotacoes"
         >
-          {/* Apenas exemplo, futuramente listar as anotações */}
+          {/* Exemplo de card de anotação - Futuramente listar do back */}
           <div className="text-center py-4 text-gray-400 text-xs uppercase tracking-wider">
-
           </div>
         </FolderAccordion>
       </div>
 
-      {/* DIALOG DE CONFIRMAÇÃO */}
       <ConfirmationDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         onConfirm={confirmAction}
-        title={
-          dialogAction === "refer"
-            ? "Encaminhar Paciente?"
-            : dialogAction === "unrefer"
-              ? "Reativar Paciente?"
-              : "Excluir Paciente?"
-        }
-        message={
-          dialogAction === "refer"
-            ? "O status será alterado para 'Encaminhada'. Use isso apenas em caso de alta ou transferência externa."
-            : dialogAction === "unrefer"
-              ? "O status voltará para 'Em Atendimento' e a paciente aparecerá na lista ativa."
-              : "A paciente será movida para a lixeira (Status de inativo). Deseja continuar?"
-        }
+        title="Ação"
+        message="Deseja continuar com esta ação?"
         isDestructive={dialogAction === "delete"}
         confirmText="Confirmar"
       />
