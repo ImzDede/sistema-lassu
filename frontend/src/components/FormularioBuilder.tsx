@@ -207,7 +207,7 @@ export const FormularioBuilder: React.FC<FormularioBuilderProps> = ({
         return (
           <Input
             label=""
-            placeholder={pergunta.enunciado}
+            // placeholder={pergunta.enunciado}
             value={typeof valorAtual === "string" ? valorAtual : ""}
             onChange={(e) => handleSimples(pergunta.id, e.target.value)}
             focusColorClass={resolvedInputFocusClass}
@@ -225,7 +225,7 @@ export const FormularioBuilder: React.FC<FormularioBuilderProps> = ({
               if (e.key === "-" || e.key === "e") e.preventDefault();
             }}
             label=""
-            placeholder={pergunta.enunciado}
+            // placeholder={pergunta.enunciado}
             value={typeof valorAtual === "string" ? valorAtual : ""}
             onChange={(e) => handleSimples(pergunta.id, e.target.value)}
             focusColorClass={resolvedInputFocusClass}
@@ -249,7 +249,7 @@ export const FormularioBuilder: React.FC<FormularioBuilderProps> = ({
       case "longo_texto":
         return (
           <Textarea
-            placeholder={pergunta.enunciado}
+            // placeholder={pergunta.enunciado}
             value={typeof valorAtual === "string" ? valorAtual : ""}
             onChange={(e) => handleSimples(pergunta.id, e.target.value)}
             rows={4}

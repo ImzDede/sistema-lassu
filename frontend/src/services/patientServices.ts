@@ -53,6 +53,11 @@ export const patientService = {
     await api.patch(`/patients/${id}/unrefer`);
   },
 
+  // Transferir Paciente
+  async transfer(patientId: string, newTherapistId: string): Promise<void> {
+    await api.patch(`/patients/${patientId}/transfer`, { newTherapistId });
+  },
+
   // Soft Delete
   async delete(id: string): Promise<void> {
     await api.delete(`/patients/${id}`);

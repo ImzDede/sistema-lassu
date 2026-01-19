@@ -20,8 +20,9 @@ function NavItem({ href, icon, label, active, activeTextClass }: any) {
     <Link href={href}>
       <div
         className={`flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 font-medium mb-1
-          ${active
-              ? `bg-white shadow-md font-bold ${activeTextClass}` 
+          ${
+            active
+              ? `bg-white shadow-md font-bold ${activeTextClass}`
               : "text-white/80 hover:bg-white/10 hover:text-white"
           }
         `}
@@ -41,9 +42,10 @@ export default function SidebarDesktop({ isVisible, toggleSidebar }: SidebarDesk
   if (!isVisible || !user) return null;
 
   const cadastroHref = user.permAdmin ? "/home/cadastro/extensionista" : "/home/cadastro";
+  const canAccessTherapists = !!(user.permAdmin || user.permCadastro); // ✅
 
   return (
-    <Card 
+    <Card
       className={`hidden lg:flex flex-col w-72 min-h-screen rounded-none shadow-xl border-r border-white/10 sticky top-0 h-screen z-50 transition-colors duration-500 ease-in-out ${bgClass}`}
     >
       <div className="p-6 flex items-center justify-between border-b border-white/10 mb-2">
@@ -72,38 +74,38 @@ export default function SidebarDesktop({ isVisible, toggleSidebar }: SidebarDesk
         />
 
         {!user.permAdmin && (
-           <NavItem 
-             href="/home/pacientes" 
-             icon={<Users size={20} />} 
-             label="Pacientes" 
-             active={pathname.includes("/home/pacientes")} 
-             activeTextClass={textClass}
-           />
+          <NavItem
+            href="/home/pacientes"
+            icon={<Users size={20} />}
+            label="Pacientes"
+            active={pathname.includes("/home/pacientes")}
+            activeTextClass={textClass}
+          />
         )}
 
-        {user.permAdmin && (
-           <NavItem 
-             href="/home/terapeutas" 
-             icon={<Users size={20} />} 
-             label="Terapeutas" 
-             active={pathname.includes("/home/terapeutas")} 
-             activeTextClass={textClass}
-           />
+        {canAccessTherapists && (
+          <NavItem
+            href="/home/terapeutas"
+            icon={<Users size={20} />}
+            label="Terapeutas"
+            active={pathname.includes("/home/terapeutas")}
+            activeTextClass={textClass}
+          />
         )}
 
-        <NavItem 
-          href={cadastroHref} 
-          icon={<PlusSquare size={20} />} 
-          label="Cadastro" 
-          active={pathname.startsWith("/home/cadastro")} 
+        <NavItem
+          href={cadastroHref}
+          icon={<PlusSquare size={20} />}
+          label="Cadastro"
+          active={pathname.startsWith("/home/cadastro")}
           activeTextClass={textClass}
         />
-        
-        <NavItem 
-          href="/home/perfil" 
-          icon={<UserIcon size={20} />} 
-          label="Perfil" 
-          active={pathname.startsWith("/home/perfil")} 
+
+        <NavItem
+          href="/home/perfil"
+          icon={<UserIcon size={20} />}
+          label="Perfil"
+          active={pathname.startsWith("/home/perfil")}
           activeTextClass={textClass}
         />
       </List>

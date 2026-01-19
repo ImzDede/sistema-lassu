@@ -17,9 +17,24 @@ interface CardPacienteProps {
 }
 
 const statusConfig = {
-  in_progress: { icon: Clock, color: "text-blue-500", bg: "bg-blue-50", border: "border-blue-100" },
-  completed: { icon: CheckCircle, color: "text-green-500", bg: "bg-green-50", border: "border-green-100" },
-  dropped: { icon: XCircle, color: "text-red-500", bg: "bg-red-50", border: "border-red-100" },
+  in_progress: {
+    icon: Clock,
+    color: "text-blue-500",
+    bg: "bg-blue-50",
+    border: "border-blue-100",
+  },
+  completed: {
+    icon: CheckCircle,
+    color: "text-green-500",
+    bg: "bg-green-50",
+    border: "border-green-100",
+  },
+  dropped: {
+    icon: XCircle,
+    color: "text-red-500",
+    bg: "bg-red-50",
+    border: "border-red-100",
+  },
 };
 
 export default function CardPaciente({
@@ -33,24 +48,37 @@ export default function CardPaciente({
   className = "",
   showPercentLabel = true,
 }: CardPacienteProps) {
-  
   const StatusIcon = status ? statusConfig[status].icon : null;
   const safeProgress = Math.min(100, Math.max(0, progressPercent));
 
+  const isClickable = typeof onClick === "function";
+
   return (
     <Card
-      onClick={onClick}
+      onClick={isClickable ? onClick : undefined}
+      role={isClickable ? "button" : undefined}
+      tabIndex={isClickable ? 0 : -1}
+      onKeyDown={(e) => {
+        if (!isClickable) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick?.();
+        }
+      }}
       className={`
         w-full shadow-sm border border-gray-200 bg-white relative overflow-visible
-        hover:shadow-md hover:border-brand-purple/30 transition-all cursor-pointer
+        transition-all
+        ${isClickable ? "cursor-pointer hover:shadow-md hover:border-brand-purple/30" : "cursor-default"}
         ${className}
       `}
     >
       {status && StatusIcon && (
-        <div className={`
-          absolute -top-2 -right-2 z-10 p-1 rounded-full shadow-sm border
-          ${statusConfig[status].bg} ${statusConfig[status].border}
-        `}>
+        <div
+          className={`
+            absolute -top-2 -right-2 z-10 p-1 rounded-full shadow-sm border
+            ${statusConfig[status].bg} ${statusConfig[status].border}
+          `}
+        >
           <StatusIcon size={16} className={statusConfig[status].color} />
         </div>
       )}
@@ -58,7 +86,12 @@ export default function CardPaciente({
       <CardBody className="p-4 flex items-center gap-4">
         <div className="shrink-0 relative">
           {avatarUrl ? (
-            <Avatar src={avatarUrl} alt={name} size="md" className="border border-gray-100" />
+            <Avatar
+              src={avatarUrl}
+              alt={name}
+              size="md"
+              className="border border-gray-100"
+            />
           ) : (
             <div className="w-12 h-12 rounded-full bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-400">
               <User size={22} />
@@ -68,11 +101,18 @@ export default function CardPaciente({
 
         <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
           <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-2">
-            <Typography variant="h6" className="font-bold text-brand-dark text-sm md:text-base truncate leading-tight">
+            <Typography
+              variant="h6"
+              className="font-bold text-brand-dark text-sm md:text-base truncate leading-tight"
+            >
               {name}
             </Typography>
+
             {age !== null && age !== undefined && (
-              <Typography variant="small" className="text-gray-400 text-xs font-medium">
+              <Typography
+                variant="small"
+                className="text-gray-400 text-xs font-medium"
+              >
                 {age} anos
               </Typography>
             )}
@@ -80,11 +120,12 @@ export default function CardPaciente({
 
           <div className="w-full flex items-center gap-3 mt-1">
             <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-              <div 
+              <div
                 className="h-full bg-brand-purple rounded-full transition-all duration-500 ease-out"
                 style={{ width: `${safeProgress}%` }}
               />
             </div>
+
             {showPercentLabel && (
               <span className="text-[10px] font-bold text-brand-purple w-8 text-right">
                 {Math.round(safeProgress)}%
@@ -93,7 +134,12 @@ export default function CardPaciente({
           </div>
         </div>
 
-        <div className="shrink-0 pl-2 text-gray-300">
+        {/* ✅ IMPORTANTE: impede clique do accessory disparar o clique do Card */}
+        <div
+          className="shrink-0 pl-2 text-gray-300"
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
           {rightAccessory || <ChevronRight size={20} />}
         </div>
       </CardBody>

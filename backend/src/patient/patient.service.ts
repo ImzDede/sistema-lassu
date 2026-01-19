@@ -285,8 +285,8 @@ export class PatientService {
         const therapistId = data.newTherapistId
         const oldTherapistId = patient.terapeuta_id
         const [therapistName, oldTherapistName, userName] = await Promise.all([
-            repository.getName(therapistId),
-            repository.getName(oldTherapistId),
+            userRepository.getName(therapistId),
+            userRepository.getName(oldTherapistId),
             userRepository.getName(userId)
         ]) as [string, string, string]
 

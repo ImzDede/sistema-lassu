@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -26,6 +32,7 @@ import CardPaciente, { PatientStatus } from "@/components/CardPaciente";
 import SearchInputWithFilter, {
   FilterOption,
 } from "@/components/SearchInputWithFilter";
+import PatientManageDialog from "@/components/PatientManageDialog";
 import { differenceInYears, parseISO } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUsers } from "@/hooks/useUsers";
@@ -48,36 +55,140 @@ export default function TherapistDetails({
 }) {
   const router = useRouter();
   const { id } = params;
-  const { isTeacher, isLoading: authLoading } = useAuth();
+
+  const { user, isTeacher, isLoading: authLoading } = useAuth();
   const { getUserById, updatePermissions } = useUsers();
   const { patients, fetchPatients, loading: loadingPatients } = usePatients();
-  const [therapist, setTherapist] = useState<TherapistData | null>(null);
   const { showFeedback } = useFeedback();
+  const pagination = usePagination();
 
-  // Dialogs
+  const [therapist, setTherapist] = useState<TherapistData | null>(null);
+  const [loadingTherapist, setLoadingTherapist] = useState(false);
+  const [therapistForbidden, setTherapistForbidden] = useState(false);
+
+  // Dialogs (admin)
   const [openRoleDialog, setOpenRoleDialog] = useState(false);
   const [openStatusDialog, setOpenStatusDialog] = useState(false);
   const [openAvailabilityDialog, setOpenAvailabilityDialog] = useState(false);
   const [openResetDialog, setOpenResetDialog] = useState(false);
 
-  // Filtros
+  // Modal (cadastro gerenciar paciente)
+  const [openPatientManageModal, setOpenPatientManageModal] = useState(false);
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(
+    null,
+  );
+
+  // filtros
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState("todos");
-  const pagination = usePagination();
 
-  const filterOptions: FilterOption[] = [
-    {
-      label: "Todos",
-      value: "todos",
-      placeholder: "Buscar paciente por nome...",
+  const isAdmin = !!user?.permAdmin;
+  const isCadastroOnly = !!user?.permCadastro && !isAdmin;
+
+  const filterOptions: FilterOption[] = useMemo(
+    () => [
+      {
+        label: "Todos",
+        value: "todos",
+        placeholder: "Buscar paciente por nome...",
+      },
+      { label: "Em Atendimento", value: "ativo" },
+      { label: "Encaminhados", value: "encaminhado" },
+      { label: "Inativos", value: "inativo" },
+    ],
+    [],
+  );
+
+  const mapStatusToCard = (pStatus: string): PatientStatus | null => {
+    if (pStatus === "atendimento") return "in_progress";
+    if (pStatus === "alta") return "completed";
+    if (pStatus === "desistência" || pStatus === "encaminhada")
+      return "dropped";
+    return null;
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    showFeedback("Número copiado!", "success");
+  };
+
+  const handlePatientCardClick = (patientId: string) => {
+    if (isAdmin) {
+      router.push(`/home/pacientes/${patientId}`);
+      return;
+    }
+    if (isCadastroOnly) {
+      setSelectedPatientId(patientId);
+      setOpenPatientManageModal(true);
+      return;
+    }
+    router.push(`/home/pacientes/${patientId}`);
+  };
+
+  const closePatientManageModal = () => {
+    setOpenPatientManageModal(false);
+    setSelectedPatientId(null);
+  };
+
+  const lastPatientsQueryRef = useRef<string>("");
+
+  const buildPatientsQueryKey = (page: number) => {
+    return JSON.stringify({
+      id,
+      page,
+      searchTerm: searchTerm.trim(),
+      activeFilter,
+    });
+  };
+
+  const loadPatients = useCallback(
+    async (pageToLoad: number) => {
+      const queryKey = buildPatientsQueryKey(pageToLoad);
+      if (lastPatientsQueryRef.current === queryKey) return;
+      lastPatientsQueryRef.current = queryKey;
+
+      let backendStatus: string | undefined = undefined;
+      if (activeFilter === "ativo") backendStatus = "atendimento";
+      if (activeFilter === "encaminhado") backendStatus = "encaminhada";
+      if (activeFilter === "inativo") backendStatus = "inativo";
+
+      const payload: any = {
+        page: pageToLoad,
+        limit: 8,
+        status: backendStatus,
+        userTargetId: id,
+        nome: searchTerm.trim() || undefined,
+      };
+
+      const meta = await fetchPatients(payload);
+      if (meta) {
+        const rawTotal = (meta as any).totalItems ?? (meta as any).total ?? 0;
+
+        const next = {
+          currentPage: meta.page || pageToLoad,
+          totalPages: meta.totalPages || 1,
+          totalItems: rawTotal,
+          itemCount: 0,
+          itemsPerPage: 8,
+        };
+
+        const same =
+          pagination.page === next.currentPage &&
+          pagination.totalPages === next.totalPages &&
+          pagination.totalItems === next.totalItems;
+
+        if (!same) pagination.setMetadata(next);
+      }
     },
-    { label: "Em Atendimento", value: "ativo" },
-    { label: "Encaminhados", value: "encaminhado" },
-    { label: "Inativos", value: "inativo" },
-  ];
+    [id, searchTerm, activeFilter, fetchPatients, pagination],
+  );
 
   const loadTherapistData = useCallback(async () => {
     if (!id) return;
+
+    setLoadingTherapist(true);
+    setTherapistForbidden(false);
+
     try {
       const userResponse = await getUserById(id);
 
@@ -100,44 +211,29 @@ export default function TherapistDetails({
       } else {
         showFeedback("Terapeuta não encontrada.", "error");
       }
-    } catch (error) {
-      console.error("Erro ao carregar terapeuta:", error);
-      showFeedback("Erro ao carregar dados.", "error");
+    } catch (error: any) {
+      const status = error?.response?.status;
+
+      if (status === 403 && isCadastroOnly) {
+        setTherapistForbidden(true);
+        setTherapist({
+          id,
+          nome: "Profissional",
+          email: "--",
+          ativo: true,
+        } as any);
+
+        showFeedback(
+          "Acesso restrito aos dados da terapeuta. Exibindo apenas pacientes vinculados.",
+          "warning",
+        );
+      } else {
+        showFeedback("Erro ao carregar dados.", "error");
+      }
+    } finally {
+      setLoadingTherapist(false);
     }
-  }, [id, getUserById, showFeedback]);
-
-  const loadPatients = useCallback(
-    (pageToLoad: number) => {
-      let backendStatus = undefined;
-
-      if (activeFilter === "ativo") backendStatus = "atendimento";
-      if (activeFilter === "encaminhado") backendStatus = "encaminhada";
-      if (activeFilter === "inativo") backendStatus = "inativo";
-
-      const payload: any = {
-        page: pageToLoad,
-        limit: 8,
-        status: backendStatus,
-        userTargetId: id,
-        nome: searchTerm || undefined,
-      };
-
-      fetchPatients(payload).then((meta) => {
-        if (meta) {
-          const rawTotal = (meta as any).totalItems ?? (meta as any).total ?? 0;
-
-          pagination.setMetadata({
-            currentPage: meta.page || pageToLoad,
-            totalPages: meta.totalPages || 1,
-            totalItems: rawTotal,
-            itemCount: 0,
-            itemsPerPage: 8,
-          });
-        }
-      });
-    },
-    [id, searchTerm, activeFilter, fetchPatients, pagination],
-  );
+  }, [id, getUserById, showFeedback, isCadastroOnly]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -146,34 +242,42 @@ export default function TherapistDetails({
       return;
     }
     loadTherapistData();
-  }, [authLoading, isTeacher]);
+  }, [authLoading, isTeacher, router, loadTherapistData]);
 
   useEffect(() => {
+    if (authLoading) return;
+    if (!id) return;
+
     const timer = setTimeout(() => {
-      pagination.setPage(1);
+      lastPatientsQueryRef.current = "";
+      if (pagination.page !== 1) pagination.setPage(1);
       loadPatients(1);
     }, 500);
+
     return () => clearTimeout(timer);
-  }, [searchTerm, activeFilter]);
+  }, [id, searchTerm, activeFilter, authLoading]);
 
   const handlePatientsPageChange = (p: number) => {
     pagination.setPage(p);
+    lastPatientsQueryRef.current = "";
     loadPatients(p);
   };
 
   const handleConfirmStatusChange = async () => {
     if (!id || !therapist) return;
     const novoStatus = !therapist.ativo;
+
     try {
       await updatePermissions(id, { ativo: novoStatus } as any);
       setTherapist({ ...therapist, ativo: novoStatus });
+
       showFeedback(
         novoStatus
           ? "Conta reativada com sucesso!"
           : "Conta desativada com sucesso.",
         novoStatus ? "success" : "warning",
       );
-    } catch (e) {
+    } catch {
       showFeedback("Erro ao alterar status.", "error");
     }
   };
@@ -181,11 +285,12 @@ export default function TherapistDetails({
   const handlePermissionChange = async (key: keyof TherapistData) => {
     if (!id || !therapist) return;
     const newValue = !Boolean(therapist[key]);
+
     try {
       await updatePermissions(id, { [key]: newValue });
       setTherapist({ ...therapist, [key]: newValue });
       showFeedback("Permissão atualizada.", "success");
-    } catch (e) {
+    } catch {
       showFeedback("Erro ao atualizar cargo.", "error");
     }
   };
@@ -195,25 +300,18 @@ export default function TherapistDetails({
     try {
       await userService.adminResetPassword(id);
       showFeedback("Senha redefinida para o padrão.", "success");
-    } catch (error) {
+    } catch {
       showFeedback("Erro ao redefinir senha.", "error");
     }
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    showFeedback("Número copiado!", "success");
-  };
+  // LÓGICA PARA ENCONTRAR O OBJETO DO PACIENTE SELECIONADO
+  const selectedPatient = useMemo(() => {
+    if (!selectedPatientId) return null;
+    return patients.find((p) => p.id === selectedPatientId) || null;
+  }, [selectedPatientId, patients]);
 
-  const mapStatusToCard = (pStatus: string): PatientStatus | null => {
-    if (pStatus === "atendimento") return "in_progress";
-    if (pStatus === "alta") return "completed";
-    if (pStatus === "desistência" || pStatus === "encaminhada")
-      return "dropped";
-    return null;
-  };
-
-  if (authLoading || !isTeacher || !therapist) {
+  if (authLoading || !isTeacher || loadingTherapist || !therapist) {
     return (
       <div className="flex justify-center h-[80vh] items-center">
         <Spinner className="text-brand-purple" />
@@ -292,6 +390,13 @@ export default function TherapistDetails({
                   </span>
                 )}
             </div>
+
+            {therapistForbidden && (
+              <div className="mt-2 text-xs text-orange-700 bg-orange-50 border border-orange-100 rounded-lg p-2">
+                Acesso limitado: o backend bloqueia detalhes completos do
+                terapeuta para “Cadastro”.
+              </div>
+            )}
           </div>
         }
       >
@@ -322,48 +427,47 @@ export default function TherapistDetails({
         </div>
       </ProfileCard>
 
-      {/* Grid de Ações */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 my-6">
-        {/* 1. Permissões */}
-        <Button
-          variant="outline"
-          onClick={() => setOpenRoleDialog(true)}
-          className="flex items-center justify-center gap-2 !border-[#A78FBF] !text-[#A78FBF] hover:!bg-[#A78FBF]/10"
-        >
-          <UserCog size={18} /> Permissões
-        </Button>
+      {/* ações administrativas — só admin */}
+      {isAdmin && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 my-6">
+          <Button
+            variant="outline"
+            onClick={() => setOpenRoleDialog(true)}
+            className="flex items-center justify-center gap-2 !border-[#A78FBF] !text-[#A78FBF] hover:!bg-[#A78FBF]/10"
+          >
+            <UserCog size={18} /> Permissões
+          </Button>
 
-        {/* 2. Disponibilidade */}
-        <Button
-          variant="outline"
-          onClick={() => setOpenAvailabilityDialog(true)}
-          className="flex items-center justify-center gap-2 !border-[#F2B694] !text-[#F2B694] hover:!bg-[#F2B694]/10"
-        >
-          <CalendarClock size={18} /> Disponibilidade
-        </Button>
+          <Button
+            variant="outline"
+            onClick={() => setOpenAvailabilityDialog(true)}
+            className="flex items-center justify-center gap-2 !border-[#F2B694] !text-[#F2B694] hover:!bg-[#F2B694]/10"
+          >
+            <CalendarClock size={18} /> Disponibilidade
+          </Button>
 
-        {/* 3. Redefinir Senha */}
-        <Button
-          variant="outline"
-          onClick={() => setOpenResetDialog(true)}
-          className="flex items-center justify-center gap-2 !border-[#D9A3B6] !text-[#D9A3B6] hover:!bg-[#D9A3B6]/10"
-        >
-          <Lock size={18} /> Redefinir Senha
-        </Button>
+          <Button
+            variant="outline"
+            onClick={() => setOpenResetDialog(true)}
+            className="flex items-center justify-center gap-2 !border-[#D9A3B6] !text-[#D9A3B6] hover:!bg-[#D9A3B6]/10"
+          >
+            <Lock size={18} /> Redefinir Senha
+          </Button>
 
-        {/* 4. Status */}
-        <Button
-          variant="outline"
-          onClick={() => setOpenStatusDialog(true)}
-          className={`flex items-center justify-center gap-2 !border-brand-anotacoes !text-brand-anotacoes hover:!bg-brand-anotacoes/10`}
-        >
-          <Power size={18} />
-          {therapist.ativo ? "Desativar" : "Reativar"}
-        </Button>
-      </div>
+          <Button
+            variant="outline"
+            onClick={() => setOpenStatusDialog(true)}
+            className="flex items-center justify-center gap-2 !border-brand-anotacoes !text-brand-anotacoes hover:!bg-brand-anotacoes/10"
+          >
+            <Power size={18} />
+            {therapist.ativo ? "Desativar" : "Reativar"}
+          </Button>
+        </div>
+      )}
 
+      {/* Lista de Pacientes */}
       <div>
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-4 gap-4">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between my-4 gap-4">
           <div className="flex items-center gap-2">
             <Typography
               variant="h5"
@@ -390,92 +494,108 @@ export default function TherapistDetails({
           />
         </div>
 
-        <div>
-          <div className="flex flex-col gap-3">
-            {loadingPatients ? (
-              <div className="py-10 flex justify-center">
-                <Spinner className="text-brand-purple" />
-              </div>
-            ) : (
-              <>
-                {patients.length > 0 ? (
-                  <>
-                    <div className="grid grid-cols-1 gap-3">
-                      {patients.map((p) => {
-                        const ageNumber = p.dataNascimento
-                          ? differenceInYears(
-                              new Date(),
-                              parseISO(p.dataNascimento),
-                            )
-                          : null;
+        <div className="flex flex-col gap-3">
+          {loadingPatients ? (
+            <div className="py-10 flex justify-center">
+              <Spinner className="text-brand-purple" />
+            </div>
+          ) : (
+            <>
+              {patients.length > 0 ? (
+                <>
+                  <div className="grid grid-cols-1 gap-3">
+                    {patients.map((p) => {
+                      const ageNumber = p.dataNascimento
+                        ? differenceInYears(
+                            new Date(),
+                            parseISO(p.dataNascimento),
+                          )
+                        : null;
 
-                        return (
-                          <CardPaciente
-                            key={p.id}
-                            name={p.nome}
-                            age={ageNumber}
-                            avatarUrl={null}
-                            progressPercent={0}
-                            status={mapStatusToCard(p.status || "")}
-                            onClick={() =>
-                              router.push(`/home/pacientes/${p.id}`)
-                            }
-                          />
-                        );
-                      })}
-                    </div>
-
-                    <div className="mt-4 flex justify-center pb-6">
-                      <PaginationControls
-                        currentPage={pagination.page}
-                        totalPages={pagination.totalPages}
-                        hasNext={pagination.hasNext}
-                        hasPrev={pagination.hasPrev}
-                        onPageChange={handlePatientsPageChange}
-                        accentColorClass="brand-encaminhamento"
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-center p-12 bg-white rounded-xl border border-dashed border-gray-200 mt-4">
-                    <Typography className="text-gray-400 text-sm">
-                      Nenhum paciente encontrado.
-                    </Typography>
+                      return (
+                        <CardPaciente
+                          key={p.id}
+                          name={p.nome}
+                          age={ageNumber}
+                          avatarUrl={null}
+                          progressPercent={0}
+                          status={mapStatusToCard(p.status || "")}
+                          onClick={() => handlePatientCardClick(p.id)}
+                        />
+                      );
+                    })}
                   </div>
-                )}
-              </>
-            )}
-          </div>
+
+                  <div className="mt-4 flex justify-center pb-6">
+                    <PaginationControls
+                      currentPage={pagination.page}
+                      totalPages={pagination.totalPages}
+                      hasNext={pagination.hasNext}
+                      hasPrev={pagination.hasPrev}
+                      onPageChange={handlePatientsPageChange}
+                      accentColorClass="brand-encaminhamento"
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="text-center p-12 bg-white rounded-xl border border-dashed border-gray-200 mt-4">
+                  <Typography className="text-gray-400 text-sm">
+                    Nenhum paciente encontrado.
+                  </Typography>
+                </div>
+              )}
+            </>
+          )}
         </div>
 
-        <PermissionsDialog
-          open={openRoleDialog}
-          onClose={() => setOpenRoleDialog(false)}
-          therapist={therapist}
-          onUpdate={handlePermissionChange}
-        />
-        <ConfirmationDialog
-          open={openStatusDialog}
-          onClose={() => setOpenStatusDialog(false)}
-          onConfirm={handleConfirmStatusChange}
-          title={therapist.ativo ? "Desativar Conta?" : "Reativar Conta?"}
-          message={`Deseja alterar o status de ${therapist.nome}?`}
-          confirmText="Confirmar"
-          isDestructive={therapist.ativo}
-        />
-        <AvailabilityDialog
-          open={openAvailabilityDialog}
-          onClose={() => setOpenAvailabilityDialog(false)}
-          availabilities={therapist.disponibilidade || []}
-        />
-        <ResetPasswordDialog
-          open={openResetDialog}
-          onClose={() => setOpenResetDialog(false)}
-          onConfirm={handleResetPassword}
-          therapistName={therapist.nome}
-          matricula={therapist.matricula}
-        />
+        {/* Dialogs admin */}
+        {isAdmin && (
+          <>
+            <PermissionsDialog
+              open={openRoleDialog}
+              onClose={() => setOpenRoleDialog(false)}
+              therapist={therapist}
+              onUpdate={handlePermissionChange}
+            />
+
+            <ConfirmationDialog
+              open={openStatusDialog}
+              onClose={() => setOpenStatusDialog(false)}
+              onConfirm={handleConfirmStatusChange}
+              title={therapist.ativo ? "Desativar Conta?" : "Reativar Conta?"}
+              message={`Deseja alterar o status de ${therapist.nome}?`}
+              confirmText="Confirmar"
+              isDestructive={therapist.ativo}
+            />
+
+            <AvailabilityDialog
+              open={openAvailabilityDialog}
+              onClose={() => setOpenAvailabilityDialog(false)}
+              availabilities={therapist.disponibilidade || []}
+            />
+
+            <ResetPasswordDialog
+              open={openResetDialog}
+              onClose={() => setOpenResetDialog(false)}
+              onConfirm={handleResetPassword}
+              therapistName={therapist.nome}
+              matricula={therapist.matricula}
+            />
+          </>
+        )}
       </div>
+
+      {/* --- MODAL REAL DE GERENCIAMENTO (CADASTRO) --- */}
+      <PatientManageDialog
+        open={openPatientManageModal && isCadastroOnly && !!selectedPatient}
+        onClose={closePatientManageModal}
+        patient={selectedPatient}
+        onUpdated={() => {
+          lastPatientsQueryRef.current = "";
+          loadPatients(pagination.page);
+        }}
+        currentTherapistId={therapist.id}
+      />
     </div>
   );
 }

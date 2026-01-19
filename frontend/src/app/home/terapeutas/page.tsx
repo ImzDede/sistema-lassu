@@ -17,9 +17,12 @@ export default function TerapeutasPage() {
   const { user, isTeacher, isLoading: authLoading } = useAuth();
   const { users, loading: loadingData, fetchUsers } = useUsers();
   const pagination = usePagination();
+
   const [searchTerm, setSearchTerm] = useState("");
   const [patientCounts, setPatientCounts] = useState<Record<string, number>>({});
-  const [statusFilter, setStatusFilter] = useState("ativos"); 
+  const [statusFilter, setStatusFilter] = useState("ativos");
+
+  const canAccess = !!(user?.permAdmin || user?.permCadastro);
 
   const filterOptions: FilterOption[] = [
     { label: "Ativos", value: "ativos", placeholder: "Procurar terapeutas..." },
@@ -27,42 +30,44 @@ export default function TerapeutasPage() {
     { label: "Todos", value: "todos", placeholder: "Procurar terapeutas..." },
   ];
 
-  const loadTherapists = (pageToLoad: number) => {
+  const loadTherapists = async (pageToLoad: number) => {
     const queryPayload: any = {
-        page: pageToLoad,
-        limit: 8,
-        nome: searchTerm || undefined,
+      page: pageToLoad,
+      limit: 8,
+      nome: searchTerm || undefined,
     };
 
     if (statusFilter === "ativos") queryPayload.ativo = true;
     if (statusFilter === "inativos") queryPayload.ativo = false;
 
-    fetchUsers(queryPayload).then((meta) => {
-        if (meta) {
-            pagination.setMetadata({
-                currentPage: meta.page || pageToLoad,
-                totalPages: meta.totalPages || 1,
-                totalItems: meta.total || 0,
-                itemCount: 0,
-                itemsPerPage: 8
-            });
-        }
-    });
+    const meta = await fetchUsers(queryPayload);
+    if (meta) {
+      pagination.setMetadata({
+        currentPage: (meta as any).page || pageToLoad,
+        totalPages: (meta as any).totalPages || 1,
+        totalItems: (meta as any).totalItems ?? (meta as any).total ?? 0,
+        itemCount: 0,
+        itemsPerPage: 8,
+      });
+    }
   };
 
   useEffect(() => {
-    if (!authLoading) {
-        if (!user || !user.permAdmin) {
-            router.push("/home");
-        } else {
-            const timer = setTimeout(() => {
-                pagination.setPage(1);
-                loadTherapists(1);
-            }, 500);
-            return () => clearTimeout(timer);
-        }
+    if (authLoading) return;
+
+    if (!user || !canAccess) {
+      router.push("/home");
+      return;
     }
-  }, [user, authLoading, searchTerm, statusFilter]);
+
+    const timer = setTimeout(() => {
+      pagination.setPage(1);
+      loadTherapists(1);
+    }, 350);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, user?.id, canAccess, searchTerm, statusFilter]);
 
   // Busca contagem real de pacientes por terapeuta
   useEffect(() => {
@@ -78,22 +83,20 @@ export default function TerapeutasPage() {
         const results = await Promise.all(
           users.map(async (u) => {
             try {
-              // Busca pacientes vinculados a este terapeuta
-              const resp = await patientService.getAll({ 
-                  page: 1, 
-                  limit: 1, 
-                  userTargetId: u.id,
-                  status: "atendimento" // Conta apenas os em atendimento
+              const resp = await patientService.getAll({
+                page: 1,
+                limit: 1,
+                userTargetId: u.id,
+                status: "atendimento",
               });
-              
-              const meta: any = resp.meta;
+
+              const meta: any = (resp as any).meta;
               const total = meta?.totalItems ?? meta?.total ?? meta?.count ?? 0;
-              
               return [u.id, total] as const;
             } catch {
               return [u.id, 0] as const;
             }
-          })
+          }),
         );
 
         if (!cancelled) {
@@ -111,21 +114,34 @@ export default function TerapeutasPage() {
       cancelled = true;
     };
   }, [users]);
- 
 
   const handlePageChange = (newPage: number) => {
-      pagination.setPage(newPage);
-      loadTherapists(newPage);
+    pagination.setPage(newPage);
+    loadTherapists(newPage);
   };
 
   if (authLoading || !isTeacher) {
-    return <div className="flex items-center justify-center h-[80vh]"><Spinner className="h-12 w-12 text-brand-purple" /></div>;
+    return (
+      <div className="flex items-center justify-center h-[80vh]">
+        <Spinner className="h-12 w-12 text-brand-purple" />
+      </div>
+    );
+  }
+
+  if (!canAccess) {
+    return (
+      <div className="flex items-center justify-center h-[80vh]">
+        <Typography className="text-gray-500">Sem permissão.</Typography>
+      </div>
+    );
   }
 
   return (
     <div className="flex flex-col w-full h-full gap-6">
       <div className="text-center lg:text-left">
-        <Typography variant="h3" className="font-bold uppercase text-brand-encaminhamento">TERAPEUTAS</Typography>
+        <Typography variant="h3" className="font-bold uppercase text-brand-encaminhamento">
+          TERAPEUTAS
+        </Typography>
       </div>
 
       <SearchInputWithFilter
@@ -133,44 +149,46 @@ export default function TerapeutasPage() {
         onChange={setSearchTerm}
         filter={statusFilter}
         onFilterChange={(newFilter) => {
-            setStatusFilter(newFilter); 
-            setSearchTerm(""); 
+          setStatusFilter(newFilter);
+          setSearchTerm("");
         }}
         options={filterOptions}
       />
 
       <div className="flex flex-col gap-4 pb-20 md:pb-0 min-h-[400px]">
         {loadingData ? (
-          <div className="flex justify-center p-10"><Spinner className="text-brand-purple" /></div>
+          <div className="flex justify-center p-10">
+            <Spinner className="text-brand-purple" />
+          </div>
         ) : (
           <>
             {users.length > 0 ? (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {users.map((tUser: User) => (
-                      <CardTerapeuta
-                        key={tUser.id}
-                        name={tUser.nome}
-                        registration={tUser.matricula || "S/M"}
-                        avatarUrl={null} 
-                        occupiedSlots={patientCounts[tUser.id] ?? 0} 
-                        capacity={5}
-                        onClick={() => router.push(`/home/terapeutas/${tUser.id}`)}
-                        className={!tUser.ativo ? "opacity-60 grayscale" : ""}
-                        accentColor='brand-encaminhamento'
-                      />
-                    ))}
-                </div>
-                
-                <div className="mt-4 flex justify-center">
-                    <PaginationControls 
-                        currentPage={pagination.page}
-                        totalPages={pagination.totalPages}
-                        hasNext={pagination.hasNext}
-                        hasPrev={pagination.hasPrev}
-                        onPageChange={handlePageChange}
-                        accentColorClass="brand-encaminhamento"
+                  {users.map((tUser: User) => (
+                    <CardTerapeuta
+                      key={tUser.id}
+                      name={tUser.nome}
+                      registration={tUser.matricula || "S/M"}
+                      avatarUrl={null}
+                      occupiedSlots={patientCounts[tUser.id] ?? 0}
+                      capacity={5}
+                      onClick={() => router.push(`/home/terapeutas/${tUser.id}`)}
+                      className={!tUser.ativo ? "opacity-60 grayscale" : ""}
+                      accentColor="brand-encaminhamento"
                     />
+                  ))}
+                </div>
+
+                <div className="mt-4 flex justify-center">
+                  <PaginationControls
+                    currentPage={pagination.page}
+                    totalPages={pagination.totalPages}
+                    hasNext={pagination.hasNext}
+                    hasPrev={pagination.hasPrev}
+                    onPageChange={handlePageChange}
+                    accentColorClass="brand-encaminhamento"
+                  />
                 </div>
               </>
             ) : (
@@ -185,3 +203,5 @@ export default function TerapeutasPage() {
     </div>
   );
 }
+
+
