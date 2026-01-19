@@ -50,7 +50,6 @@ export function FolderItemCard({
             {title}
           </Typography>
           
-          {/* CORREÇÃO AQUI: Trocado Typography por div e removido 'truncate' para permitir multiline (status) */}
           {variant === "default" && subtitle && (
             <div className="text-xs text-gray-500 font-normal mt-0.5">
               {subtitle}

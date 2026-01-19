@@ -62,43 +62,54 @@ export default function NewExtensionist() {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setErrors({});
+    
+    // Validação FRONTEND básica (opcional, mas boa prática UX)
     const nextErrors: Record<string, string> = {};
-
     if (!formData.name?.trim()) nextErrors.name = "Campo obrigatório.";
     if (!formData.email?.trim()) nextErrors.email = "Campo obrigatório.";
-
-    if (!formData.registration?.trim()) {
-      nextErrors.registration = "Campo obrigatório.";
-    } else if (formData.registration.length < 7) {
-      nextErrors.registration = "Mínimo 7 dígitos.";
-    }
-
-    if (!formData.phone?.trim()) {
-      nextErrors.phone = "Campo obrigatório.";
-    } else if (cleanFormat(formData.phone).length < 10) {
-      nextErrors.phone = "Telefone incompleto.";
-    }
+    if (!formData.registration?.trim()) nextErrors.registration = "Campo obrigatório.";
+    if (!formData.phone?.trim()) nextErrors.phone = "Campo obrigatório.";
 
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
-      showFeedback("Preencha todos os campos obrigatórios corretamente.", "error");
+      showFeedback("Preencha todos os campos obrigatórios.", "error");
       return;
     }
 
-    await handleSubmit(async () => {
-      const payload = {
-        nome: formData.name,
-        email: formData.email,
-        matricula: formData.registration,
-        telefone: cleanFormat(formData.phone),
-      };
+    // Chamada ao BACKEND via useFormHandler
+    await handleSubmit(
+      async () => {
+        const payload = {
+          nome: formData.name,
+          email: formData.email,
+          matricula: formData.registration,
+          telefone: cleanFormat(formData.phone),
+        };
 
-      await userService.create(payload);
+        await userService.create(payload);
 
-      showFeedback("Extensionista cadastrada com sucesso!", "success");
-      setFormData({ name: "", email: "", registration: "", phone: "" });
-      setErrors({});
-    });
+        showFeedback("Extensionista cadastrada com sucesso!", "success");
+        setFormData({ name: "", email: "", registration: "", phone: "" });
+        setErrors({});
+      },
+      undefined, // onSuccess (opcional, já fizemos feedback e reset acima)
+      (error, fieldErrors) => {
+        // Callback de ERRO
+        // Se o back mandar { error: { details: { email: ["Inválido"] } } }
+        // fieldErrors vai ter { email: "Inválido" }
+        if (fieldErrors && Object.keys(fieldErrors).length > 0) {
+            // Mapeia campos do back para nomes do front se necessário
+            // Ex: back "matricula" -> front "registration"
+            const mappedErrors: Record<string, string> = {};
+            if (fieldErrors.matricula) mappedErrors.registration = fieldErrors.matricula;
+            if (fieldErrors.telefone) mappedErrors.phone = fieldErrors.telefone;
+            if (fieldErrors.nome) mappedErrors.name = fieldErrors.nome;
+            if (fieldErrors.email) mappedErrors.email = fieldErrors.email;
+            
+            setErrors(prev => ({ ...prev, ...fieldErrors, ...mappedErrors }));
+        }
+      }
+    );
   }
 
   return (

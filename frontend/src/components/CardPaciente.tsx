@@ -1,3 +1,5 @@
+"use client";
+
 import React, { ReactNode } from "react";
 import { User, ChevronRight, Clock, CheckCircle, XCircle } from "lucide-react";
 import { Card, CardBody, Typography, Avatar } from "@material-tailwind/react";
@@ -8,7 +10,7 @@ interface CardPacienteProps {
   name: string;
   age?: number | string | null;
   avatarUrl?: string | null;
-  progressPercent: number;
+  progressPercent?: number; // Tornou-se opcional
   status?: PatientStatus | null;
   onClick?: () => void;
   rightAccessory?: ReactNode;
@@ -41,7 +43,7 @@ export default function CardPaciente({
   name,
   age,
   avatarUrl,
-  progressPercent = 0,
+  progressPercent, // Não tem mais valor padrão fixo
   status,
   onClick,
   rightAccessory,
@@ -49,7 +51,9 @@ export default function CardPaciente({
   showPercentLabel = true,
 }: CardPacienteProps) {
   const StatusIcon = status ? statusConfig[status].icon : null;
-  const safeProgress = Math.min(100, Math.max(0, progressPercent));
+  
+  // Só calcula se existir
+  const safeProgress = progressPercent !== undefined ? Math.min(100, Math.max(0, progressPercent)) : 0;
 
   const isClickable = typeof onClick === "function";
 
@@ -118,23 +122,25 @@ export default function CardPaciente({
             )}
           </div>
 
-          <div className="w-full flex items-center gap-3 mt-1">
-            <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-brand-purple rounded-full transition-all duration-500 ease-out"
-                style={{ width: `${safeProgress}%` }}
-              />
-            </div>
+          {/* SÓ RENDERIZA A BARRA SE TIVER PROGRESSO DEFINIDO */}
+          {progressPercent !== undefined && (
+            <div className="w-full flex items-center gap-3 mt-1">
+              <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-brand-purple rounded-full transition-all duration-500 ease-out"
+                  style={{ width: `${safeProgress}%` }}
+                />
+              </div>
 
-            {showPercentLabel && (
-              <span className="text-[10px] font-bold text-brand-purple w-8 text-right">
-                {Math.round(safeProgress)}%
-              </span>
-            )}
-          </div>
+              {showPercentLabel && (
+                <span className="text-[10px] font-bold text-brand-purple w-8 text-right">
+                  {Math.round(safeProgress)}%
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* ✅ IMPORTANTE: impede clique do accessory disparar o clique do Card */}
         <div
           className="shrink-0 pl-2 text-gray-300"
           onClick={(e) => e.stopPropagation()}

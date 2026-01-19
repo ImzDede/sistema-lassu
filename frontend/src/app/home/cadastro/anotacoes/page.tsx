@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { formatCPF } from "@/utils/format";
 import { useAppTheme } from "@/hooks/useAppTheme";
 import { useFeedback } from "@/contexts/FeedbackContext";
+import { useFormHandler } from "@/hooks/useFormHandler";
 
 export default function AnotacoesPage() {
   const router = useRouter();
@@ -23,13 +24,13 @@ export default function AnotacoesPage() {
   const { user } = useAuth();
   const { showFeedback } = useFeedback();
   const { patients, fetchPatients, loading: loadingPatients } = usePatients();
+  const { loading: loadingSave, handleSubmit } = useFormHandler();
 
   const {
     saveNote,
     fetchSessionsForPatient,
     getSessionNote,
     patientSessions,
-    loadingSave,
   } = useAnotacoes();
 
   const { borderClass, textClass, lightBgClass } = useAppTheme();
@@ -71,6 +72,7 @@ export default function AnotacoesPage() {
         setNotes("");
         return;
       }
+      // Aqui pode manter direto pois é leitura, mas idealmente trataria erro também
       const texto = await getSessionNote(sessionId);
       if (alive) setNotes(texto);
     }
@@ -125,6 +127,7 @@ export default function AnotacoesPage() {
   }, [patientSessions]);
 
   const handleSave = async () => {
+    // 1. Validação local (campos obrigatórios)
     const nextErrors: typeof errors = {};
 
     if (!selectedPatient) nextErrors.patientId = "Selecione um paciente.";
@@ -137,7 +140,12 @@ export default function AnotacoesPage() {
       return;
     }
 
-    await saveNote(sessionId, notes);
+    // 2. Envio com tratamento de erro via useFormHandler
+    await handleSubmit(async () => {
+      // O saveNote deve lançar erro (throw) caso falhe no back
+      await saveNote(sessionId, notes);
+      showFeedback("Anotação salva com sucesso!", "success");
+    });
   };
 
   return (
@@ -260,5 +268,3 @@ export default function AnotacoesPage() {
     </div>
   );
 }
-
-

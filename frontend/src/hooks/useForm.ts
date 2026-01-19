@@ -6,33 +6,20 @@ import { FormFilledDTO } from "@/types/form";
 type FormType = "ANAMNESE" | "SINTESE";
 
 export function useForm() {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false); // Loading apenas para o fetch
   const [formData, setFormData] = useState<FormFilledDTO | null>(null);
   const { showFeedback } = useFeedback();
 
-  // Helper para chave do LocalStorage (COMENTADO PARA TESTE)
-  // const getLocalKey = (type: FormType, patientId: string) => `rascunho_${type}_${patientId}`;
-
-  // 1. BUSCAR DADOS
+  // 1. BUSCAR DADOS (GET) - Mantém try/catch pois é leitura
   const fetchForm = useCallback(async (type: FormType, patientId: string) => {
     if (!patientId) return;
-    // const localKey = getLocalKey(type, patientId); // COMENTADO
 
     try {
       setLoading(true);
       
-      // Busca do Backend
-      let data = type === "ANAMNESE" 
+      const data = type === "ANAMNESE" 
         ? await formService.getAnamnese(patientId)
         : await formService.getSintese(patientId);
-
-      // --- BLOCO LOCALSTORAGE COMENTADO ---
-      /* const localRaw = localStorage.getItem(localKey);
-      if (localRaw) {
-        // ... lógica de merge ...
-      }
-      */
-      // ------------------------------------
 
       setFormData(data);
     } catch (error: any) {
@@ -43,57 +30,43 @@ export function useForm() {
     }
   }, [showFeedback]);
 
-  // 2. SALVAR (Direto no Backend - SEM RETORNO)
+  // 2. SALVAR (POST/PUT)
+  // Agora retorna Promise<void> e lança erro se falhar na finalização
   const saveForm = async (type: FormType, patientId: string, rawData: any, finalizar: boolean) => {
-    if (!patientId) return false;
+    if (!patientId) throw new Error("Paciente não identificado.");
     
-    // --- BLOCO LOCALSTORAGE COMENTADO ---
-    // const localKey = getLocalKey(type, patientId);
-    // localStorage.setItem(localKey, JSON.stringify(rawData));
-    // ------------------------------------
-
     if (!formData || !formData.versaoId) {
-        if (finalizar) showFeedback("Erro: Versão não identificada. Recarregue a página.", "error");
-        return false;
+        throw new Error("Versão do formulário não identificada. Recarregue a página.");
     }
 
     const versaoId = formData.versaoId;
 
     try {
-      if (finalizar) setLoading(true);
-
-      // 2. Tenta enviar para o Backend
+      // Chamada ao Backend
       if (type === "ANAMNESE") {
         await formService.submitAnamnese(patientId, versaoId, rawData, finalizar);
       } else {
         await formService.submitSintese(patientId, versaoId, rawData, finalizar);
       }
       
+      // Sucesso
       if (finalizar) {
-        // localStorage.removeItem(localKey); // COMENTADO
         showFeedback("Formulário finalizado com sucesso!", "success");
       }
-      return true;
 
     } catch (error: any) {
       console.error(`Erro ao salvar ${type}:`, error);
-      
-      const isErroDeRede = error.code === "ERR_NETWORK" || !error.response;
 
+      // LÓGICA CRUCIAL:
+      // Se for FINALIZAR (ação do usuário), lançamos o erro para a tela tratar.
+      // Se for AUTOSAVE (automático), engolimos o erro para não travar a digitação.
+      
       if (finalizar) {
-        const msg = error.response?.data?.message || "Erro ao salvar formulário.";
-        showFeedback(msg, "warning"); 
-        return false;
+        throw error; // Joga pro useFormHandler
       } else {
-        if (isErroDeRede) {
-             console.warn("⚠️ Sem internet. Salvamento falhou (LocalStorage desligado).");
-        } else {
-             console.warn("❌ Erro no AutoSave (Backend recusou):", error.response?.data);
-        }
+        // Apenas loga aviso silencioso no console
+        console.warn("⚠️ Falha no salvamento automático (backend).");
       }
-      return true; 
-    } finally {
-      setLoading(false);
     }
   };
 

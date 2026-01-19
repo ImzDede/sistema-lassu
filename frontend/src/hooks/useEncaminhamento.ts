@@ -1,50 +1,36 @@
-import { useState } from "react";
 import { patientService } from "@/services/patientServices";
-import { useFeedback } from "@/contexts/FeedbackContext";
+// Não precisa mais do useFeedback aqui para erros, a página trata via useFormHandler
+// Mas podemos manter para sucesso se quiser, ou mover para a página.
 
 export function useEncaminhamento() {
-  const [loading, setLoading] = useState(false);
-  const { showFeedback } = useFeedback();
-
+  
   const saveReferral = async (
     patientId: string,
     destino: string,
     arquivo: File | null
   ) => {
+    // 1. Validações básicas (lançam erro para o handler pegar)
     if (!patientId) {
-      showFeedback("Selecione um paciente.", "error");
-      return false;
+      throw new Error("Selecione um paciente.");
     }
 
     if (!destino.trim()) {
-      showFeedback("Informe o motivo ou destino do encaminhamento.", "error");
-      return false;
+      throw new Error("Informe o motivo ou destino do encaminhamento.");
     }
 
-    try {
-      setLoading(true);
+    // 2. Montagem dos dados
+    const formData = new FormData();
+    formData.append("destino", destino);
 
-      const formData = new FormData();
-      formData.append("destino", destino);
-
-      // ✅ arquivo opcional
-      if (arquivo) {
-        formData.append("arquivo", arquivo);
-      }
-
-      await patientService.referPatient(patientId, formData);
-
-      showFeedback("Paciente encaminhado com sucesso!", "success");
-      return true;
-    } catch (error: any) {
-      const msg =
-        error.response?.data?.message || "Erro ao realizar encaminhamento.";
-      showFeedback(msg, "error");
-      return false;
-    } finally {
-      setLoading(false);
+    if (arquivo) {
+      formData.append("arquivo", arquivo);
     }
+
+    // 3. Chamada ao serviço SEM try/catch
+    // Se der erro no back (ex: "Anamnese não finalizada"), 
+    // o erro vai subir para o useFormHandler da página exibir.
+    await patientService.referPatient(patientId, formData);
   };
 
-  return { saveReferral, loading };
+  return { saveReferral };
 }

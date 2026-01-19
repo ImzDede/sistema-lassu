@@ -10,6 +10,7 @@ import { useFeedback } from "@/contexts/FeedbackContext";
 import { usePatients } from "@/hooks/usePatients";
 import { useAuth } from "@/contexts/AuthContext";
 import { useForm } from "@/hooks/useForm";
+import { useFormHandler } from "@/hooks/useFormHandler"; // ✅ Importado
 
 export default function SintesePage() {
   const router = useRouter();
@@ -23,7 +24,10 @@ export default function SintesePage() {
   const { user } = useAuth();
   const { patients, fetchPatients, loading: loadingPatients } = usePatients();
   const { showFeedback } = useFeedback();
+  
+  // ✅ Hook de formulário e handler
   const { formData, fetchForm, saveForm, loading: loadingForm } = useForm();
+  const { handleSubmit } = useFormHandler();
 
   const [selectedPatient, setSelectedPatient] = useState<string | null>(
     preSelectedPatientId || null,
@@ -70,20 +74,24 @@ export default function SintesePage() {
     });
   }
 
+  // AutoSave: Silencioso (sem handleSubmit)
   const handleSalvarRascunho = async (respostas: any) => {
     if (!selectedPatient) return;
     await saveForm("SINTESE", selectedPatient, respostas, false);
   };
 
+  // Finalizar: Com tratamento de erro e feedback visual
   const handleFinalizar = async (respostas: any) => {
     if (!selectedPatient) {
       showFeedback("Selecione um paciente.", "error");
       return;
     }
-    const sucesso = await saveForm("SINTESE", selectedPatient, respostas, true);
-    if (sucesso) {
+
+    await handleSubmit(async () => {
+      await saveForm("SINTESE", selectedPatient, respostas, true);
+      // Sucesso
       router.back();
-    }
+    });
   };
 
   const getDadosIniciais = () => {

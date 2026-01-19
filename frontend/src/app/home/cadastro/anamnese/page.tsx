@@ -10,6 +10,7 @@ import { useFeedback } from "@/contexts/FeedbackContext";
 import { usePatients } from "@/hooks/usePatients";
 import { useAuth } from "@/contexts/AuthContext";
 import { useForm } from "@/hooks/useForm";
+import { useFormHandler } from "@/hooks/useFormHandler"; // ✅ Importado
 
 export default function AnamnesePage() {
   const router = useRouter();
@@ -23,7 +24,12 @@ export default function AnamnesePage() {
   const { user } = useAuth();
   const { patients, fetchPatients, loading: loadingPatients } = usePatients();
   const { showFeedback } = useFeedback();
+  
+  // ✅ Hook de formulário (fetch e save)
   const { formData, fetchForm, saveForm, loading: loadingForm } = useForm();
+  
+  // ✅ Handler para tratar erros no salvamento final
+  const { handleSubmit } = useFormHandler();
 
   const [selectedPatient, setSelectedPatient] = useState<string | null>(
     preSelectedPatientId || null,
@@ -70,25 +76,31 @@ export default function AnamnesePage() {
     });
   }
 
+  // AutoSave: Não usa handleSubmit para não bloquear a tela ou mostrar erro intrusivo
   const handleSalvarRascunho = async (respostas: any) => {
     if (!selectedPatient) return;
     await saveForm("ANAMNESE", selectedPatient, respostas, false);
   };
 
+  // Finalizar: Usa handleSubmit para validar e mostrar feedback visual
   const handleFinalizar = async (respostas: any) => {
     if (!selectedPatient) {
       showFeedback("Selecione um paciente.", "error");
       return;
     }
-    const sucesso = await saveForm(
-      "ANAMNESE",
-      selectedPatient,
-      respostas,
-      true,
-    );
-    if (sucesso) {
+
+    await handleSubmit(async () => {
+      // Agora o saveForm lança erro se falhar.
+      await saveForm(
+        "ANAMNESE",
+        selectedPatient,
+        respostas,
+        true, // Finalizar = true
+      );
+      
+      // Se chegou aqui, deu certo
       router.back();
-    }
+    });
   };
 
   const getDadosIniciais = () => {

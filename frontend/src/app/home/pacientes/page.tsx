@@ -120,7 +120,7 @@ export default function PacientesPage() {
                         name={p.nome}
                         age={ageNumber}
                         avatarUrl={null}
-                        progressPercent={0}
+                        // progressPercent removido
                         showPercentLabel={true}
                         status={mapStatusToCard(p.status || "")}
                         onClick={() => router.push(`/home/pacientes/${p.id}`)}

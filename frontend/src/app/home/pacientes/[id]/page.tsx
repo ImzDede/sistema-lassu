@@ -47,7 +47,7 @@ import ConfirmationDialog from "@/components/ConfirmationDialog";
 import { AnamnesePDF } from "@/components/pdfs/AnamnesePDF";
 import { SintesePDF } from "@/components/pdfs/SintesePDF";
 
-// Helper para formatar data ignorando timezone (UTC) - Resolve o problema do dia anterior
+// Helper para formatar data ignorando timezone (UTC)
 const formatDateUTC = (dateString: string) => {
   if (!dateString) return "-";
   // Pega apenas a parte da data YYYY-MM-DD
@@ -59,12 +59,22 @@ const formatDateUTC = (dateString: string) => {
 // Helper para traduzir status e cor
 const getStatusConfig = (status: string) => {
   switch (status) {
-    case "realizada": return { label: "Realizada", color: "text-green-600 font-bold" };
-    case "falta": return { label: "Falta", color: "text-red-500 font-bold" };
-    case "cancelada_paciente": return { label: "Canc. pelo Paciente", color: "text-orange-500 font-bold" };
-    case "cancelada_terapeuta": return { label: "Canc. pela Terapeuta", color: "text-orange-500 font-bold" };
+    case "realizada": 
+      // Roxo escuro (#6D538B) - Sucesso/Concluído
+      return { label: "Realizada", color: "text-brand-sessao font-bold" };
+    case "falta": 
+      // Terracota/Vermelho (#F2A9A2) - Alerta de ausência
+      return { label: "Falta", color: "text-brand-terracota font-bold" };
+    case "cancelada_paciente": 
+      // Pêssego/Laranja (#F2B694) - Atenção
+      return { label: "Canc. pelo Paciente", color: "text-brand-peach font-bold" };
+    case "cancelada_terapeuta": 
+      // Pêssego/Laranja (#F2B694) - Atenção
+      return { label: "Canc. pela Terapeuta", color: "text-brand-peach font-bold" };
     case "agendada": 
-    default: return { label: "Agendada", color: "text-blue-500 font-medium" };
+    default: 
+      // Cinza (#71787E) - Neutro/Aguardando
+      return { label: "Agendada", color: "text-brand-anotacoes font-medium" };
   }
 };
 
@@ -135,7 +145,6 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
           orderBy: "dia",
           direction: "ASC",
         });
-        console.log("DEBUG SESSÕES DO BACKEND:", list); // LOG DEBUG
         setSessionsList(Array.isArray(list) ? list : []);
       } catch (sessionErr) {
         setSessionsList([]);

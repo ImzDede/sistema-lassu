@@ -1,4 +1,3 @@
-// src/app/home/cadastro/paciente/page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -55,8 +54,6 @@ export default function NewPatient() {
     cellphone: "",
   });
 
-  // ✅ agora errors segue os nomes do BACK
-  // nome, dataNascimento, cpf, telefone, terapeutaId
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [availability, setAvailability] = useState<TimeSlot[]>([
@@ -65,11 +62,9 @@ export default function NewPatient() {
 
   const [selectedProfessionalId, setSelectedProfessionalId] = useState<string | null>(null);
 
-  // Contagem de pacientes por profissional
   const [professionalPatientCounts, setProfessionalPatientCounts] = useState<Record<string, number>>({});
   const [loadingCounts, setLoadingCounts] = useState(false);
 
-  // Busca contagem quando os resultados chegarem
   useEffect(() => {
     let isMounted = true;
 
@@ -129,8 +124,6 @@ export default function NewPatient() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
 
-    // limpa erro correspondente do BACK
-    // (mapeamento name -> campo do back)
     const nameToBackField: Record<string, string> = {
       name: "nome",
       birthDate: "dataNascimento",
@@ -170,7 +163,6 @@ export default function NewPatient() {
     e.preventDefault();
     setErrors({});
 
-    // ✅ só obrigatório básico no front (regras ficam pro back)
     const next: Record<string, string> = {};
     if (!formData.name.trim()) next.nome = "Campo obrigatório.";
     if (!formData.birthDate) next.dataNascimento = "Campo obrigatório.";
@@ -184,7 +176,6 @@ export default function NewPatient() {
       return;
     }
 
-    // ✅ bloqueio UX do limite de 5
     const selectedCount = selectedProfessionalId
       ? (professionalPatientCounts[selectedProfessionalId] ?? 0)
       : 0;
@@ -194,6 +185,7 @@ export default function NewPatient() {
       return;
     }
 
+    // CORREÇÃO: O callback de erro estava fora do handleSubmit
     await handleSubmit(
       async () => {
         await createPatient({
@@ -212,10 +204,14 @@ export default function NewPatient() {
         setErrors({});
       },
       undefined,
-      (_err, fieldErrors) => {
-        // ✅ destaca campos pelo BACK
-        if (fieldErrors && Object.keys(fieldErrors).length) {
-          setErrors(fieldErrors);
+      (err, fieldErrors) => {
+        if (fieldErrors && Object.keys(fieldErrors).length > 0) {
+          const mappedErrors: Record<string, string> = { ...fieldErrors };
+          
+          if (fieldErrors.dataNascimento) mappedErrors.birthDate = fieldErrors.dataNascimento;
+          if (fieldErrors.telefone) mappedErrors.cellphone = fieldErrors.telefone;
+          
+          setErrors(mappedErrors);
         }
       }
     );
@@ -444,4 +440,3 @@ export default function NewPatient() {
     </div>
   );
 }
-

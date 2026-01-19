@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { formatCPF } from "@/utils/format";
 import { useAppTheme } from "@/hooks/useAppTheme";
 import { useFeedback } from "@/contexts/FeedbackContext";
+import { useFormHandler } from "@/hooks/useFormHandler"; // ✅ Importado
 
 type FieldErrors = {
   patientId?: string;
@@ -28,7 +29,11 @@ export default function EncaminhamentoPage() {
   const { user } = useAuth();
   const { showFeedback } = useFeedback();
   const { patients, fetchPatients, loading: loadingPatients } = usePatients();
-  const { saveReferral, loading: loadingSave } = useEncaminhamento();
+  
+  // ✅ useFormHandler substitui o loading manual para controlar erros
+  const { loading: formLoading, handleSubmit } = useFormHandler();
+  
+  const { saveReferral } = useEncaminhamento();
 
   const { borderClass, textClass, lightBgClass } = useAppTheme();
 
@@ -76,9 +81,10 @@ export default function EncaminhamentoPage() {
     return opts;
   }, [patients, preSelectedPatientId, preSelectedPatientName]);
 
-  const canSubmit = !!selectedPatient && description.trim().length > 0 && !loadingSave;
+  const canSubmit = !!selectedPatient && description.trim().length > 0 && !formLoading;
 
   const handleSave = async () => {
+    // 1. Validação Front
     const nextErrors: FieldErrors = {};
     if (!selectedPatient) nextErrors.patientId = "Selecione um paciente.";
     if (!description.trim()) nextErrors.destino = "Campo obrigatório.";
@@ -90,11 +96,23 @@ export default function EncaminhamentoPage() {
       return;
     }
 
-    const success = await saveReferral(selectedPatient!, description, selectedFile);
-    if (success) {
+    // 2. Validação Back via useFormHandler
+    await handleSubmit(async () => {
+      // O saveReferral precisa lançar erro (throw) se falhar no axios.
+      // Se ele retornar booleano (true/false), verificamos aqui:
+      const success = await saveReferral(selectedPatient!, description, selectedFile);
+      
+      if (!success) {
+        // Se o hook antigo engole o erro e retorna false, forçamos um erro aqui
+        // para o useFormHandler exibir a mensagem genérica ou o hook antigo já exibiu.
+        // O ideal é que saveReferral dê throw.
+        throw new Error("Não foi possível salvar o encaminhamento.");
+      }
+
+      // Sucesso
       await new Promise((r) => setTimeout(r, 400));
       router.back();
-    }
+    });
   };
 
   return (
@@ -207,7 +225,7 @@ export default function EncaminhamentoPage() {
             <div className="w-full lg:w-1/2">
               <Button
                 onClick={handleSave}
-                loading={loadingSave}
+                loading={formLoading}
                 fullWidth
                 accentColorClass="brand-encaminhamento"
                 disabled={!canSubmit}
@@ -222,4 +240,3 @@ export default function EncaminhamentoPage() {
     </div>
   );
 }
-
