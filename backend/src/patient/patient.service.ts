@@ -96,6 +96,21 @@ export class PatientService {
         });
 
         const totalPages = Math.ceil(total / limit);
+        
+        const anamenseId = (await formRepository.getIdModelByTitle('ANAMNESE'))
+        const sinteseId = (await formRepository.getIdModelByTitle('SINTESE'))
+
+        for (let patientRow of patientRows) {
+            let anamnesePorcentagem: number = 0
+            const anamenseRow = await formRepository.getFilledForm(anamenseId, patientRow.id)
+            if (anamenseRow) anamnesePorcentagem = anamenseRow.porcentagem_conclusao
+            patientRow.anamnesePorcentagem = anamnesePorcentagem
+
+            let sintesePorcentagem: number = 0
+            const sinteseRow = await formRepository.getFilledForm(sinteseId, patientRow.id)
+            if (sinteseRow) sintesePorcentagem = sinteseRow.porcentagem_conclusao
+            patientRow.sintesePorcentagem = sintesePorcentagem
+        }
 
         return {
             patientRows,
@@ -208,6 +223,7 @@ export class PatientService {
         }
 
         const sessionRows = await sessionRepository.list({ filterPatientId: patientId })
+        if (sessionRows.length < 1) throw new AppError('Realize pelo menos uma sessão para poder encaminhar.', 400);
         for (const sessionRow of sessionRows) {
             if (sessionRow.status == 'agendada') {
                 throw new AppError('Ainda existe uma consulta agendada com essa paciente, cancele ou realize.', 400);

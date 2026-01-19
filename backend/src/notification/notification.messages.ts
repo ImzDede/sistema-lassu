@@ -174,7 +174,7 @@ export const NOTIFICATION_MESSAGE = {
             return {
                 title: "Paciente Recebida",
                 message:
-                    `A paciente [${params.patientName}](patient:${params.patientId}) de [${params.oldTherapistName}](user:${params.oldTherapistId}) foi transferida para você.).`
+                    `A paciente [${params.patientName}](patient:${params.patientId}) de [${params.oldTherapistName}](user:${params.oldTherapistId}) foi transferida para você.`
             }
         },
 

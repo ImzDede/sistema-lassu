@@ -24,7 +24,7 @@ const senhaCreateSchema = z.string().min(8, HTTP_ERRORS.BAD_REQUEST.USER.PASSWOR
     .regex(/[a-z]/, HTTP_ERRORS.BAD_REQUEST.USER.PASSWORD.LOWERCASE)
     .regex(/[0-9]/, HTTP_ERRORS.BAD_REQUEST.USER.PASSWORD.NUMBER)
     .regex(/[^A-Za-z0-9]/, HTTP_ERRORS.BAD_REQUEST.USER.PASSWORD.SPECIAL);
-const matriculaSchema = z.string().length(8, HTTP_ERRORS.BAD_REQUEST.USER.REGISTRATION.LENGTH).regex(/^[mcMC]\d{7}$/, HTTP_ERRORS.BAD_REQUEST.USER.REGISTRATION.NUMBER)
+const matriculaSchema = z.string().length(7, HTTP_ERRORS.BAD_REQUEST.USER.REGISTRATION.LENGTH).regex(/^\d{7}$/, HTTP_ERRORS.BAD_REQUEST.USER.REGISTRATION.NUMBER)
 
 export const createUserSchema = z.object({
     nome: nomeSchema,

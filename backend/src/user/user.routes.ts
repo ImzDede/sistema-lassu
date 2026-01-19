@@ -21,9 +21,9 @@ router.post('/refresh', userController.refreshToken);
 
 // Cadastro
 router.get('/', is('cadastro'), validate(userListSchema, 'query'), userController.get);
-router.get('/:targetId', is('cadastro'), validate(UserTargetIdParamSchema, 'params'), userController.getById);
 router.get('/available', is('cadastro'), validate(getAvailableUsersSchema, 'query'), userController.getAvailable);
 router.post('/', is('cadastro'), validate(createUserSchema), userController.create);
+router.get('/:targetId', is('cadastro'), validate(UserTargetIdParamSchema, 'params'), userController.getById);
 
 //Admin
 router.use(is('admin'));
