@@ -5,7 +5,25 @@ import { HTTP_ERRORS } from "../errors/messages";
 
 const nomeSchema = z.string().min(1, HTTP_ERRORS.BAD_REQUEST.VALIDATION.REQUIRED);
 
-const dataNascimentoSchema = dateFormateSchema
+const dataNascimentoSchema = dateFormateSchema.refine((date) => {
+    if (date < '1900-01-01') return false;
+
+    const todayDate = new Date();
+
+    const ano = todayDate.getFullYear();
+    const mes = String(todayDate.getMonth() + 1).padStart(2, '0');
+    const dia = String(todayDate.getDate()).padStart(2, '0');
+
+    const today = `${ano}-${mes}-${dia}`;
+
+    if (date > today) return false
+
+    return true;
+},
+    {
+        message: 'Data de nascimento inválida'
+    }
+)
 
 const cpfSchema = z.string().regex(/^[0-9]{11}$/).refine((cpf) => {
     //Validação de números conhecidos

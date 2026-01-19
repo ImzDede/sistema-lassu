@@ -33,6 +33,17 @@ export class PatientRepository {
         return result.rows[0] ?? null;
     }
 
+    async countPatientsActive(userId: string): Promise<number> {
+        const query = `
+            SELECT COUNT(*) AS total
+            FROM pacientes
+            WHERE status = 'atendimento' AND terapeuta_id = $1
+        `
+
+        const result = await this.client.query(query, [userId])
+        return Number(result.rows[0].total)
+    }
+
     async list(
         params: {
             limit: number;

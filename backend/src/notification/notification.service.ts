@@ -1,10 +1,11 @@
+import pool from "../config/db";
 import { UserRepository } from "../user/user.repository";
 import { Notification } from "./notification.messages";
 import { NotificationRepository } from "./notification.repository";
 import { NotificationIdArrayDTO, NotificationListDTO } from "./notification.schema";
 
 const repository = new NotificationRepository()
-const userRepository = new UserRepository()
+const userRepository = new UserRepository(pool)
 
 export class NotificationService {
 

@@ -24,12 +24,14 @@ export type UserIdRow = Pick<UserRow, 'id'>;
 
 export type UserMinRow = Pick<UserRow, 'id' | 'nome'>;
 
-export type UserListRow = UserMinRow & Pick<UserRow, 'created_at' | 'matricula' | 'foto_url' | 'ativo' | 'perm_atendimento' | 'perm_cadastro'>;
+export type UserListRow = UserMinRow & Pick<UserRow, 'created_at' | 'matricula' | 'foto_url' | 'ativo' | 'perm_atendimento' | 'perm_cadastro'> & {
+  patientsActive: number
+};
 
 export type UserCreateRow = UserMinRow & Pick<UserRow, 'created_at'>;
 
 export type UserTokenRow = Pick<UserRow,
-  'id' | 'nome' | 'perm_atendimento' | 'perm_cadastro' | 'perm_admin' | 'primeiro_acesso'>;
+'id' | 'nome' | 'perm_atendimento' | 'perm_cadastro' | 'perm_admin' | 'primeiro_acesso'>;
 
 export type UserLoginRow = UserTokenRow & Pick<UserRow, 'senha_hash' | 'matricula' | 'ativo'>;
 
@@ -42,7 +44,8 @@ export type UserUpdateProfileRow = UserMinRow & Pick<UserRow, 'email' | 'telefon
 export type UserUpdateRow = UserMinRow & Pick<UserRow, 'matricula' | 'perm_atendimento' | 'perm_cadastro' | 'ativo'>
 
 export type AvailableUserRow = Pick<UserRow, 'id' | 'matricula' | 'nome'> & {
-  lista_disponibilidades: AvailabilityRow[]
+  lista_disponibilidades: AvailabilityRow[],
+  patientsActive: number
 }
 
 //--------------
@@ -63,10 +66,19 @@ export type UserProfileResponseDTO = {
     ativo: boolean;
     primeiroAcesso: boolean;
     createdAt: Date;
+  },
+  patients: {
+    ativas: number;
   }
 }
 
-export type UserGetResponseDTO = UserProfileResponseDTO & AvailabilityResponseDTO
+export type UserGetResponseDTO =
+  UserProfileResponseDTO &
+  AvailabilityResponseDTO & {
+    patients: {
+      ativas: number;
+    }
+  }
 
 export type UserCreateResponseDTO = {
   user: {
@@ -95,6 +107,9 @@ export type UserListAllResponseDTO = {
     permCadastro: boolean;
     ativo: boolean;
     createdAt: Date;
+  },
+  patients: {
+    ativas: number;
   }
 }[];
 
@@ -141,5 +156,8 @@ export type UserAvailableResponseDTO = {
     id: string;
     nome: string;
     matricula: string;
+  },
+  patients: {
+    ativas: number;
   }
 } & AvailabilityResponseDTO

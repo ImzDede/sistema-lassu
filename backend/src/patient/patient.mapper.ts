@@ -17,8 +17,8 @@ export class PatientMapper {
         }
     }
 
-    static toGet(data: { patientRow: PatientRow, therapistName: string }): PatientGetResponseDTO {
-        const { patientRow, therapistName } = data
+    static toGet(data: { patientRow: PatientRow, therapistName: string, anamnesePorcentagem: number, sintesePorcentagem:number }): PatientGetResponseDTO {
+        const { patientRow, therapistName, anamnesePorcentagem, sintesePorcentagem } = data
         return {
             patient: {
                 id: patientRow.id,
@@ -32,6 +32,10 @@ export class PatientMapper {
             therapist: {
                 id: patientRow.terapeuta_id,
                 nome: therapistName
+            },
+            forms: {
+                anamnesePorcentagem,
+                sintesePorcentagem
             }
         }
     }

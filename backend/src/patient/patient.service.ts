@@ -7,14 +7,14 @@ import { NotificationService } from "../notification/notification.service";
 import { NOTIFICATION_MESSAGE } from "../notification/notification.messages";
 import { UserRepository } from "../user/user.repository";
 import { UserPermDTO } from "../user/user.schema";
-//import { FormRepository } from "../form/form.repository";
+import { FormRepository } from "../form/form.repository";
 import pool from "../config/db";
 import { withTransaction } from "../utils/withTransaction";
 
 const repository = new PatientRepository(pool)
-const userRepository = new UserRepository()
+const userRepository = new UserRepository(pool)
 const notificationService = new NotificationService()
-//const formRepository = new FormRepository()
+const formRepository = new FormRepository(pool)
 
 export class PatientService {
     async create(userId: string, data: PatientCreateDTO) {
@@ -35,26 +35,13 @@ export class PatientService {
             throw new AppError(HTTP_ERRORS.NOT_FOUND.THERAPIST, 404)
         }
 
+        const patientsActive = await repository.countPatientsActive(therapistId)
+        if (patientsActive >= 5) {
+            throw new AppError("Essa terapeuta já atingiu o limite de pacientes ativos", 400)
+        }
+
         //Cria paciente no banco
         const patientRow = await repository.create(data, newId)
-
-        /*
-        //Cria formulários
-        const anamneseVersion = await formRepository.getActiveVersionId('ANAMNESE');
-        const sinteseVersion = await formRepository.getActiveVersionId('SINTESE');
-
-        const tasks = [];
-
-        if (anamneseVersion) {
-            tasks.push(formRepository.createResponse(v4(), patientRow.id, anamneseVersion));
-        }
-
-        if (sinteseVersion) {
-            tasks.push(formRepository.createResponse(v4(), patientRow.id, sinteseVersion));
-        }
-
-        await Promise.all(tasks);
-        */
 
         //Notificações
         const [userName, therapistName] = await Promise.all([
@@ -134,7 +121,18 @@ export class PatientService {
 
         const therapistName = await userRepository.getName(patientRow.terapeuta_id) as string
 
-        return { patientRow, therapistName }
+        let anamnesePorcentagem: number = 0
+        const anamenseId = (await formRepository.getIdModelByTitle('ANAMNESE'))
+        const anamenseRow = await formRepository.getFilledForm(anamenseId, patientId)
+        if (anamenseRow) anamnesePorcentagem = anamenseRow.porcentagem_conclusao
+
+        let sintesePorcentagem: number = 0
+        const sinteseId = (await formRepository.getIdModelByTitle('SINTESE'))
+        const sinteseRow = await formRepository.getFilledForm(sinteseId, patientId)
+        if (sinteseRow) sintesePorcentagem = sinteseRow.porcentagem_conclusao
+
+
+        return { patientRow, therapistName, anamnesePorcentagem, sintesePorcentagem }
     }
 
     async getRefer(userId: string, patientId: string, perms: UserPermDTO) {
@@ -196,17 +194,6 @@ export class PatientService {
 
         return await withTransaction(async (client) => {
             const repository = new PatientRepository(client);
-            //const formRepository = new FormRepository(client);
-
-            /*const totalForms = await formRepository.countFinalizedForms(patientId);
-
-            // Precisa de 2 forms finalizados (Anamnese e Síntese)
-            if (totalForms < 2) {
-                throw new AppError(
-                    "Pendência: O paciente precisa ter Anamnese e Síntese finalizadas antes de ser encaminhado.",
-                    400
-                );
-            }*/
 
             const referRow = await repository.upsertRefer(patientId, data.destino, filename);
 

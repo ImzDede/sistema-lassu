@@ -9,10 +9,14 @@ import { NotificationService } from '../notification/notification.service';
 import { NOTIFICATION_MESSAGE } from '../notification/notification.messages';
 import { UserTokenRow } from './user.type';
 import { AvailabilityService } from '../availability/availability.service';
+import pool from '../config/db';
+import { withTransaction } from '../utils/withTransaction';
+import { PatientRepository } from '../patient/patient.repository';
 
-const repository = new UserRepository();
+const repository = new UserRepository(pool);
 const notificationService = new NotificationService();
 const availabilityService = new AvailabilityService();
+const patientRepository = new PatientRepository(pool)
 
 export class UserService {
     async create(data: CreateUserDTO) {
@@ -83,50 +87,57 @@ export class UserService {
             throw new AppError(HTTP_ERRORS.UNAUTHORIZED.ACCOUNT_DISABLED, 401)
         }
 
-        return { userRow }
+        const patientsActive = await patientRepository.countPatientsActive(userId)
+
+        return { userRow, patientsActive }
     }
 
     async completeFirstAccess(userId: string, data: FirstAccessDTO) {
-        //É necessário informar uma senha nova
-        if (!data.senha) {
-            throw new AppError(HTTP_ERRORS.BAD_REQUEST.USER.PASSWORD.MISMATCH, 400);
-        }
+        return withTransaction(async (client) => {
 
-        //Procura usário
-        const currentUserRow = await repository.verifyFirstAccess(userId);
+            const repository = new UserRepository(client);
 
-        //Erro se não achar
-        if (!currentUserRow) {
-            throw new AppError(HTTP_ERRORS.NOT_FOUND.USER, 404);
-        }
+            //É necessário informar uma senha nova
+            if (!data.senha) {
+                throw new AppError(HTTP_ERRORS.BAD_REQUEST.USER.PASSWORD.MISMATCH, 400);
+            }
 
-        //Erro se o primeiro acesso já foi realizado
-        if (!currentUserRow.primeiro_acesso) {
-            throw new AppError(HTTP_ERRORS.BAD_REQUEST.USER.ALREADY_FIRST_ACCESS, 400);
-        }
+            //Procura usário
+            const currentUserRow = await repository.verifyFirstAccess(userId);
 
-        //Verifica se a senha mudou, se não, da erro
-        const oldPassword = currentUserRow.senha_hash;
+            //Erro se não achar
+            if (!currentUserRow) {
+                throw new AppError(HTTP_ERRORS.NOT_FOUND.USER, 404);
+            }
 
-        if (await bcrypt.compare(data.senha, oldPassword)) {
-            throw new AppError(HTTP_ERRORS.BAD_REQUEST.USER.PASSWORD.MISMATCH, 400);
-        }
+            //Erro se o primeiro acesso já foi realizado
+            if (!currentUserRow.primeiro_acesso) {
+                throw new AppError(HTTP_ERRORS.BAD_REQUEST.USER.ALREADY_FIRST_ACCESS, 400);
+            }
 
-        //Transforma senha nova em hash
-        const passwordHash = await bcrypt.hash(data.senha, 10);
+            //Verifica se a senha mudou, se não, da erro
+            const oldPassword = currentUserRow.senha_hash;
 
-        //Lança Disponibilidade
-        const { availabilityRows } = await availabilityService.save(userId, data.disponibilidade)
+            if (await bcrypt.compare(data.senha, oldPassword)) {
+                throw new AppError(HTTP_ERRORS.BAD_REQUEST.USER.PASSWORD.MISMATCH, 400);
+            }
 
-        //Atualiza usuário
-        const userRow = await repository.completeFirstAccess(userId, passwordHash, data.fotoUrl);
-        if (!userRow) {
-            throw new AppError(HTTP_ERRORS.NOT_FOUND.USER, 404)
-        }
+            //Transforma senha nova em hash
+            const passwordHash = await bcrypt.hash(data.senha, 10);
 
-        const token = this.generateToken(userRow)
+            //Lança Disponibilidade
+            const { availabilityRows } = await availabilityService.save(userId, data.disponibilidade, client)
 
-        return { userRow, token, availabilityRows }
+            //Atualiza usuário
+            const userRow = await repository.completeFirstAccess(userId, passwordHash, data.fotoUrl);
+            if (!userRow) {
+                throw new AppError(HTTP_ERRORS.NOT_FOUND.USER, 404)
+            }
+
+            const token = this.generateToken(userRow)
+
+            return { userRow, token, availabilityRows }
+        })
     }
 
     //Atualiza dados do próprio perfil não sensíveis, acesso a todos usuários logados
@@ -196,7 +207,7 @@ export class UserService {
         const { page, limit, orderBy, direction, ativo, nome } = params;
         const offset = (page - 1) * limit;
 
-        const { userRows, total } = await repository.findAll({
+        let { userRows, total } = await repository.findAll({
             limit,
             offset,
             orderBy,
@@ -204,6 +215,14 @@ export class UserService {
             nome,
             ativo
         });
+
+        userRows = await Promise.all(userRows.map(async (user) => {
+            const patientsActive = await patientRepository.countPatientsActive(user.id);
+            return {
+                ...user,
+                patientsActive
+            };
+        }));
 
         const totalPages = Math.ceil(total / limit);
 
@@ -228,13 +247,15 @@ export class UserService {
 
         const { availabilityRows } = await availabilityService.getByUser(userId);
 
-        return { userRow, availabilityRows }
+        const patientsActive = await patientRepository.countPatientsActive(userId)
+
+        return { userRow, availabilityRows, patientsActive }
     }
 
     async findAvailableUsers(params: GetAvailableUsersDTO) {
         const { diaSemana, horaInicio, horaFim } = params;
 
-        const userRows = await repository.findAvailableUsers({ diaSemana, horaInicio, horaFim });
+        let userRows = await repository.findAvailableUsers({ diaSemana, horaInicio, horaFim });
 
         for (const userRow of userRows) {
             userRow.lista_disponibilidades = userRow.lista_disponibilidades.map(
@@ -245,6 +266,14 @@ export class UserService {
                 }
             )
         }
+
+        userRows = await Promise.all(userRows.map(async (user) => {
+            const patientsActive = await patientRepository.countPatientsActive(user.id);
+            return {
+                ...user,
+                patientsActive
+            };
+        }));
 
         return {
             userRows,

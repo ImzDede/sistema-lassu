@@ -57,6 +57,10 @@ export type PatientGetResponseDTO = {
     therapist: {
         id: string
         nome: string
+    },
+    forms: {
+        anamnesePorcentagem: number,
+        sintesePorcentagem: number
     }
 }
 
