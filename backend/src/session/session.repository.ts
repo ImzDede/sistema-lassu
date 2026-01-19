@@ -101,15 +101,25 @@ export class SessionRepository {
 
     async list(
         params: {
-            start: string,
-            end: string,
+            start?: string,
+            end?: string,
             status?: 'agendada' | 'realizada' | 'falta' | 'cancelada_paciente' | 'cancelada_terapeuta',
             filterPatientId?: string,
             filterUserId?: string
         }
     ): Promise<SessionGetRow[]> {
-        let whereClause = `WHERE s.dia >= $1 AND s.dia <=  $2`
-        let values = [params.start, params.end]
+        let whereClause = `WHERE 1=1`
+        let values = []
+
+        if (params.start) {
+            whereClause += ` AND s.dia >= $${values.length + 1}`
+            values.push(params.start)
+        }
+
+        if (params.end) {
+            whereClause += ` AND s.dia <= $${values.length + 1}`
+            values.push(params.end)
+        }
 
         if (params.status) {
             whereClause += ` AND s.status = $${values.length + 1}`

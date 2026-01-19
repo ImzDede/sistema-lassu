@@ -12,11 +12,16 @@ import { AvailabilityService } from '../availability/availability.service';
 import pool from '../config/db';
 import { withTransaction } from '../utils/withTransaction';
 import { PatientRepository } from '../patient/patient.repository';
+import { SessionRepository } from '../session/session.repository';
+import path from 'path';
+import fs from 'fs';
+import { uploadConfig } from '../config/upload';
 
 const repository = new UserRepository(pool);
 const notificationService = new NotificationService();
 const availabilityService = new AvailabilityService();
 const patientRepository = new PatientRepository(pool)
+const sessionRepository = new SessionRepository()
 
 export class UserService {
     async create(data: CreateUserDTO) {
@@ -129,7 +134,7 @@ export class UserService {
             const { availabilityRows } = await availabilityService.save(userId, data.disponibilidade, client)
 
             //Atualiza usuário
-            const userRow = await repository.completeFirstAccess(userId, passwordHash, data.fotoUrl);
+            const userRow = await repository.completeFirstAccess(userId, passwordHash);
             if (!userRow) {
                 throw new AppError(HTTP_ERRORS.NOT_FOUND.USER, 404)
             }
@@ -174,6 +179,20 @@ export class UserService {
             }
         }
 
+        if (data.ativo == false) {
+            const patientsActive = await patientRepository.countPatientsActive(targetId)
+            if (patientsActive > 0) {
+                throw new AppError('Usuário possui pacientes ativos, espere ele atender, ou transfira antes de desativar.', 400)
+            }
+
+            const sessionRows = await sessionRepository.list({ filterUserId: targetId })
+            for (const sessionRow of sessionRows) {
+                if (sessionRow.status == 'agendada') {
+                    throw new AppError('Ainda existe uma consulta agendada com essa paciente, cancele ou realize.', 400);
+                }
+            }
+        }
+
         //Atualiza dados no banco caso forem informados, caso não, se mantém os dados já armazenados
         const userRow = await repository.update(targetId, data)
 
@@ -182,6 +201,32 @@ export class UserService {
         }
 
         return { userRow }
+    }
+
+    async updateAvatar(userId: string, avatarFilename: string | null) {
+        const user = await repository.getById(userId);
+
+        if (!user) {
+            throw new AppError(HTTP_ERRORS.NOT_FOUND.USER, 401);
+        }
+
+        if (user.foto_url) {
+            const userAvatarFilePath = path.join(uploadConfig.directory, user.foto_url);
+
+            const userAvatarFileExists = await fs.promises.stat(userAvatarFilePath).catch(() => false);
+
+            if (userAvatarFileExists) {
+                await fs.promises.unlink(userAvatarFilePath);
+            }
+        }
+
+        const userUpdated = await repository.updateAvatar(userId, avatarFilename);
+
+        if (!userUpdated) {
+            throw new AppError(HTTP_ERRORS.NOT_FOUND.USER, 404);
+        }
+
+        return { userRow: userUpdated };
     }
 
     async resetPassword(targetId: string) {

@@ -24,10 +24,10 @@ export type SessionCreateDTO = z.infer<typeof sessionCreateSchema>
 export const sessionListSchema = z.object({
     start: dateFormateSchema,
     end: dateFormateSchema,
-    status: statusSchema.optional(),
-    patientTargetId: z.string().uuid().optional(),
-    userTargetId: z.string().uuid().optional()
-})
+    status: statusSchema,
+    patientTargetId: z.string().uuid(),
+    userTargetId: z.string().uuid()
+}).partial()
 
 export type SessionListDTO = z.infer<typeof sessionListSchema>
 
