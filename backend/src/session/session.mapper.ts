@@ -34,7 +34,8 @@ export class SessionMapper {
                     dia: row.dia,
                     hora: row.hora,
                     sala: row.sala,
-                    status: row.status
+                    status: row.status,
+                    anotacoes: row.anotacoes,
                 },
                 therapist: {
                     id: row.usuario_id,

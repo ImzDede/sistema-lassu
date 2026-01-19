@@ -37,7 +37,7 @@ export class PatientRepository {
         const query = `
             SELECT COUNT(*) AS total
             FROM pacientes
-            WHERE status = 'atendimento' AND terapeuta_id = $1
+            WHERE status = 'atendimento' AND terapeuta_id = $1 AND deleted_at = NULL
         `
 
         const result = await this.client.query(query, [userId])

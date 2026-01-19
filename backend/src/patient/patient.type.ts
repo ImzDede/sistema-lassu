@@ -17,7 +17,10 @@ export type PatientUpdateRow = Pick<PatientRow, 'id' | 'nome' | 'data_nascimento
 
 export type PatientIdRow = Pick<PatientRow, 'id'>;
 
-export type PatientListRow = Pick<PatientRow, 'id' | 'nome' | 'data_nascimento' | 'terapeuta_id' | 'status' | 'created_at'>;
+export type PatientListRow = Pick<PatientRow, 'id' | 'nome' | 'data_nascimento' | 'terapeuta_id' | 'status' | 'created_at'> & {
+    anamnesePorcentagem: number,
+    sintesePorcentagem: number
+};
 
 export interface ReferRow {
     id: number;

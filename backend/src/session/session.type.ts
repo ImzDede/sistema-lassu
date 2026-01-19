@@ -59,7 +59,8 @@ export type SessionListResponseDTO = {
         dia: string,
         hora: number,
         sala: number,
-        status: string
+        status: string,
+        anotacoes: string
     },
     therapist: {
         id: string
