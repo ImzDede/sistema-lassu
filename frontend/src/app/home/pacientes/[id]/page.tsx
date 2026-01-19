@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -55,22 +55,6 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
   const [patient, setPatient] = useState<any | null>(null);
   const [sessionsList, setSessionsList] = useState<any[]>([]);
 
-  // --- MOCK DE ANOTAÇÕES (Substituir pela chamada da API quando tiver) ---
-  const [notesList, setNotesList] = useState<any[]>([
-    {
-      id: 1,
-      titulo: "Anotação Inicial",
-      data: "2025-10-05",
-      resumo: "Observações sobre o comportamento inicial.",
-    },
-    {
-      id: 2,
-      titulo: "Evolução Quinzenal",
-      data: "2025-10-20",
-      resumo: "Melhora significativa na comunicação.",
-    },
-  ]);
-
   // Progresso vindo do Back
   const [formsProgress, setFormsProgress] = useState({
     anamnese: 0,
@@ -78,10 +62,11 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
   });
   const [totalProgress, setTotalProgress] = useState(0);
 
+  // Estados dos formulários
   const [anamneseData, setAnamneseData] = useState<any>(null);
   const [sinteseData, setSinteseData] = useState<any>(null);
-  const [hasEncaminhamento, setHasEncaminhamento] = useState(false);
 
+  const [hasEncaminhamento, setHasEncaminhamento] = useState(false);
   const [loading, setLoading] = useState(true);
   const [therapistName, setTherapistName] = useState<string>("Buscando...");
 
@@ -105,13 +90,12 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
       setLoading(true);
 
       // 1. Busca Dados do Paciente
-      const data = await patientService.getById(id);
+      // Usamos 'as any' pois o tipo no front ainda não tem o campo 'forms' atualizado
+      const data = (await patientService.getById(id)) as any;
       setPatient(data.patient);
-
-      // Nome da terapeuta vindo do JSON (data.therapist.nome)
       setTherapistName(data.therapist?.nome || "Não atribuído");
 
-      // 1.1 Processa Progresso (Do backend)
+      // 1.1 Processa Progresso Real (Vindo do JSON do back)
       const forms = data.forms || {
         anamnesePorcentagem: 0,
         sintesePorcentagem: 0,
@@ -120,14 +104,14 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
         anamnese: forms.anamnesePorcentagem,
         sintese: forms.sintesePorcentagem,
       });
-      // Média para o Perfil (Frontend calcula apenas a média visual)
       setTotalProgress(
         Math.round((forms.anamnesePorcentagem + forms.sintesePorcentagem) / 2),
       );
 
+      // Define se tem encaminhamento pelo Status
       setHasEncaminhamento(data.patient.status === "encaminhada");
 
-      // 2. Busca Sessões
+      // 2. Busca Sessões (ORDEM ASC para cronologia correta 1ª, 2ª...)
       try {
         const list = await sessionService.getAll({
           start: "2023-01-01",
@@ -141,7 +125,7 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
         setSessionsList([]);
       }
 
-      // 3. Busca Forms
+      // 3. Busca Forms (Anamnese e Síntese)
       try {
         const anamnese = await formService.getAnamnese(id);
         setAnamneseData(anamnese);
@@ -155,10 +139,6 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
       } catch (e) {
         /* Ignora */
       }
-
-      // 4. Aqui você buscaria as anotações reais:
-      // const notes = await noteService.getAll(id);
-      // setNotesList(notes);
     } catch (error) {
       console.error(error);
       showFeedback("Erro ao carregar dados.", "error");
@@ -170,6 +150,21 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
   useEffect(() => {
     if (!authLoading) loadData();
   }, [authLoading, loadData]);
+
+  // LÓGICA DE ANOTAÇÕES
+  const notesList = useMemo(() => {
+    return (sessionsList ?? [])
+      .filter((s) => {
+        const text = typeof s?.anotacoes === "string" ? s.anotacoes.trim() : "";
+        return text.length > 0;
+      })
+      .map((s) => ({
+        id: s.id,
+        data: s.dia,
+        titulo: "Anotação de Sessão",
+        resumo: (typeof s.anotacoes === "string" ? s.anotacoes : "").trim(),
+      }));
+  }, [sessionsList]);
 
   // --- Helpers ---
   const handleCopyPhone = () => {
@@ -277,7 +272,7 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
     !isMasterAdmin && (user?.permCadastro || user?.permAtendimento);
   const isEncaminhada = patient?.status === "encaminhada";
 
-  // Status Formatado
+  // Tag de Status Formatada
   const statusDisplay = isEncaminhada ? "Encaminhada" : "Em Atendimento";
 
   if (loading || authLoading)
@@ -290,6 +285,7 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 pb-20 font-sans">
+      {/* HEADER */}
       <div className="pt-8 pb-4 px-4 md:px-8 max-w-6xl mx-auto w-full flex justify-between">
         <div className="flex items-center gap-4">
           <button
@@ -337,6 +333,7 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
         </Menu>
       </div>
 
+      {/* PERFIL */}
       <div className="px-4 md:px-8 max-w-6xl mx-auto w-full mb-8">
         <ProfileCard
           name={patient.nome}
@@ -404,6 +401,7 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
         </ProfileCard>
       </div>
 
+      {/* PASTAS */}
       <div className="px-4 md:px-8 max-w-6xl mx-auto w-full flex flex-col gap-2">
         {/* 1. SESSÕES */}
         <FolderAccordion
@@ -441,9 +439,7 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
               />
             ))
           ) : (
-            <div className="text-center py-4 text-gray-400 text-xs uppercase tracking-wider">
-              Nenhuma sessão encontrada.
-            </div>
+            <div></div>
           )}
         </FolderAccordion>
 
@@ -553,7 +549,6 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
           addLabel="Novo Encaminhamento"
           accentColor="brand-encaminhamento"
         >
-          {/* Lógica: Se status == encaminhada, mostra o card */}
           {hasEncaminhamento ? (
             <FolderItemCard
               title="Encaminhamento Realizado"
@@ -565,15 +560,12 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
                   ? () => handleNavigate("encaminhamento", "current", "edit")
                   : undefined
               }
-              // Botão de download (simulado, pois não temos arquivo ainda)
               downloadComponent={
                 <DownloadButton exists={false} doc={null} fileName="" />
               }
             />
           ) : (
-            <div className="text-center py-4 text-gray-400 text-xs uppercase tracking-wider">
-              Nenhum encaminhamento.
-            </div>
+            <div></div>
           )}
         </FolderAccordion>
 
@@ -585,35 +577,43 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
           isOpen={sections.anotacoes}
           onToggle={() => toggleSection("anotacoes")}
           showAddButton={canEditGeneral}
-          onAdd={() => handleNavigate("anotacoes", 0, "create")}
+          onAdd={() =>
+            router.push(
+              `/home/cadastro/anotacoes?patientId=${patient.id}&patientName=${encodeURIComponent(patient.nome)}`,
+            )
+          }
           addLabel="Nova Anotação"
           accentColor="brand-anotacoes"
         >
-          {/* MAP DAS ANOTAÇÕES (Usando lista mockada por enquanto) */}
           {notesList.length > 0 ? (
             notesList.map((note) => (
               <FolderItemCard
                 key={note.id}
                 title={note.titulo}
                 subtitle={
-                  <span>
+                  <span className="line-clamp-1">
                     {new Date(note.data).toLocaleDateString("pt-BR")} |{" "}
                     {note.resumo}
                   </span>
                 }
                 icon={<Edit3 size={16} />}
-                onView={() => handleNavigate("anotacoes", note.id, "view")}
+                onView={() =>
+                  router.push(
+                    `/home/cadastro/anotacoes?patientId=${patient.id}&patientName=${encodeURIComponent(patient.nome)}&sessionId=${note.id}`,
+                  )
+                }
                 onEdit={
                   canEditGeneral
-                    ? () => handleNavigate("anotacoes", note.id, "edit")
+                    ? () =>
+                        router.push(
+                          `/home/cadastro/anotacoes?patientId=${patient.id}&patientName=${encodeURIComponent(patient.nome)}&sessionId=${note.id}`,
+                        )
                     : undefined
                 }
               />
             ))
           ) : (
-            <div className="text-center py-4 text-gray-400 text-xs uppercase tracking-wider">
-              Nenhuma anotação registrada.
-            </div>
+            <div></div>
           )}
         </FolderAccordion>
       </div>
@@ -630,3 +630,4 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
     </div>
   );
 }
+

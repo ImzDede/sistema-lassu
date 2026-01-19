@@ -1,4 +1,3 @@
-// src/hooks/useAnotacoes.ts
 import { useState, useCallback } from "react";
 import { sessionService } from "@/services/sessionServices";
 import { useFeedback } from "@/contexts/FeedbackContext";

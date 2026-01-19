@@ -1,4 +1,3 @@
-// src/services/sessionServices.ts
 import api from "./apiServices";
 import { CreateSessionDTO, Session } from "@/types/sessao";
 
