@@ -9,7 +9,7 @@ export interface Option {
   id: string;
   label: string;
   subLabel?: string;
-  cpf?: string; // <--- NOVO CAMPO CPF
+  cpf?: string;
 }
 
 interface SearchableSelectProps {
@@ -23,6 +23,9 @@ interface SearchableSelectProps {
   required?: boolean;
   disabled?: boolean;
   accentColorClass?: string;
+
+  // ✅ novo
+  error?: string;
 }
 
 export default function SearchableSelect({
@@ -36,6 +39,7 @@ export default function SearchableSelect({
   required = false,
   disabled = false,
   accentColorClass,
+  error,
 }: SearchableSelectProps) {
   const accent = accentColorClass ?? "brand-purple";
 
@@ -50,7 +54,6 @@ export default function SearchableSelect({
       ? ({ label: "Item Selecionado", subLabel: "Carregado", id: value } as Option)
       : undefined);
 
-  // Fecha ao clicar fora
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
@@ -61,12 +64,10 @@ export default function SearchableSelect({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Limpa busca se valor for resetado
   useEffect(() => {
     if (!value) setSearchTerm("");
   }, [value]);
 
-  // Debounce da busca
   useEffect(() => {
     if (!onSearch) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -82,7 +83,9 @@ export default function SearchableSelect({
 
   const filteredOptions = onSearch
     ? options
-    : options.filter((opt) => opt.label.toLowerCase().includes(searchTerm.toLowerCase()));
+    : options.filter((opt) =>
+        opt.label.toLowerCase().includes(searchTerm.toLowerCase())
+      );
 
   const handleSelect = (option: Option) => {
     onChange(option.id);
@@ -100,10 +103,12 @@ export default function SearchableSelect({
     setIsOpen(true);
   };
 
-  const inputFocusClass = useMemo(
-    () => `focus-within:!border-${accent} focus-within:!ring-1 focus-within:!ring-${accent}`,
-    [accent]
-  );
+  const inputFocusClass = useMemo(() => {
+    if (error) {
+      return "focus-within:!border-brand-encaminhamento focus-within:!ring-1 focus-within:!ring-brand-encaminhamento";
+    }
+    return `focus-within:!border-${accent} focus-within:!ring-1 focus-within:!ring-${accent}`;
+  }, [accent, error]);
 
   const spinnerClass = `h-4 w-4 text-${accent}`;
 
@@ -120,29 +125,31 @@ export default function SearchableSelect({
           onClick={() => !disabled && setIsOpen(true)}
           className={`
             relative flex items-center justify-between p-3 border rounded-lg transition-all cursor-pointer
-            bg-${accent}/5 border-${accent}
+            ${error ? "border-brand-encaminhamento" : `bg-${accent}/5 border-${accent}`}
             ${disabled ? "opacity-60 cursor-not-allowed" : "hover:shadow-md"}
           `}
         >
           <div className="flex flex-col">
-            <span className="font-bold text-brand-dark text-sm">{selectedOption.label}</span>
+            <span className="font-bold text-brand-dark text-sm">
+              {selectedOption.label}
+            </span>
             <div className="flex gap-2 text-xs text-gray-500">
-                {selectedOption.subLabel && <span>{selectedOption.subLabel}</span>}
-                {/* Exibe o CPF se existir */}
-                {selectedOption.cpf && (
-                    <>
-                     {selectedOption.subLabel && <span>•</span>}
-                     <span>CPF: {selectedOption.cpf}</span>
-                    </>
-                )}
+              {selectedOption.subLabel && <span>{selectedOption.subLabel}</span>}
+              {selectedOption.cpf && (
+                <>
+                  {selectedOption.subLabel && <span>•</span>}
+                  <span>CPF: {selectedOption.cpf}</span>
+                </>
+              )}
             </div>
           </div>
 
           <button
             onClick={handleClear}
             className={`
-              p-1.5 bg-white text-${accent} rounded-full shadow-sm transition-colors z-10
-              hover:bg-red-50 hover:text-red-500
+              p-1.5 bg-white rounded-full shadow-sm transition-colors z-10
+              ${error ? "text-brand-encaminhamento" : `text-${accent}`}
+              hover:bg-red-50 hover:text-brand-encaminhamento
             `}
             title="Remover seleção"
             type="button"
@@ -190,7 +197,6 @@ export default function SearchableSelect({
                     <ListItem
                       key={opt.id}
                       onClick={() => handleSelect(opt)}
-                      // MUDANÇA NO HOVER: Usamos bg-gray-100 para garantir visibilidade
                       className={`
                         text-sm font-medium rounded-md px-3 py-2.5 flex items-center justify-between group transition-colors
                         hover:bg-gray-100 cursor-pointer
@@ -206,17 +212,16 @@ export default function SearchableSelect({
                           {opt.label}
                         </span>
                         <div className="flex items-center gap-2">
-                            {opt.subLabel && (
+                          {opt.subLabel && (
                             <span className="text-[10px] text-gray-400 uppercase tracking-wide">
-                                {opt.subLabel}
+                              {opt.subLabel}
                             </span>
-                            )}
-                             {/* Exibe o CPF na lista */}
-                            {opt.cpf && (
-                                <span className="text-[10px] text-gray-400 tracking-wide">
-                                  CPF: {opt.cpf}
-                                </span>
-                            )}
+                          )}
+                          {opt.cpf && (
+                            <span className="text-[10px] text-gray-400 tracking-wide">
+                              CPF: {opt.cpf}
+                            </span>
+                          )}
                         </div>
                       </div>
                       {value === opt.id && <Check size={16} className={`text-${accent}`} />}
@@ -232,6 +237,13 @@ export default function SearchableSelect({
           )}
         </div>
       )}
+
+      {error && (
+        <span className="text-xs text-brand-encaminhamento font-bold ml-1 mt-0.5 animate-pulse">
+          {error}
+        </span>
+      )}
     </div>
   );
 }
+

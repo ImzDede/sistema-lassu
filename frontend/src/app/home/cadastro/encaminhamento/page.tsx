@@ -12,6 +12,12 @@ import { usePatients } from "@/hooks/usePatients";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatCPF } from "@/utils/format";
 import { useAppTheme } from "@/hooks/useAppTheme";
+import { useFeedback } from "@/contexts/FeedbackContext";
+
+type FieldErrors = {
+  patientId?: string;
+  destino?: string;
+};
 
 export default function EncaminhamentoPage() {
   const router = useRouter();
@@ -20,16 +26,19 @@ export default function EncaminhamentoPage() {
   const preSelectedPatientName = searchParams.get("patientName");
 
   const { user } = useAuth();
+  const { showFeedback } = useFeedback();
   const { patients, fetchPatients, loading: loadingPatients } = usePatients();
   const { saveReferral, loading: loadingSave } = useEncaminhamento();
 
   const { borderClass, textClass, lightBgClass } = useAppTheme();
 
   const [selectedPatient, setSelectedPatient] = useState<string | null>(
-    preSelectedPatientId || null,
+    preSelectedPatientId || null
   );
   const [description, setDescription] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  const [errors, setErrors] = useState<FieldErrors>({});
 
   useEffect(() => {
     if (user && !preSelectedPatientId) {
@@ -39,20 +48,16 @@ export default function EncaminhamentoPage() {
 
   const handleSearchPatient = useCallback(
     (term: string) =>
-      fetchPatients({
-        nome: term,
-        page: 1,
-        limit: 10,
-        status: "atendimento",
-      } as any),
-    [fetchPatients],
+      fetchPatients({ nome: term, page: 1, limit: 10, status: "atendimento" } as any),
+    [fetchPatients]
   );
 
   const patientOptions = useMemo(() => {
     const opts = patients.map((p) => ({
       id: p.id,
       label: p.nome,
-      subLabel: p.cpf ? formatCPF(p.cpf) : undefined
+      subLabel: p.cpf ? formatCPF(p.cpf) : undefined,
+      cpf: p.cpf ? formatCPF(p.cpf) : undefined,
     }));
 
     if (
@@ -64,25 +69,30 @@ export default function EncaminhamentoPage() {
         id: preSelectedPatientId,
         label: decodeURIComponent(preSelectedPatientName),
         subLabel: "Selecionado",
+        cpf: undefined,
       });
     }
 
     return opts;
   }, [patients, preSelectedPatientId, preSelectedPatientName]);
 
-  const canSubmit =
-    !!selectedPatient && description.trim().length > 0 && !loadingSave;
+  const canSubmit = !!selectedPatient && description.trim().length > 0 && !loadingSave;
 
   const handleSave = async () => {
-    if (!selectedPatient) return;
+    const nextErrors: FieldErrors = {};
+    if (!selectedPatient) nextErrors.patientId = "Selecione um paciente.";
+    if (!description.trim()) nextErrors.destino = "Campo obrigatório.";
 
-    const success = await saveReferral(
-      selectedPatient,
-      description,
-      selectedFile,
-    );
+    setErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) {
+      showFeedback("Verifique os campos em destaque.", "error");
+      return;
+    }
+
+    const success = await saveReferral(selectedPatient!, description, selectedFile);
     if (success) {
-      await new Promise((r) => setTimeout(r, 500));
+      await new Promise((r) => setTimeout(r, 400));
       router.back();
     }
   };
@@ -115,10 +125,7 @@ export default function EncaminhamentoPage() {
             <div className={`p-2 rounded-lg ${lightBgClass}`}>
               <Share className={`w-6 h-6 ${textClass}`} />
             </div>
-            <Typography
-              variant="h6"
-              className="font-bold text-brand-encaminhamento"
-            >
+            <Typography variant="h6" className="font-bold text-brand-encaminhamento">
               Dados do Encaminhamento
             </Typography>
           </div>
@@ -128,49 +135,60 @@ export default function EncaminhamentoPage() {
               label="Paciente"
               options={patientOptions}
               value={selectedPatient}
-              onChange={setSelectedPatient}
+              onChange={(id) => {
+                setSelectedPatient(id);
+                setErrors((prev) => ({ ...prev, patientId: "" }));
+              }}
               onSearch={handleSearchPatient}
               isLoading={loadingPatients}
               required
               disabled={!!preSelectedPatientId}
               placeholder="Busque pelo nome"
               accentColorClass="brand-encaminhamento"
+              error={errors.patientId}
             />
           </div>
 
           <div>
-            <Typography
-              variant="small"
-              className="font-bold text-gray-700 mb-2 flex gap-2"
-            >
+            <Typography variant="small" className="font-bold text-gray-700 mb-2 flex gap-2">
               Anexar Documento{" "}
               <span className="text-gray-400 font-semibold">(Opcional)</span>
             </Typography>
 
             <FileUploadBox
               selectedFile={selectedFile}
-              onFileChange={(e) =>
-                e.target.files && setSelectedFile(e.target.files[0])
-              }
+              onFileChange={(e) => e.target.files && setSelectedFile(e.target.files[0])}
               onRemoveFile={() => setSelectedFile(null)}
             />
           </div>
 
           <div>
-            <Typography
-              variant="small"
-              className="font-bold text-gray-700 mb-2 flex gap-2"
-            >
+            <Typography variant="small" className="font-bold text-gray-700 mb-2 flex gap-2">
               Motivo / Destino
             </Typography>
+
             <Textarea
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                setErrors((prev) => ({ ...prev, destino: "" }));
+              }}
               rows={5}
               placeholder="Descreva o motivo e o destino do encaminhamento..."
-              className="!border-gray-300 focus:!border-brand-encaminhamento focus:!ring-1 focus:!ring-brand-encaminhamento bg-white"
+              className={`
+                bg-white
+                ${errors.destino
+                  ? "!border-feedback-error-text focus:!border-feedback-error-text focus:!ring-1 focus:!ring-feedback-error-text"
+                  : "!border-gray-300 focus:!border-brand-encaminhamento focus:!ring-1 focus:!ring-brand-encaminhamento"}
+              `}
               labelProps={{ className: "hidden" }}
             />
+
+            {errors.destino && (
+              <span className="text-xs text-feedback-error-text font-bold ml-1 mt-1 animate-pulse">
+                {errors.destino}
+              </span>
+            )}
           </div>
 
           <div className="flex flex-col-reverse lg:flex-row gap-4 mt-2 border-t border-gray-100 pt-4">
@@ -185,6 +203,7 @@ export default function EncaminhamentoPage() {
                 CANCELAR
               </Button>
             </div>
+
             <div className="w-full lg:w-1/2">
               <Button
                 onClick={handleSave}
@@ -192,11 +211,7 @@ export default function EncaminhamentoPage() {
                 fullWidth
                 accentColorClass="brand-encaminhamento"
                 disabled={!canSubmit}
-                title={
-                  !canSubmit
-                    ? "Selecione um paciente e preencha o destino"
-                    : undefined
-                }
+                title={!canSubmit ? "Selecione um paciente e preencha o destino" : undefined}
               >
                 REGISTRAR ENCAMINHAMENTO
               </Button>
@@ -207,3 +222,4 @@ export default function EncaminhamentoPage() {
     </div>
   );
 }
+

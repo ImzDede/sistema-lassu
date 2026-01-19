@@ -18,7 +18,13 @@ export default function NewExtensionist() {
   const { showFeedback } = useFeedback();
   const { loading: formLoading, handleSubmit } = useFormHandler();
 
-  const [formData, setFormData] = useState({ name: "", email: "", registration: "", phone: "" });
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    registration: "",
+    phone: "",
+  });
+
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -39,7 +45,7 @@ export default function NewExtensionist() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    if (errors[name]) setErrors(prev => ({ ...prev, [name]: "" }));
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
 
     if (name === "phone") {
       setFormData((prev) => ({ ...prev, [name]: formatPhone(value) }));
@@ -57,20 +63,20 @@ export default function NewExtensionist() {
     e.preventDefault();
     setErrors({});
     const nextErrors: Record<string, string> = {};
-    
+
     if (!formData.name?.trim()) nextErrors.name = "Campo obrigatório.";
     if (!formData.email?.trim()) nextErrors.email = "Campo obrigatório.";
-    
+
     if (!formData.registration?.trim()) {
-        nextErrors.registration = "Campo obrigatório.";
+      nextErrors.registration = "Campo obrigatório.";
     } else if (formData.registration.length < 7) {
-        nextErrors.registration = "Mínimo 7 dígitos.";
+      nextErrors.registration = "Mínimo 7 dígitos.";
     }
 
     if (!formData.phone?.trim()) {
-        nextErrors.phone = "Campo obrigatório.";
+      nextErrors.phone = "Campo obrigatório.";
     } else if (cleanFormat(formData.phone).length < 10) {
-        nextErrors.phone = "Telefone incompleto.";
+      nextErrors.phone = "Telefone incompleto.";
     }
 
     if (Object.keys(nextErrors).length > 0) {
@@ -91,14 +97,13 @@ export default function NewExtensionist() {
 
       showFeedback("Extensionista cadastrada com sucesso!", "success");
       setFormData({ name: "", email: "", registration: "", phone: "" });
+      setErrors({});
     });
   }
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full relative">
-
       <div className="flex items-center gap-4">
-        {/* BOTÃO DE VOLTAR */}
         <button
           onClick={() => router.back()}
           className="p-3 rounded-full transition-colors focus:outline-none bg-brand-terapeuta/20 text-brand-terapeuta hover:bg-brand-terapeuta/30"
@@ -135,8 +140,8 @@ export default function NewExtensionist() {
                 onChange={handleChange}
                 required
                 leftIcon={User}
-                placeholder="Ex: Maria Silva" 
-                error={errors.name} 
+                placeholder="Ex: Maria Silva"
+                error={errors.name}
               />
               <Input
                 label="E-mail"
@@ -146,8 +151,8 @@ export default function NewExtensionist() {
                 onChange={handleChange}
                 required
                 leftIcon={Mail}
-                placeholder="exemplo@dominio.com" 
-                error={errors.email} 
+                placeholder="exemplo@dominio.com"
+                error={errors.email}
               />
             </div>
 
@@ -161,8 +166,8 @@ export default function NewExtensionist() {
                 maxLength={7}
                 minLength={7}
                 leftIcon={Hash}
-                placeholder="Ex: 1234567" 
-                error={errors.registration} 
+                placeholder="Ex: 1234567"
+                error={errors.registration}
               />
               <Input
                 label="Celular"
@@ -172,8 +177,8 @@ export default function NewExtensionist() {
                 maxLength={15}
                 required
                 leftIcon={Phone}
-                placeholder="(00) 90000-0000" 
-                error={errors.phone} 
+                placeholder="(00) 90000-0000"
+                error={errors.phone}
               />
             </div>
 
@@ -190,12 +195,7 @@ export default function NewExtensionist() {
                 </Button>
               </div>
               <div className="w-full lg:w-1/2">
-                <Button 
-                  type="submit" 
-                  loading={formLoading} 
-                  fullWidth
-                  className="bg-brand-terapeuta"
-                >
+                <Button type="submit" loading={formLoading} fullWidth className="bg-brand-terapeuta">
                   {formLoading ? "SALVANDO..." : "CADASTRAR EXTENSIONISTA"}
                 </Button>
               </div>

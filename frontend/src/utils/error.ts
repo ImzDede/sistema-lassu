@@ -24,3 +24,20 @@ export function getErrorMessage(error: any): string {
   // 5. Fallback final
   return "Ocorreu um erro inesperado. Tente novamente.";
 }
+
+// Extrai erros por campo no formato do seu backend:
+export function getFieldErrors(error: any): Record<string, string> {
+  const details = error?.response?.data?.error?.details;
+
+  if (!details || typeof details !== "object") return {};
+
+  const fieldErrors: Record<string, string> = {};
+
+  Object.entries(details).forEach(([field, messages]) => {
+    if (Array.isArray(messages) && messages.length > 0) {
+      fieldErrors[field] = String(messages[0]);
+    }
+  });
+
+  return fieldErrors;
+}

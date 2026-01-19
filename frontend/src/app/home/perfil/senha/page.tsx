@@ -16,45 +16,53 @@ export default function ProfilePassword() {
   const router = useRouter();
   const { showFeedback } = useFeedback();
   const { loading, handleSubmit } = useFormHandler();
-
-  // TEMA: brand-peach
   const { color, borderClass, lightBgClass, textClass } = useAppTheme();
 
-  // CORREÇÃO: Forçando cor Peach
   const themeAccentColor = `brand-${color}`;
   const inputFocus = `focus-within:!border-${themeAccentColor} focus-within:!ring-1 focus-within:!ring-${themeAccentColor}`;
 
   const [passwords, setPasswords] = useState({ new: "", confirm: "" });
-  const [errors, setErrors] = useState({ new: "", confirm: "" });
+  const [errors, setErrors] = useState<{ new: string; confirm: string }>({ new: "", confirm: "" });
+
+  const pickBackendMsg = (fieldErrors: Record<string, string>, keys: string[]) => {
+    for (const k of keys) if (fieldErrors[k]) return fieldErrors[k];
+    return "";
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    let isValid = true;
-    const newErrors = { new: "", confirm: "" };
-    const strongPasswordRegex = /^(?=.*[A-Z])(?=.*[!@#$&*]).+$/;
+    setErrors({ new: "", confirm: "" });
 
-    if (passwords.new.length < 6) {
-      newErrors.new = "Mínimo 6 caracteres.";
-      isValid = false;
-    } else if (!strongPasswordRegex.test(passwords.new)) {
-      newErrors.new = "Necessário letra maiúscula e caractere especial.";
-      isValid = false;
-    }
-    if (passwords.new !== passwords.confirm) {
-      newErrors.confirm = "As senhas não coincidem.";
-      isValid = false;
-    }
-
-    setErrors(newErrors);
-    if (!isValid) {
+    // UX mínima
+    if (!passwords.new.trim()) {
+      setErrors((p) => ({ ...p, new: "Campo obrigatório." }));
       showFeedback("Verifique os campos.", "error");
       return;
     }
 
-    await handleSubmit(async () => {
-      await authService.updateProfile({ senha: passwords.new } as any);
-      router.push("/home/perfil?success=senha");
-    });
+    if (passwords.new !== passwords.confirm) {
+      setErrors((p) => ({ ...p, confirm: "As senhas não coincidem." }));
+      showFeedback("Verifique os campos.", "error");
+      return;
+    }
+
+    await handleSubmit(
+      async () => {
+        await authService.updateProfile({ senha: passwords.new } as any);
+        router.push("/home/perfil?success=senha");
+      },
+      undefined,
+      (_err, fieldErrors) => {
+        // destaca com o que vier do back
+        if (!fieldErrors || Object.keys(fieldErrors).length === 0) return;
+
+        setErrors((prev) => ({
+          ...prev,
+          new: prev.new || pickBackendMsg(fieldErrors, ["senha", "password", "newPassword", "new"]),
+          confirm: prev.confirm || pickBackendMsg(fieldErrors, ["confirm", "confirmPassword"]),
+        }));
+      }
+    );
   };
 
   return (
@@ -67,21 +75,14 @@ export default function ProfilePassword() {
           <ArrowLeft className="w-6 h-6" />
         </button>
         <div>
-          <Typography
-            variant="h4"
-            className="font-bold uppercase text-brand-peach"
-          >
+          <Typography variant="h4" className="font-bold uppercase text-brand-peach">
             Segurança
           </Typography>
-          <Typography className="text-gray-500 text-sm">
-            Gerencie sua senha.
-          </Typography>
+          <Typography className="text-gray-500 text-sm">Gerencie sua senha.</Typography>
         </div>
       </div>
 
-      <Card
-        className={`w-full shadow-lg border-t-4 ${borderClass} bg-brand-surface`}
-      >
+      <Card className={`w-full shadow-lg border-t-4 ${borderClass} bg-brand-surface`}>
         <CardBody className="p-6 md:p-10">
           <div className="flex items-center gap-3 mb-8 pb-4 border-b border-gray-100">
             <div className={`p-2 rounded-lg ${lightBgClass}`}>
@@ -142,12 +143,7 @@ export default function ProfilePassword() {
                 </Button>
               </div>
               <div className="w-full lg:w-1/2">
-                <Button
-                  type="submit"
-                  loading={loading}
-                  fullWidth
-                  accentColorClass={themeAccentColor}
-                >
+                <Button type="submit" loading={loading} fullWidth accentColorClass={themeAccentColor}>
                   ATUALIZAR SENHA
                 </Button>
               </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Edit3, List } from "lucide-react";
 import { Card, CardBody, Typography, Textarea } from "@material-tailwind/react";
@@ -12,6 +12,7 @@ import { usePatients } from "@/hooks/usePatients";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatCPF } from "@/utils/format";
 import { useAppTheme } from "@/hooks/useAppTheme";
+import { useFeedback } from "@/contexts/FeedbackContext";
 
 export default function AnotacoesPage() {
   const router = useRouter();
@@ -20,6 +21,7 @@ export default function AnotacoesPage() {
   const preSelectedPatientName = searchParams.get("patientName");
 
   const { user } = useAuth();
+  const { showFeedback } = useFeedback();
   const { patients, fetchPatients, loading: loadingPatients } = usePatients();
 
   const {
@@ -35,8 +37,10 @@ export default function AnotacoesPage() {
   const [selectedPatient, setSelectedPatient] = useState<string | null>(
     preSelectedPatientId || null
   );
-  const [sessionId, setSessionId] = useState<string>(""); // sempre string por causa do select
+  const [sessionId, setSessionId] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
+
+  const [errors, setErrors] = useState<{ patientId?: string; sessionId?: string }>({});
 
   // 1) Carrega pacientes
   useEffect(() => {
@@ -50,6 +54,7 @@ export default function AnotacoesPage() {
     if (selectedPatient) {
       setSessionId("");
       setNotes("");
+      setErrors((prev) => ({ ...prev, sessionId: "" }));
       fetchSessionsForPatient(selectedPatient);
     } else {
       setSessionId("");
@@ -57,7 +62,7 @@ export default function AnotacoesPage() {
     }
   }, [selectedPatient, fetchSessionsForPatient]);
 
-  // 3) Quando escolhe sessão, busca a anotação do banco (GET /sessions/:id)
+  // 3) Quando escolhe sessão, busca a anotação do banco
   useEffect(() => {
     let alive = true;
 
@@ -66,13 +71,11 @@ export default function AnotacoesPage() {
         setNotes("");
         return;
       }
-
       const texto = await getSessionNote(sessionId);
       if (alive) setNotes(texto);
     }
 
     loadNote();
-
     return () => {
       alive = false;
     };
@@ -84,36 +87,56 @@ export default function AnotacoesPage() {
     [fetchPatients]
   );
 
-  const patientOptions = patients.map((p) => ({
-    id: p.id,
-    label: p.nome,
-    subLabel: p.cpf ? formatCPF(p.cpf) : undefined
-  }));
+  const patientOptions = useMemo(() => {
+    const opts = patients.map((p) => ({
+      id: p.id,
+      label: p.nome,
+      subLabel: p.cpf ? formatCPF(p.cpf) : undefined,
+      cpf: p.cpf ? formatCPF(p.cpf) : undefined,
+    }));
 
-  if (
-    preSelectedPatientId &&
-    preSelectedPatientName &&
-    !patientOptions.find((p) => p.id === preSelectedPatientId)
-  ) {
-    patientOptions.unshift({
-      id: preSelectedPatientId,
-      label: decodeURIComponent(preSelectedPatientName),
-      subLabel: "Selecionado",
+    if (
+      preSelectedPatientId &&
+      preSelectedPatientName &&
+      !opts.find((p) => p.id === preSelectedPatientId)
+    ) {
+      opts.unshift({
+        id: preSelectedPatientId,
+        label: decodeURIComponent(preSelectedPatientName),
+        subLabel: "Selecionado",
+        cpf: undefined,
+      });
+    }
+
+    return opts;
+  }, [patients, preSelectedPatientId, preSelectedPatientName]);
+
+  const sessionOptions = useMemo(() => {
+    return patientSessions.map((sessao) => {
+      const dataFormatada = sessao.dia
+        ? new Date(sessao.dia).toLocaleDateString("pt-BR")
+        : "Data n/d";
+      const horaFormatada = sessao.hora ? `${sessao.hora}h` : "";
+      return {
+        value: String(sessao.id),
+        label: `Sessão ${dataFormatada} - ${horaFormatada} (${sessao.status})`,
+      };
     });
-  }
-
-  const sessionOptions = patientSessions.map((sessao) => {
-    const dataFormatada = sessao.dia
-      ? new Date(sessao.dia).toLocaleDateString("pt-BR")
-      : "Data n/d";
-    const horaFormatada = sessao.hora ? `${sessao.hora}h` : "";
-    return {
-      value: String(sessao.id), // garante string
-      label: `Sessão ${dataFormatada} - ${horaFormatada} (${sessao.status})`,
-    };
-  });
+  }, [patientSessions]);
 
   const handleSave = async () => {
+    const nextErrors: typeof errors = {};
+
+    if (!selectedPatient) nextErrors.patientId = "Selecione um paciente.";
+    if (!sessionId) nextErrors.sessionId = "Selecione uma sessão.";
+
+    setErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) {
+      showFeedback("Selecione paciente e sessão.", "error");
+      return;
+    }
+
     await saveNote(sessionId, notes);
   };
 
@@ -156,13 +179,17 @@ export default function AnotacoesPage() {
               label="Paciente"
               options={patientOptions}
               value={selectedPatient}
-              onChange={setSelectedPatient}
+              onChange={(id) => {
+                setSelectedPatient(id);
+                setErrors((prev) => ({ ...prev, patientId: "" }));
+              }}
               onSearch={handleSearchPatient}
               isLoading={loadingPatients}
               required
               disabled={!!preSelectedPatientId}
               placeholder="Busque pelo nome"
               accentColorClass="brand-anotacoes"
+              error={errors.patientId}
             />
           </div>
 
@@ -171,7 +198,10 @@ export default function AnotacoesPage() {
               label="Referente à Sessão"
               options={sessionOptions}
               value={sessionId}
-              onChange={setSessionId}
+              onChange={(v) => {
+                setSessionId(v);
+                setErrors((prev) => ({ ...prev, sessionId: "" }));
+              }}
               placeholder={
                 sessionOptions.length > 0
                   ? "Selecione a sessão..."
@@ -180,14 +210,13 @@ export default function AnotacoesPage() {
               leftIcon={List}
               accentColorClass="brand-anotacoes"
               disabled={!selectedPatient || sessionOptions.length === 0}
+              error={errors.sessionId}
             />
           </div>
 
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <label className="text-sm font-bold text-gray-700">
-                Conteúdo
-              </label>
+              <label className="text-sm font-bold text-gray-700">Conteúdo</label>
             </div>
 
             <Textarea
@@ -231,4 +260,5 @@ export default function AnotacoesPage() {
     </div>
   );
 }
+
 

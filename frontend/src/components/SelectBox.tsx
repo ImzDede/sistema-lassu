@@ -6,7 +6,11 @@ interface SelectOption {
   value: string | number;
 }
 
-interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "onChange" | "value"> {
+interface SelectProps
+  extends Omit<
+    React.SelectHTMLAttributes<HTMLSelectElement>,
+    "onChange" | "value"
+  > {
   label?: string;
   value: string | number;
   onChange: (value: string) => void;
@@ -32,12 +36,12 @@ const Select = ({
   ...props
 }: SelectProps) => {
   const accent = accentColorClass ?? "brand-purple";
-
   const hasValue = value !== "" && value !== null && value !== undefined;
 
   const wrapperFocusClass = error
-    ? "border-feedback-error-text focus-within:ring-1 focus-within:ring-feedback-error-text"
-    : `border-gray-300 focus-within:!border-${accent} focus-within:ring-1 focus-within:!ring-${accent}`;
+    ? "border-brand-encaminhamento focus-within:ring-1 focus-within:ring-brand-encaminhamento"
+    : `border-gray-300 focus-within:ring-1 focus-within:border-${accent} focus-within:ring-${accent}`;
+
 
   return (
     <div className={`flex flex-col gap-1.5 w-full ${className}`}>
@@ -67,7 +71,7 @@ const Select = ({
           required={required}
           className={`
             w-full h-12 bg-transparent outline-none text-base appearance-none cursor-pointer z-20
-            ${LeftIcon ? "pl-10" : "pl-4"} 
+            ${LeftIcon ? "pl-10" : "pl-4"}
             pr-10 rounded-lg
             ${!hasValue ? "text-gray-400" : "text-brand-dark"}
           `}
@@ -96,9 +100,14 @@ const Select = ({
         </div>
       </div>
 
-      {error && <span className="text-xs text-feedback-error-text font-bold ml-1 mt-0.5 animate-pulse">{error}</span>}
+      {error && (
+        <span className="text-xs text-brand-encaminhamento font-bold ml-1 mt-0.5 animate-pulse">
+          {error}
+        </span>
+      )}
     </div>
   );
 };
 
 export default Select;
+

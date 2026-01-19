@@ -17,9 +17,7 @@ export default function ProfileData() {
   const { user, refreshProfile } = useAuth();
   const { loading: loadingSave, handleSubmit } = useFormHandler();
 
-  // TEMA: brand-peach
   const { color, borderClass, lightBgClass, textClass } = useAppTheme();
-
   const themeAccentColor = `brand-${color}`;
   const inputFocusClass = `focus-within:!border-${themeAccentColor} focus-within:!ring-${themeAccentColor}`;
 
@@ -29,6 +27,8 @@ export default function ProfileData() {
     email: "",
     telefone: "",
   });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (user) {
@@ -43,22 +43,35 @@ export default function ProfileData() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    if (name === "telefone")
-      setFormData((prev) => ({ ...prev, [name]: formatPhone(value) }));
+
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
+
+    if (name === "telefone") setFormData((prev) => ({ ...prev, [name]: formatPhone(value) }));
     else setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    await handleSubmit(async () => {
-      await authService.updateProfile({
-        nome: formData.nome,
-        email: formData.email,
-        telefone: cleanFormat(formData.telefone),
-      });
-      await refreshProfile();
-      router.push("/home/perfil?success=dados");
-    });
+    setErrors({});
+
+    await handleSubmit(
+      async () => {
+        await authService.updateProfile({
+          nome: formData.nome,
+          email: formData.email,
+          telefone: cleanFormat(formData.telefone),
+        });
+        await refreshProfile();
+        router.push("/home/perfil?success=dados");
+      },
+      undefined,
+      (_err, fieldErrors) => {
+        // destaque por campo vindo do back
+        if (fieldErrors && Object.keys(fieldErrors).length) {
+          setErrors(fieldErrors);
+        }
+      }
+    );
   };
 
   return (
@@ -71,10 +84,7 @@ export default function ProfileData() {
           <ArrowLeft className="w-6 h-6" />
         </button>
         <div>
-          <Typography
-            variant="h4"
-            className="font-bold uppercase text-brand-peach"
-          >
+          <Typography variant="h4" className="font-bold uppercase text-brand-peach">
             Meus Dados
           </Typography>
           <Typography className="text-gray-500 text-sm">
@@ -83,9 +93,7 @@ export default function ProfileData() {
         </div>
       </div>
 
-      <Card
-        className={`w-full shadow-lg border-t-4 ${borderClass} bg-brand-surface`}
-      >
+      <Card className={`w-full shadow-lg border-t-4 ${borderClass} bg-brand-surface`}>
         <CardBody className="p-6 md:p-10">
           <div className="flex items-center gap-3 mb-8 pb-4 border-b border-gray-100">
             <div className={`p-2 rounded-lg ${lightBgClass}`}>
@@ -107,6 +115,7 @@ export default function ProfileData() {
                 leftIcon={User}
                 placeholder="Nome"
                 focusColorClass={inputFocusClass}
+                error={errors.nome}
               />
               <Input
                 label="E-mail"
@@ -118,8 +127,10 @@ export default function ProfileData() {
                 leftIcon={Mail}
                 placeholder="email"
                 focusColorClass={inputFocusClass}
+                error={errors.email}
               />
             </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Input
                 label="Matrícula/CRP"
@@ -143,10 +154,11 @@ export default function ProfileData() {
                 maxLength={15}
                 placeholder="(00) 00000-0000"
                 leftIcon={Phone}
-                error=""
                 focusColorClass={inputFocusClass}
+                error={errors.telefone}
               />
             </div>
+
             <div className="flex flex-col-reverse md:flex-row gap-4 mt-4 pt-4 border-t border-gray-100">
               <div className="w-full md:w-1/2">
                 <Button
@@ -161,12 +173,7 @@ export default function ProfileData() {
                 </Button>
               </div>
               <div className="w-full md:w-1/2">
-                <Button
-                  type="submit"
-                  loading={loadingSave}
-                  fullWidth
-                  accentColorClass={themeAccentColor}
-                >
+                <Button type="submit" loading={loadingSave} fullWidth accentColorClass={themeAccentColor}>
                   SALVAR ALTERAÇÕES
                 </Button>
               </div>
@@ -177,3 +184,4 @@ export default function ProfileData() {
     </div>
   );
 }
+
