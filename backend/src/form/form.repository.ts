@@ -96,36 +96,6 @@ export class FormRepository {
         return result.rows[0]
     }
 
-    async getSections(versionId: string): Promise<SectionRow[]> {
-        const query = `
-            SELECT *
-            FROM formulario_secoes
-            WHERE versao_id = $1
-        `
-        const result = await this.client.query(query, [versionId])
-        return result.rows
-    }
-
-    async getQuestions(sectionId: string): Promise<QuestionRow[]> {
-        const query = `
-            SELECT *
-            FROM formulario_perguntas
-            WHERE secao_id = $1
-        `
-        const result = await this.client.query(query, [sectionId])
-        return result.rows
-    }
-
-    async getOptions(questionId: string): Promise<OptionRow[]> {
-        const query = `
-            SELECT *
-            FROM formulario_opcoes
-            WHERE pergunta_id = $1
-        `
-        const result = await this.client.query(query, [questionId])
-        return result.rows
-    }
-
     async getFilledForm(modelId: string, patientId: string): Promise<FormFilledRow | null> {
         const query = `
             SELECT fp.*
@@ -159,13 +129,54 @@ export class FormRepository {
         return result.rows[0]
     }
 
+    async reopenFilledForm(id: string): Promise<FormFilledRow> {
+        const query = `
+            UPDATE formulario_preenchidos
+            SET status = 'rascunho',
+                updated_at = NOW()
+            WHERE id = $1
+            RETURNING *;
+        `;
+        const result = await this.client.query(query, [id]);
+        return result.rows[0]
+    }
+
+    async getSections(versionId: string): Promise<SectionRow[]> {
+        const query = `
+            SELECT *
+            FROM formulario_secoes
+            WHERE versao_id = $1
+        `
+        const result = await this.client.query(query, [versionId])
+        return result.rows
+    }
+
+    async getQuestions(sectionId: string): Promise<QuestionRow[]> {
+        const query = `
+            SELECT *
+            FROM formulario_perguntas
+            WHERE secao_id = $1
+        `
+        const result = await this.client.query(query, [sectionId])
+        return result.rows
+    }
+
+    async getOptions(questionId: string): Promise<OptionRow[]> {
+        const query = `
+            SELECT *
+            FROM formulario_opcoes
+            WHERE pergunta_id = $1
+        `
+        const result = await this.client.query(query, [questionId])
+        return result.rows
+    }
+
     async upsertAnswersBatch(
         answerIds: string[],
         formId: string,
         questionIds: string[],
         values: (string | null)[]
     ) {
-        // CORRIGIDO: valor -> texto_resposta
         const query = `
         INSERT INTO formulario_respostas (
             id,
@@ -196,7 +207,6 @@ export class FormRepository {
     async clearSelectedOptionsBatch(
         answerIds: string[]
     ) {
-        // CORRIGIDO: formulario_resposta_opcoes -> formulario_selecionados
         const query = `
             DELETE FROM formulario_selecionados
             WHERE resposta_id = ANY($1::uuid[]);
@@ -210,9 +220,6 @@ export class FormRepository {
         optionIds: string[],
         complements: (string | null)[]
     ) {
-        // CORRIGIDO: 
-        // Tabela: formulario_resposta_opcoes -> formulario_selecionados
-        // Coluna: complemento -> texto_complemento
         const query = `
             INSERT INTO formulario_selecionados (
                 resposta_id,
@@ -238,42 +245,42 @@ export class FormRepository {
     ): Promise<{ percentage: number; missingMandatory: string[] }> {
 
         const query = `
-    WITH active_mandatory AS (
-      SELECT q.id
-      FROM formulario_perguntas q
-      JOIN formulario_secoes s ON q.secao_id = s.id 
-      
-      LEFT JOIN formulario_selecionados ro
-        ON ro.opcao_id = q.depende_de_opcao_id
-      LEFT JOIN formulario_respostas r
-        ON r.id = ro.resposta_id
-       AND r.formulario_id = $1
+            WITH active_mandatory AS (
+              SELECT q.id
+              FROM formulario_perguntas q
+              JOIN formulario_secoes s ON q.secao_id = s.id 
+              
+              LEFT JOIN formulario_selecionados ro
+                ON ro.opcao_id = q.depende_de_opcao_id
+              LEFT JOIN formulario_respostas r
+                ON r.id = ro.resposta_id
+               AND r.formulario_id = $1
        
-      WHERE s.versao_id = $2
-        AND q.obrigatoria = true
-        AND (
-          q.depende_de_opcao_id IS NULL 
-          OR r.id IS NOT NULL           
-        )
-    ),
-    answered AS (
-      SELECT DISTINCT fr.pergunta_id
-      FROM formulario_respostas fr
-      LEFT JOIN formulario_selecionados fs ON fr.id = fs.resposta_id
-      WHERE fr.formulario_id = $1
-      AND (
-          fr.texto_resposta IS NOT NULL   
-          OR fs.resposta_id IS NOT NULL -- <--- CORREÇÃO: fs.id -> fs.resposta_id
-      )
-    )
-    SELECT
-      COUNT(*) AS total_mandatory,
-      COUNT(a.pergunta_id) AS answered_mandatory,
-      ARRAY_AGG(am.id)
-        FILTER (WHERE a.pergunta_id IS NULL) AS missing
-    FROM active_mandatory am
-    LEFT JOIN answered a ON a.pergunta_id = am.id;
-  `;
+              WHERE s.versao_id = $2
+                AND q.obrigatoria = true
+                AND (
+                  q.depende_de_opcao_id IS NULL 
+                  OR r.id IS NOT NULL           
+                )
+            ),
+            answered AS (
+              SELECT DISTINCT fr.pergunta_id
+              FROM formulario_respostas fr
+              LEFT JOIN formulario_selecionados fs ON fr.id = fs.resposta_id
+              WHERE fr.formulario_id = $1
+              AND (
+                  fr.texto_resposta IS NOT NULL   
+                  OR fs.resposta_id IS NOT NULL
+              )
+            )
+            SELECT
+              COUNT(*) AS total_mandatory,
+              COUNT(a.pergunta_id) AS answered_mandatory,
+              ARRAY_AGG(am.id)
+                FILTER (WHERE a.pergunta_id IS NULL) AS missing
+            FROM active_mandatory am
+            LEFT JOIN answered a ON a.pergunta_id = am.id;
+        `;
 
         const { rows } = await this.client.query(query, [
             formId,
@@ -345,5 +352,15 @@ export class FormRepository {
         `;
         const result = await this.client.query(query, [formId]);
         return result.rows;
+    }
+
+    async deleteAnswersByQuestionIds(formId: string, questionIds: string[]) {
+        const query = `DELETE FROM formulario_respostas WHERE formulario_id = $1 AND pergunta_id = ANY($2::uuid[])`;
+        await this.client.query(query, [formId, questionIds]);
+    }
+
+    async deleteAnswersByIds(answerIds: string[]) {
+        const query = `DELETE FROM formulario_respostas WHERE id = ANY($1::uuid[])`;
+        await this.client.query(query, [answerIds]);
     }
 }

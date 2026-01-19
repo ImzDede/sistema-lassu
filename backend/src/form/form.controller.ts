@@ -66,4 +66,20 @@ export class FormController {
         const { missing } = result
         res.status(200).json(response(data, { missing }));
     }
+
+    async reopenAnamnese(req: Request, res: Response) {
+        const userId = req.validated.userId;
+        const { targetId } = req.validated.params;
+        const result = await service.reopenForm('ANAMNESE', userId, targetId);
+        const data = FormMapper.toReopen(result)
+        res.status(200).json(response(data));
+    }
+
+    async reopenSintese(req: Request, res: Response) {
+        const userId = req.validated.userId;
+        const { targetId } = req.validated.params;
+        const result = await service.reopenForm('SINTESE', userId, targetId);
+        const data = FormMapper.toReopen(result)
+        res.status(200).json(response(data));
+    }
 }

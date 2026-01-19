@@ -202,7 +202,7 @@ export class PatientRepository {
         return result.rows[0] ?? null;
     }
 
-    async upsertRefer(patientId: string, destino: string, filename: string | null) {
+    async upsertRefer(patientId: string, destino: string, filename: string | null): Promise<ReferRow> {
         const query = `
             INSERT INTO encaminhamentos (paciente_id, destino, arquivo_url)
             VALUES ($1, $2, $3)

@@ -34,6 +34,16 @@ export class FormMapper {
             })
         }
     }
+
+    static toReopen(data: { filledRow: FormFilledRow }) {
+        const { filledRow } = data
+        return {
+            id: filledRow.id,
+            versaoId: filledRow.versao_id,
+            status: filledRow
+        }
+    }
+
     static toGetFilled(data: {
         filledRow: FormFilledRow,
         sectionRows: SectionRow[],

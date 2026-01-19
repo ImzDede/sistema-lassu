@@ -30,10 +30,6 @@ export type Option = {
   perguntasDerivadas?: Question[];
 };
 
-// ====================================================
-// A. ATUALIZAÇÃO DE ESTRUTURA (ADMIN) - PUT /modelo
-// ====================================================
-
 const baseQuestionSchema = z.object({
     enunciado: enunciadoSchema,
     tipo: questionTipoSchema,
@@ -67,7 +63,6 @@ export const formUpdateStructureSchema = z.object({
 
 export type FormUpdateStructureDTO = z.infer<typeof formUpdateStructureSchema>;
 
-// Schema para opção selecionada (pode ter texto complemento)
 const selectedOptionSchema = z.object({
     id: z.string().uuid(),
     complemento: z.string().optional().nullable()
@@ -75,8 +70,8 @@ const selectedOptionSchema = z.object({
 
 const answerItemSchema = z.object({
     perguntaId: z.string().uuid(HTTP_ERRORS.BAD_REQUEST.VALIDATION.UUID),
-    valor: z.string().optional().nullable(), // Aceita string, null ou undefined
-    opcoes: z.array(selectedOptionSchema).optional() // Aceita array ou undefined
+    valor: z.string().optional().nullable(),
+    opcoes: z.array(selectedOptionSchema).optional()
 });
 
 export const formSubmitSchema = z.object({

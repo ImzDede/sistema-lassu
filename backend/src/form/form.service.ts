@@ -110,7 +110,7 @@ export class FormService {
         const patient = await patientRepository.getById(patientId);
         if (!patient) throw new AppError(HTTP_ERRORS.NOT_FOUND.PATIENT, 404);
         if (patient.terapeuta_id !== userId) throw new AppError(HTTP_ERRORS.FORBIDDEN.PATIENT.NOT_YOURS, 403);
-        if (patient.status == 'encaminhada') throw new AppError('Paciente já encaminhada.', 403);
+        if (patient.status == 'encaminhada') throw new AppError('Paciente já encaminhada.', 400);
 
         return await withTransaction(async (client) => {
             const repository = new FormRepository(client);
@@ -119,42 +119,31 @@ export class FormService {
 
             let formRow = await repository.getFilledForm(modelId, patientId)
             if (!formRow) throw new AppError(`Formulário não encontrado`, 404)
-            if (formRow.status == 'finalizado') throw new AppError('Formulário já finalizado.', 403);
+            if (formRow.status == 'finalizado') throw new AppError('Formulário já finalizado.', 400);
 
-            // =========================================================
-            // 1. SEPARAR O QUE SALVA (Upsert) DO QUE APAGA (Delete)
-            // =========================================================
             const answerIds: string[] = [];
             const questionIds: string[] = [];
             const values: (string | null)[] = [];
             const answersToDeleteQuestionIds: string[] = [];
 
             for (const item of data.respostas) {
-                // Normaliza string vazia "" para NULL
                 let textValue = (item.valor === "null" || item.valor === "") ? null : (item.valor ?? null);
 
                 const hasOptions = item.opcoes && item.opcoes.length > 0;
 
-                // LÓGICA CRÍTICA: Se não tem texto E não tem opções -> É DELETE
                 if (!textValue && !hasOptions) {
                     answersToDeleteQuestionIds.push(item.perguntaId);
                 } else {
-                    // Senão, é Upsert
                     answerIds.push(v4());
                     questionIds.push(item.perguntaId);
                     values.push(textValue);
                 }
             }
 
-            // 2. EXECUTAR DELETES (Limpa do banco para a % cair)
             if (answersToDeleteQuestionIds.length > 0) {
-                await client.query(
-                    `DELETE FROM formulario_respostas WHERE formulario_id = $1 AND pergunta_id = ANY($2::uuid[])`,
-                    [formRow.id, answersToDeleteQuestionIds]
-                );
+                await repository.deleteAnswersByQuestionIds(formRow.id, answersToDeleteQuestionIds)
             }
 
-            // 3. EXECUTAR UPSERTS (Salva novos valores)
             let answerRows: { id: string, pergunta_id: string }[] = [];
             if (answerIds.length > 0) {
                 answerRows = await repository.upsertAnswersBatch(
@@ -165,19 +154,16 @@ export class FormService {
                 );
             }
 
-            // 4. ATUALIZAR OPÇÕES (Apenas para as respostas que existem)
             const answerIdByQuestion = new Map<string, string>();
             for (const row of answerRows) {
                 answerIdByQuestion.set(row.pergunta_id, row.id);
             }
 
-            // Limpa opções velhas
             const affectedAnswerIds = Array.from(answerIdByQuestion.values());
             if (affectedAnswerIds.length > 0) {
                 await repository.clearSelectedOptionsBatch(affectedAnswerIds);
             }
 
-            // Insere opções novas
             const selectedAnswerIds: string[] = [];
             const selectedOptionIds: string[] = [];
             const selectedComplements: (string | null)[] = [];
@@ -203,9 +189,6 @@ export class FormService {
                 );
             }
 
-            // =========================================================
-            // 5. FAXINA FINAL (Respostas Órfãs/Escondidas)
-            // =========================================================
             const allQuestions = await repository.getQuestionsByVersion(formRow.versao_id);
             const allAnswers = await repository.getAllAnswers(formRow.id);
             const allSelectedOptions = await repository.getAllSelectedOptions(formRow.id);
@@ -229,13 +212,9 @@ export class FormService {
             }
 
             if (orphansToDeleteIds.length > 0) {
-                await client.query(
-                    `DELETE FROM formulario_respostas WHERE id = ANY($1)`,
-                    [orphansToDeleteIds]
-                );
+                await repository.deleteAnswersByIds(orphansToDeleteIds)
             }
 
-            // 6. CALCULAR METADADOS
             const { missingMandatory, percentage } = await repository.calculateFormMetadata(
                 formRow.id,
                 formRow.versao_id
@@ -255,6 +234,22 @@ export class FormService {
                 missing: missingMandatory
             };
         });
+    }
+
+    async reopenForm(modelTitle: 'ANAMNESE' | 'SINTESE', userId: string, patientId: string) {
+        const patient = await patientRepository.getById(patientId);
+        if (!patient) throw new AppError(HTTP_ERRORS.NOT_FOUND.PATIENT, 404);
+        if (patient.terapeuta_id !== userId) throw new AppError(HTTP_ERRORS.FORBIDDEN.PATIENT.NOT_YOURS, 403);
+
+        const modelId = await repository.getIdModelByTitle(modelTitle);
+        let formRow = await repository.getFilledForm(modelId, patientId)
+        if (!formRow) throw new AppError(`Formulário não encontrado`, 404)
+        if (formRow.status != 'finalizado') throw new AppError('Formulário já está aberto.', 400);
+
+        const filledRow = await repository.reopenFilledForm(formRow.id)
+
+        return { filledRow }
+
     }
 
     async getPatientForm(modelTitle: 'ANAMNESE' | 'SINTESE', userId: string, patientId: string, perms: UserPermDTO) {

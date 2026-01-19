@@ -61,9 +61,10 @@ export class PatientController {
 	}
 
 	async transfer(req: Request, res: Response) {
+		const userId = req.validated.userId;
 		const body = req.validated.body
 		const { targetId } = req.validated.params;
-		const result = await patientService.transfer(targetId, body);
+		const result = await patientService.transfer(userId, targetId, body);
 		const data = PatientMapper.toComplete(result);
 		return res.status(200).json(response(data));
 	}

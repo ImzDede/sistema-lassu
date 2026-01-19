@@ -139,6 +139,17 @@ export class UserService {
                 throw new AppError(HTTP_ERRORS.NOT_FOUND.USER, 404)
             }
 
+            //Notificação
+            await Promise.all([
+                notificationService.notifyUser(userId, NOTIFICATION_MESSAGE.USER.WELCOME({
+                    userName: userRow.nome
+                })),
+                notificationService.notifyAdmins(NOTIFICATION_MESSAGE.ADMIN.NEW_FIRST_ACCESS({
+                    userId: userRow.id,
+                    userName: userRow.nome
+                }))
+            ])
+
             const token = this.generateToken(userRow)
 
             return { userRow, token, availabilityRows }

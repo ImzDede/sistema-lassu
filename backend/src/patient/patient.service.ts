@@ -51,21 +51,20 @@ export class PatientService {
             userRepository.getName(therapistId)
         ]) as [string, string]
 
-        //Para admin
-        await notificationService.notifyAdmins(NOTIFICATION_MESSAGE.ADMIN.NEW_PATIENT({
-            patientName: patientRow.nome,
-            patientId: patientRow.id,
-            userName: userName,
-            userId: userId,
-            therapistId: patientRow.terapeuta_id,
-            therapistName: therapistName
-        }))
-
-        //Para terapeuta
-        await notificationService.notifyUser(therapistId, NOTIFICATION_MESSAGE.USER.NEW_PATIENT({
-            patientName: patientRow.nome,
-            patientId: patientRow.id,
-        }))
+        await Promise.all([
+            notificationService.notifyAdmins(NOTIFICATION_MESSAGE.ADMIN.NEW_PATIENT({
+                patientName: patientRow.nome,
+                patientId: patientRow.id,
+                userName: userName,
+                userId: userId,
+                therapistId: patientRow.terapeuta_id,
+                therapistName: therapistName
+            })),
+            notificationService.notifyUser(therapistId, NOTIFICATION_MESSAGE.USER.NEW_PATIENT({
+                patientName: patientRow.nome,
+                patientId: patientRow.id,
+            }))
+        ])
 
         return { patientRow }
     }
@@ -207,8 +206,8 @@ export class PatientService {
         if (statusAnamnese != 'finalizado' || statusSintese != 'finalizado') {
             throw new AppError('Os documentos de Anamnese e Síntese devem ser finalizados antes o envio.', 400);
         }
-        
-        const sessionRows = await sessionRepository.list({filterPatientId: patientId})
+
+        const sessionRows = await sessionRepository.list({ filterPatientId: patientId })
         for (const sessionRow of sessionRows) {
             if (sessionRow.status == 'agendada') {
                 throw new AppError('Ainda existe uma consulta agendada com essa paciente, cancele ou realize.', 400);
@@ -225,6 +224,20 @@ export class PatientService {
             if (!patientRow) {
                 throw new AppError(HTTP_ERRORS.NOT_FOUND.PATIENT);
             }
+
+            const [userName, patientName] = await Promise.all([
+                userRepository.getName(userId),
+                repository.getName(patientId)
+            ]) as [string, string]
+
+            await Promise.all([
+                notificationService.notifyAdmins(NOTIFICATION_MESSAGE.ADMIN.PATIENT_REFERRAL(
+                    { userId, userName, patientId, patientName, referId: referRow.id.toString(), referDestination: referRow.destino }
+                )),
+                notificationService.notifyUser(userId, NOTIFICATION_MESSAGE.USER.PATIENT_REFERRAL(
+                    { patientId, patientName, referId: referRow.id.toString(), referDestination: referRow.destino }
+                ))
+            ])
 
             return { patientRow, referRow };
         });
@@ -249,7 +262,7 @@ export class PatientService {
         return { patientRow };
     }
 
-    async transfer(patientId: string, data: PatientTransferDTO) {
+    async transfer(userId: string, patientId: string, data: PatientTransferDTO) {
         const patient = await repository.getById(patientId);
         if (!patient) throw new AppError(HTTP_ERRORS.NOT_FOUND.PATIENT, 404);
 
@@ -258,7 +271,7 @@ export class PatientService {
             throw new AppError(HTTP_ERRORS.NOT_FOUND.THERAPIST, 404);
         }
 
-        const patientsActive = await repository.countPatientsActive(patient.terapeuta_id)
+        const patientsActive = await repository.countPatientsActive(data.newTherapistId)
         if (patientsActive >= 5) {
             throw new AppError("Essa terapeuta já atingiu o limite de pacientes ativos", 400)
         }
@@ -269,10 +282,25 @@ export class PatientService {
             throw new AppError(HTTP_ERRORS.NOT_FOUND.PATIENT)
         }
 
-        await notificationService.notifyUser(data.newTherapistId, NOTIFICATION_MESSAGE.USER.NEW_PATIENT({
-            patientName: patient.nome,
-            patientId: patient.id
-        }));
+        const therapistId = data.newTherapistId
+        const oldTherapistId = patient.terapeuta_id
+        const [therapistName, oldTherapistName, userName] = await Promise.all([
+            repository.getName(therapistId),
+            repository.getName(oldTherapistId),
+            userRepository.getName(userId)
+        ]) as [string, string, string]
+
+        await Promise.all([
+            notificationService.notifyAdmins(NOTIFICATION_MESSAGE.ADMIN.PATIENT_TRANSFER({
+                userId, userName, therapistId, therapistName, oldTherapistId, oldTherapistName, patientId: patientRow.id, patientName: patientRow.nome
+            })),
+            notificationService.notifyUser(therapistId, NOTIFICATION_MESSAGE.USER.TRANSFER_IN({
+                oldTherapistId, oldTherapistName, patientId: patientRow.id, patientName: patientRow.nome
+            })),
+            notificationService.notifyUser(oldTherapistId, NOTIFICATION_MESSAGE.USER.TRANSFER_OUT({
+                therapistId, therapistName, patientId: patientRow.id, patientName: patientRow.nome
+            }))
+        ])
 
         return { patientRow };
     }

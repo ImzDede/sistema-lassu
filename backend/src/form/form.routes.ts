@@ -16,9 +16,12 @@ router.post('/anamnese', validate(formUpdateStructureSchema), is('admin'), contr
 router.post('/sintese', validate(formUpdateStructureSchema), is('admin'), controller.createVersionSintese);
 router.get('/anamnese', is('admin'), controller.getVersionActiveAnamnese);
 router.get('/sintese', is('admin'), controller.getVersionActiveSintese);
-router.put('/anamnese/:targetId', validate(patientTargetIdParamSchema, 'params'), validate(formSubmitSchema),controller.submitAnamnese);
+
+router.put('/anamnese/:targetId', validate(patientTargetIdParamSchema, 'params'),  validate(formSubmitSchema),controller.submitAnamnese);
 router.put('/sintese/:targetId', validate(patientTargetIdParamSchema, 'params'), validate(formSubmitSchema), controller.submitSintese);
 router.get('/anamnese/:targetId', validate(patientTargetIdParamSchema, 'params'), controller.getAnamnese);
 router.get('/sintese/:targetId', validate(patientTargetIdParamSchema, 'params'), controller.getSintese);
+router.patch('/anamnese/:targetId/reopen', validate(patientTargetIdParamSchema, 'params'), controller.reopenAnamnese);
+router.patch('/sintese/:targetId/reopen', validate(patientTargetIdParamSchema, 'params'), controller.reopenSintese);
 
 export default router;
