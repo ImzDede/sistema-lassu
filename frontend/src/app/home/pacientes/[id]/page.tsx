@@ -18,6 +18,7 @@ import {
   Stethoscope,
   Edit3,
   FileDown,
+  Eye, 
 } from "lucide-react";
 import {
   Spinner,
@@ -55,14 +56,12 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
   const [patient, setPatient] = useState<any | null>(null);
   const [sessionsList, setSessionsList] = useState<any[]>([]);
 
-  // Progresso vindo do Back
   const [formsProgress, setFormsProgress] = useState({
     anamnese: 0,
     sintese: 0,
   });
   const [totalProgress, setTotalProgress] = useState(0);
 
-  // Estados dos formulários
   const [anamneseData, setAnamneseData] = useState<any>(null);
   const [sinteseData, setSinteseData] = useState<any>(null);
 
@@ -89,13 +88,10 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
     try {
       setLoading(true);
 
-      // 1. Busca Dados do Paciente
-      // Usamos 'as any' pois o tipo no front ainda não tem o campo 'forms' atualizado
       const data = (await patientService.getById(id)) as any;
       setPatient(data.patient);
       setTherapistName(data.therapist?.nome || "Não atribuído");
 
-      // 1.1 Processa Progresso Real (Vindo do JSON do back)
       const forms = data.forms || {
         anamnesePorcentagem: 0,
         sintesePorcentagem: 0,
@@ -108,10 +104,8 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
         Math.round((forms.anamnesePorcentagem + forms.sintesePorcentagem) / 2),
       );
 
-      // Define se tem encaminhamento pelo Status
       setHasEncaminhamento(data.patient.status === "encaminhada");
 
-      // 2. Busca Sessões (ORDEM ASC para cronologia correta 1ª, 2ª...)
       try {
         const list = await sessionService.getAll({
           start: "2023-01-01",
@@ -125,20 +119,16 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
         setSessionsList([]);
       }
 
-      // 3. Busca Forms (Anamnese e Síntese)
       try {
         const anamnese = await formService.getAnamnese(id);
         setAnamneseData(anamnese);
-      } catch (e) {
-        /* Ignora */
-      }
+      } catch (e) { /* Ignora */ }
 
       try {
         const sintese = await formService.getSintese(id);
         setSinteseData(sintese);
-      } catch (e) {
-        /* Ignora */
-      }
+      } catch (e) { /* Ignora */ }
+
     } catch (error) {
       console.error(error);
       showFeedback("Erro ao carregar dados.", "error");
@@ -151,7 +141,6 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
     if (!authLoading) loadData();
   }, [authLoading, loadData]);
 
-  // LÓGICA DE ANOTAÇÕES
   const notesList = useMemo(() => {
     return (sessionsList ?? [])
       .filter((s) => {
@@ -166,7 +155,6 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
       }));
   }, [sessionsList]);
 
-  // --- Helpers ---
   const handleCopyPhone = () => {
     if (patient?.telefone) {
       navigator.clipboard.writeText(patient.telefone);
@@ -184,6 +172,28 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
     router.push(
       `/home/cadastro/${type}?patientId=${patient.id}&patientName=${encodeURIComponent(patient.nome)}${idParam}&mode=${mode}`,
     );
+  };
+
+  // --- LÓGICA DE VALIDAÇÃO (100% ou Finalizado) ---
+  const isFormFinalized = (formData: any, progress: number) => {
+    // Considera finalizado se status for 'finalizado', boolean 'finalizada' for true
+    // OU se o progresso for 100% (para garantir que ícone mude visualmente)
+    return (
+      formData?.status === 'finalizado' || 
+      formData?.finalizada === true || 
+      progress === 100
+    );
+  };
+
+  const anamneseFinalizada = isFormFinalized(anamneseData, formsProgress.anamnese);
+  const sinteseFinalizada = isFormFinalized(sinteseData, formsProgress.sintese);
+
+  const handleCreateReferral = () => {
+    if (!anamneseFinalizada || !sinteseFinalizada) {
+        showFeedback("Para encaminhar, a Anamnese e a Síntese devem estar 100% concluídas e finalizadas.", "warning");
+        return;
+    }
+    handleNavigate("encaminhamento", 0, "create");
   };
 
   const getRespostasFormatadas = (formData: any) => {
@@ -268,11 +278,9 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
   };
 
   const isMasterAdmin = user?.permAdmin;
-  const canEditGeneral =
-    !isMasterAdmin && (user?.permCadastro || user?.permAtendimento);
+  const canEditGeneral = !isMasterAdmin && (user?.permCadastro || user?.permAtendimento);
+  
   const isEncaminhada = patient?.status === "encaminhada";
-
-  // Tag de Status Formatada
   const statusDisplay = isEncaminhada ? "Encaminhada" : "Em Atendimento";
 
   if (loading || authLoading)
@@ -285,7 +293,6 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 pb-20 font-sans">
-      {/* HEADER */}
       <div className="pt-8 pb-4 px-4 md:px-8 max-w-6xl mx-auto w-full flex justify-between">
         <div className="flex items-center gap-4">
           <button
@@ -312,7 +319,7 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
             </IconButton>
           </MenuHandler>
           <MenuList className="p-2 border border-gray-200 shadow-xl rounded-xl">
-            {isMasterAdmin && isEncaminhada && (
+            {(isMasterAdmin || canEditGeneral) && isEncaminhada && (
               <MenuItem
                 onClick={() => handleActionClick("unrefer")}
                 className="flex items-center gap-2 text-brand-dark hover:bg-brand-purple/5 p-3"
@@ -333,7 +340,6 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
         </Menu>
       </div>
 
-      {/* PERFIL */}
       <div className="px-4 md:px-8 max-w-6xl mx-auto w-full mb-8">
         <ProfileCard
           name={patient.nome}
@@ -361,8 +367,7 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
               <Progress
                 value={totalProgress}
                 size="lg"
-                color="purple"
-                className="bg-gray-100 rounded-full"
+                className="bg-gray-100 rounded-full [&>div]:bg-brand-encaminhamento"
               />
             </div>
           }
@@ -389,7 +394,6 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
             />
           </div>
 
-          {/* RESPONSÁVEL: SÓ PARA ADMIN E CADASTRO */}
           {(user?.permAdmin || user?.permCadastro) && (
             <div className="flex items-center gap-2 bg-brand-encaminhamento/10 px-3 py-1.5 rounded-full border border-brand-encaminhamento text-brand-encaminhamento">
               <UserCheck size={16} className="text-brand-encaminhamento" />
@@ -401,16 +405,14 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
         </ProfileCard>
       </div>
 
-      {/* PASTAS */}
       <div className="px-4 md:px-8 max-w-6xl mx-auto w-full flex flex-col gap-2">
-        {/* 1. SESSÕES */}
         <FolderAccordion
           title="Sessões"
           tabColorClass="bg-brand-sessao"
           icon={<Calendar size={18} />}
           isOpen={sections.sessoes}
           onToggle={() => toggleSection("sessoes")}
-          showAddButton={canEditGeneral}
+          showAddButton={canEditGeneral && !hasEncaminhamento}
           onAdd={() => handleNavigate("sessoes", 0, "create")}
           addLabel="Nova Sessão"
           accentColor="brand-sessao"
@@ -432,7 +434,7 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
                 icon={<Clock size={16} />}
                 highlight={idx === sessionsList.length - 1}
                 onEdit={
-                  canEditGeneral
+                  canEditGeneral && !hasEncaminhamento
                     ? () => handleNavigate("sessoes", sessao.id, "edit")
                     : undefined
                 }
@@ -443,7 +445,6 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
           )}
         </FolderAccordion>
 
-        {/* 2. ANAMNESE */}
         <FolderAccordion
           title="Anamnese"
           tabColorClass="bg-brand-anamnese"
@@ -457,15 +458,28 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
               title="Anamnese Inicial"
               variant="progress"
               progress={formsProgress.anamnese}
-              onView={() => handleNavigate("anamnese", "current", "view")}
+              
+              // --- CORREÇÃO: COR DA BARRA ---
+              progressColorClass="[&>div]:bg-brand-anamnese"
+              
+              // --- CORREÇÃO: ÍCONE MUDAR COM 100% ---
+              onView={
+                anamneseFinalizada || !canEditGeneral
+                  ? () => handleNavigate("anamnese", "current", "view")
+                  : undefined
+              }
+              
               onEdit={
-                canEditGeneral && !anamneseData.finalizada
+                canEditGeneral && !anamneseFinalizada && !hasEncaminhamento
                   ? () => handleNavigate("anamnese", "current", "edit")
                   : undefined
               }
+              
+              icon={anamneseFinalizada ? <Eye size={16} /> : <Edit3 size={16} />}
+              
               downloadComponent={
                 <DownloadButton
-                  exists={!!anamneseData.finalizada}
+                  exists={anamneseFinalizada}
                   doc={
                     <AnamnesePDF
                       pacienteNome={patient.nome}
@@ -476,7 +490,7 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
                 />
               }
             />
-          ) : canEditGeneral ? (
+          ) : canEditGeneral && !hasEncaminhamento ? (
             <button
               onClick={() => handleNavigate("anamnese", "current", "create")}
               className="text-sm text-brand-anamnese hover:underline p-4 w-full text-left"
@@ -484,13 +498,10 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
               + Iniciar Anamnese
             </button>
           ) : (
-            <div className="p-4 text-gray-400 text-sm">
-              Nenhuma anamnese iniciada.
-            </div>
+            <div></div>
           )}
         </FolderAccordion>
 
-        {/* 3. SÍNTESE */}
         <FolderAccordion
           title="Síntese"
           tabColorClass="bg-brand-sintese"
@@ -504,15 +515,25 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
               title="Síntese Diagnóstica"
               variant="progress"
               progress={formsProgress.sintese}
-              onView={() => handleNavigate("sintese", "current", "view")}
+              progressColorClass="[&>div]:bg-brand-sintese"
+              
+              onView={
+                sinteseFinalizada || !canEditGeneral
+                  ? () => handleNavigate("sintese", "current", "view")
+                  : undefined
+              }
+              
               onEdit={
-                canEditGeneral && !sinteseData.finalizada
+                canEditGeneral && !sinteseFinalizada && !hasEncaminhamento
                   ? () => handleNavigate("sintese", "current", "edit")
                   : undefined
               }
+
+              icon={sinteseFinalizada ? <Eye size={16} /> : <Edit3 size={16} />}
+
               downloadComponent={
                 <DownloadButton
-                  exists={!!sinteseData.finalizada}
+                  exists={sinteseFinalizada}
                   doc={
                     <SintesePDF
                       pacienteNome={patient.nome}
@@ -523,7 +544,7 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
                 />
               }
             />
-          ) : canEditGeneral ? (
+          ) : canEditGeneral && !hasEncaminhamento ? (
             <button
               onClick={() => handleNavigate("sintese", "current", "create")}
               className="text-sm text-brand-sintese hover:underline p-4 w-full text-left"
@@ -531,13 +552,10 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
               + Iniciar Síntese
             </button>
           ) : (
-            <div className="p-4 text-gray-400 text-sm">
-              Nenhuma síntese iniciada.
-            </div>
+            <div></div>
           )}
         </FolderAccordion>
 
-        {/* 4. ENCAMINHAMENTO */}
         <FolderAccordion
           title="Encaminhamento"
           tabColorClass="bg-brand-encaminhamento"
@@ -545,7 +563,7 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
           isOpen={sections.encaminhamento}
           onToggle={() => toggleSection("encaminhamento")}
           showAddButton={canEditGeneral && !hasEncaminhamento}
-          onAdd={() => handleNavigate("encaminhamento", 0, "create")}
+          onAdd={handleCreateReferral} 
           addLabel="Novo Encaminhamento"
           accentColor="brand-encaminhamento"
         >
@@ -569,7 +587,6 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
           )}
         </FolderAccordion>
 
-        {/* 5. ANOTAÇÕES */}
         <FolderAccordion
           title="Anotações"
           tabColorClass="bg-brand-anotacoes"
@@ -630,4 +647,3 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
     </div>
   );
 }
-

@@ -360,24 +360,24 @@ export default function TherapistDetails({
             <div className="flex gap-2 flex-wrap">
               {therapist.permAdmin && (
                 <Chip
-                  value="Admin"
-                  className="bg-purple-50 text-purple-900 border border-purple-100"
+                  value="Professora"
+                  className="bg-brand-purple/10 text-brand-purple border border-brand-purple/20"
                   size="sm"
                   variant="ghost"
                 />
               )}
               {therapist.permCadastro && (
                 <Chip
-                  value="Cadastro"
-                  className="bg-pink-50 text-pink-900 border border-pink-100"
+                  value="Administrativo"
+                  className="bg-brand-pink/20 text-brand-dark border border-brand-pink/30"
                   size="sm"
                   variant="ghost"
                 />
               )}
               {therapist.permAtendimento && (
                 <Chip
-                  value="Atendimento"
-                  className="bg-orange-50 text-orange-900 border border-orange-100"
+                  value="Terapeuta"
+                  className="bg-brand-peach/20 text-brand-dark border border-brand-peach/30"
                   size="sm"
                   variant="ghost"
                 />
