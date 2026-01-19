@@ -66,7 +66,6 @@ export class SessionService {
         } else {
             filterUserId = userId
             if (patientTargetId) {
-                // Verifica se a paciente é da terapeuta
                 const therapistId = await patientRepository.getTherapistId(patientTargetId)
                 if (!therapistId) throw new AppError(HTTP_ERRORS.NOT_FOUND.PATIENT, 404);
 

@@ -10,11 +10,13 @@ import { UserPermDTO } from "../user/user.schema";
 import { FormRepository } from "../form/form.repository";
 import pool from "../config/db";
 import { withTransaction } from "../utils/withTransaction";
+import { SessionRepository } from "../session/session.repository";
 
 const repository = new PatientRepository(pool)
 const userRepository = new UserRepository(pool)
 const notificationService = new NotificationService()
 const formRepository = new FormRepository(pool)
+const sessionRepository = new SessionRepository()
 
 export class PatientService {
     async create(userId: string, data: PatientCreateDTO) {
@@ -192,6 +194,27 @@ export class PatientService {
             throw new AppError(HTTP_ERRORS.CONFLICT.PATIENT.ALREADY_REFER, 409);
         }
 
+        let statusAnamnese: string = ''
+        const anamenseId = await formRepository.getIdModelByTitle('ANAMNESE')
+        const anamenseRow = await formRepository.getFilledForm(anamenseId, patientId)
+        if (anamenseRow) statusAnamnese = anamenseRow.status
+
+        let statusSintese: string = ''
+        const sinteseId = await formRepository.getIdModelByTitle('SINTESE')
+        const sinteseRow = await formRepository.getFilledForm(sinteseId, patientId)
+        if (sinteseRow) statusSintese = sinteseRow.status
+
+        if (statusAnamnese != 'finalizado' || statusSintese != 'finalizado') {
+            throw new AppError('Os documentos de Anamnese e Síntese devem ser finalizados antes o envio.', 400);
+        }
+        
+        const sessionRows = await sessionRepository.list({filterPatientId: patientId})
+        for (const sessionRow of sessionRows) {
+            if (sessionRow.status == 'agendada') {
+                throw new AppError('Ainda existe uma consulta agendada com essa paciente, cancele ou realize.', 400);
+            }
+        }
+
         return await withTransaction(async (client) => {
             const repository = new PatientRepository(client);
 
@@ -233,6 +256,11 @@ export class PatientService {
         const newTherapist = await userRepository.getName(data.newTherapistId);
         if (!newTherapist) {
             throw new AppError(HTTP_ERRORS.NOT_FOUND.THERAPIST, 404);
+        }
+
+        const patientsActive = await repository.countPatientsActive(patient.terapeuta_id)
+        if (patientsActive >= 5) {
+            throw new AppError("Essa terapeuta já atingiu o limite de pacientes ativos", 400)
         }
 
         const patientRow = await repository.updateTherapist(patientId, data.newTherapistId);

@@ -25,7 +25,6 @@ const senhaCreateSchema = z.string().min(8, HTTP_ERRORS.BAD_REQUEST.USER.PASSWOR
     .regex(/[0-9]/, HTTP_ERRORS.BAD_REQUEST.USER.PASSWORD.NUMBER)
     .regex(/[^A-Za-z0-9]/, HTTP_ERRORS.BAD_REQUEST.USER.PASSWORD.SPECIAL);
 const matriculaSchema = z.string().length(8, HTTP_ERRORS.BAD_REQUEST.USER.REGISTRATION.LENGTH).regex(/^[mcMC]\d{7}$/, HTTP_ERRORS.BAD_REQUEST.USER.REGISTRATION.NUMBER)
-const fotoSchema = z.string().url().nullable()
 
 export const createUserSchema = z.object({
     nome: nomeSchema,
@@ -47,7 +46,6 @@ export const updateProfileSchema = z.object({
     nome: nomeSchema,
     email: emailSchema,
     telefone: telefoneSchema,
-    fotoUrl: fotoSchema,
     senha: senhaCreateSchema
 }).partial()
 
@@ -64,7 +62,6 @@ export type UpdateUserDTO = z.infer<typeof updateUserSchema>
 
 export const firstAccessSchema = z.object({
     senha: senhaCreateSchema,
-    fotoUrl: fotoSchema.optional(),
     disponibilidade: availabilityListSchema
 })
 

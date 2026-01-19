@@ -45,6 +45,14 @@ export class UserController {
         return res.status(200).json(response(data));
     }
 
+    async updateAvatar(req: Request, res: Response) {
+        const userId = req.validated.userId;
+        const avatarFilename = req.file?.filename || null;
+        const result = await userService.updateAvatar(userId, avatarFilename);
+        const data = UserMapper.toUpdateProfile(result);
+        return res.json(response(data));
+    }
+
     async resetPassword(req: Request, res: Response) {
         const result = await userService.resetPassword(req.validated.params.targetId);
         const data = UserMapper.toResetPassword(result)
