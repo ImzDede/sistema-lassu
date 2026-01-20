@@ -73,7 +73,7 @@ CREATE TABLE sessoes (
     hora INTEGER NOT NULL,
     sala INTEGER NOT NULL,
 
-    anotacoes TEXT DEFAULT NULL;
+    anotacoes TEXT DEFAULT NULL,
     
     status VARCHAR(30) NOT NULL DEFAULT 'agendada' 
         CHECK (status IN ('agendada', 'realizada', 'falta', 'cancelada_paciente', 'cancelada_terapeuta')),
@@ -168,7 +168,7 @@ CREATE TABLE formulario_respostas (
     created_at TIMESTAMP DEFAULT NOW(),
 
     CONSTRAINT unique_resposta_por_pergunta 
-    UNIQUE (formulario_id, pergunta_id);
+    UNIQUE (formulario_id, pergunta_id)
 );
 
 -- 8. Selecionados
@@ -178,3 +178,31 @@ CREATE TABLE formulario_selecionados (
     texto_complemento TEXT DEFAULT NULL,
     PRIMARY KEY (resposta_id, opcao_id)
 );
+
+-- Insere a conta admin
+INSERT INTO usuarios (
+    id, 
+    matricula, 
+    nome, 
+    email, 
+    telefone, 
+    senha_hash, 
+    perm_admin, 
+    perm_cadastro, 
+    perm_atendimento, 
+    ativo, 
+    primeiro_acesso
+) VALUES (
+    '00000000-0000-0000-0000-000000000001',
+    '0000000', 
+    'Administrador Sistema', 
+    'admin@sistema.com', 
+    '85999999999', 
+    '$2b$10$9vh0xXm7ITjN1tz4fPjvq.9bqYX.mljijpdCbkqxCneZcR0vOocEm', 
+    TRUE,
+    TRUE,
+    TRUE,
+    TRUE,
+    FALSE
+) 
+ON CONFLICT (email) DO NOTHING;

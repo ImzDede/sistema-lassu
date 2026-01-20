@@ -43,6 +43,15 @@ O projeto possui um arquivo SQL responsável por criar toda a estrutura inicial 
 npm run dev
 ```
 
+### 7. Acesso Inicial (Admin)
+O script de inicialização do banco (`init.sql`) cria automaticamente uma conta de administrador para que você possa começar a usar o sistema:
+
+* **Email:** `admin@sistema.com`
+* **Matrícula:** `0000000`
+* **Senha:** `12345678`
+
+> ⚠️ **Importante:** Única forma de criar uma conta admin é por comando sql direto no banco, caso queira um email ou matrícula diferente altere no comando sql, já a senha recomendo manter na execução sql, pois ela é em ``hash``, e trocar dentro da própria aplicação pelo Perfil.
+
 ## 🧱 Arquitetura
 
 **O backend segue uma arquitetura em camadas bem definida:**
@@ -53,7 +62,11 @@ npm run dev
 
 **Middlewares** → interceptadores para autenticação, validação de permissões e tratamento de schemas.
 
-**Services** → contém toda a lógica de negócio, regras e validações complexas.
+**Services** → contém toda a lógica de negócio, regras, validações complexas e **controle de transações (atomicidade)**.
+
+> ⚛️ **Atomicidade e Integridade:**
+> Utilizamos o utilitário `withTransaction` nos Services para garantir a atomicidade em operações complexas.
+> *Exemplo:* Ao criar um Modelo de Formulário, salvamos a Versão, Seções, Perguntas e Opções em sequência. Se qualquer inserção falhar, o `withTransaction` executa o **rollback** automático de tudo, evitando dados órfãos ou corrompidos no banco.
 
 **Repositories** → camada exclusiva de comunicação direta com o banco de dados (SQL).
 
@@ -135,6 +148,14 @@ perm_atendimento → permAtendimento
 - A API é responsável por garantir integridade, consistência e segurança dos dados persistidos
 
 - O banco de dados atua apenas como camada de persistência, sem regras de negócio
+
+## 📂 Upload de Arquivos
+
+O gerenciamento de arquivos (fotos de perfil e documentos PDF) é feito utilizando a biblioteca **Multer**.
+
+* **Protocolo:** `multipart/form-data`.
+* **Armazenamento:** Os arquivos são salvos localmente no servidor e servidos via rota estática pública.
+* **Segurança:** O middleware do Multer valida o tipo do arquivo (mimetype) e tamanho máximo antes de permitir a gravação no disco.
 
 ## ❌ Tratamento de Erros
 
@@ -318,3 +339,4 @@ Authorization: Bearer <token>
 ### 📅 [/availability](./src/availability/README.md)
 ### 🔔 [/notifications](./src/notification/README.md)
 ### 🏥 [/patients](./src/patient/README.md)
+### 📝 [/forms](./src/form/README.md)

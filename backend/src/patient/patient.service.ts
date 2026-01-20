@@ -292,6 +292,13 @@ export class PatientService {
             throw new AppError("Essa terapeuta já atingiu o limite de pacientes ativos", 400)
         }
 
+        const sessionRows = await sessionRepository.list({ filterPatientId: patientId })
+        for (const sessionRow of sessionRows) {
+            if (sessionRow.status == 'agendada' || sessionRow.status == 'realizada') {
+                throw new AppError('Não é possível transferir uma paciente com sessão ativa ou realizada.', 400);
+            }
+        }
+
         const patientRow = await repository.updateTherapist(patientId, data.newTherapistId);
 
         if (!patientRow) {
@@ -327,6 +334,13 @@ export class PatientService {
 
         if (!perms.cadastro && patient.terapeuta_id !== userId) {
             throw new AppError("Permissão negada para excluir esta paciente.", 403);
+        }
+
+        const sessionRows = await sessionRepository.list({ filterPatientId: patientId })
+        for (const sessionRow of sessionRows) {
+            if (sessionRow.status == 'agendada' || sessionRow.status == 'realizada') {
+                throw new AppError('Não é possível deletar uma paciente com sessão ativa ou realizada.', 400);
+            }
         }
 
         const patientRow = await repository.delete(patientId);

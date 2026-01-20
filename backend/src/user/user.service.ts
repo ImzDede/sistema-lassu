@@ -280,6 +280,8 @@ export class UserService {
             };
         }));
 
+        console.log(await bcrypt.hash("12345678", 10))
+
         const totalPages = Math.ceil(total / limit);
 
         return {

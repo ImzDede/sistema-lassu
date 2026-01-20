@@ -33,8 +33,6 @@ export const handleError: ErrorRequestHandler = (
             details[field].push(issue.message);
         });
 
-        console.log(details)
-
         return res.status(400).json({
             data: null,
             meta: {},
@@ -47,8 +45,6 @@ export const handleError: ErrorRequestHandler = (
     }
 
     if (err instanceof AppError) {
-        console.log(err.message)
-
         return res.status(err.statusCode).json({
             data: null,
             meta: {},

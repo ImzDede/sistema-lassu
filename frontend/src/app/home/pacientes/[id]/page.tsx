@@ -61,16 +61,16 @@ const getStatusConfig = (status: string) => {
   switch (status) {
     case "realizada": 
       // Roxo escuro (#6D538B) - Sucesso/Concluído
-      return { label: "Realizada", color: "text-brand-sessao font-bold" };
+      return { label: "Sessão Realizada", color: "text-brand-sessao font-bold" };
     case "falta": 
       // Terracota/Vermelho (#F2A9A2) - Alerta de ausência
       return { label: "Falta", color: "text-brand-terracota font-bold" };
     case "cancelada_paciente": 
       // Pêssego/Laranja (#F2B694) - Atenção
-      return { label: "Canc. pelo Paciente", color: "text-brand-peach font-bold" };
+      return { label: "Sessão cancelada pelo Paciente", color: "text-brand-peach font-bold" };
     case "cancelada_terapeuta": 
       // Pêssego/Laranja (#F2B694) - Atenção
-      return { label: "Canc. pela Terapeuta", color: "text-brand-peach font-bold" };
+      return { label: "Sessão cancelada pela Terapeuta", color: "text-brand-peach font-bold" };
     case "agendada": 
     default: 
       // Cinza (#71787E) - Neutro/Aguardando
@@ -120,7 +120,7 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
       setLoading(true);
 
       const data = (await patientService.getById(id)) as any;
-      setPatient(data.patient);
+      setPatient(data.patient,);
       setTherapistName(data.therapist?.nome || "Não atribuído");
 
       const forms = data.forms || {
@@ -184,6 +184,38 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
         titulo: "Anotação de Sessão",
         resumo: (typeof s.anotacoes === "string" ? s.anotacoes : "").trim(),
       }));
+  }, [sessionsList]);
+
+  const processedSessions = useMemo(() => {
+    let count = 0;
+    
+    return sessionsList.map((sessao) => {
+      // Verifica os tipos de status
+      const isCanceled = ["cancelada_paciente", "cancelada_terapeuta"].includes(sessao.status);
+      const isFalta = sessao.status === "falta";
+      const isValidSession = ["realizada", "agendada"].includes(sessao.status);
+
+      // Só aumenta o número (1ª, 2ª...) se for Agendada ou Realizada
+      if (isValidSession) {
+        count++;
+      }
+
+      // Define o Título do Card
+      let displayTitle = "";
+      
+      if (isCanceled) {
+        displayTitle = "Sessão Cancelada";
+      } else if (isFalta) {
+        displayTitle = "Falta";
+      } else {
+        displayTitle = `${count}ª Sessão`;
+      }
+
+      return {
+        ...sessao,
+        displayTitle
+      };
+    });
   }, [sessionsList]);
 
   const handleCopyPhone = () => {
@@ -451,16 +483,17 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
           addLabel="Nova Sessão"
           accentColor="brand-sessao"
         >
-          {sessionsList.length > 0 ? (
-            sessionsList.map((sessao, idx) => {
-              // Pega a configuração de cor e label do status
+          {processedSessions.length > 0 ? (
+            // MUDANÇA 1: Usar processedSessions ao invés de sessionsList
+            processedSessions.map((sessao, idx) => {
               const statusConfig = getStatusConfig(sessao.status);
               
               return (
                 <FolderItemCard
                   key={sessao.id || idx}
-                  title={`${idx + 1}ª Sessão`}
-                  // SUBTÍTULO COM DATA CORRETA (UTC) E STATUS COLORIDO
+                  // MUDANÇA 2: Usar o título processado
+                  title={sessao.displayTitle}
+                  
                   subtitle={
                     <div className="flex flex-col gap-1 mt-1">
                       <span>
@@ -472,7 +505,8 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
                     </div>
                   }
                   icon={<Clock size={16} />}
-                  highlight={idx === sessionsList.length - 1}
+                  // Highlight apenas na última sessão válida ou agendada (opcional)
+                  highlight={idx === processedSessions.length - 1}
                   onEdit={
                     canEditGeneral && !hasEncaminhamento
                       ? () => handleNavigate("sessoes", sessao.id, "edit")
@@ -611,16 +645,41 @@ export default function PatientDetails({ params }: { params: { id: string } }) {
           {hasEncaminhamento ? (
             <FolderItemCard
               title="Encaminhamento Realizado"
-              subtitle="Paciente encaminhada"
+              // Verifica se existe objeto de encaminhamento e mostra o destino
+              subtitle={`Destino: ${patient.encaminhamento?.destino || "Externo"}`}
               icon={<Share size={16} />}
+              
+              // Mantém a navegação de visualização/edição normal ao clicar no card
               onView={() => handleNavigate("encaminhamento", "current", "view")}
               onEdit={
                 canEditGeneral
                   ? () => handleNavigate("encaminhamento", "current", "edit")
                   : undefined
               }
+
+              // AQUI ESTÁ A LÓGICA DO ARQUIVO PÚBLICO
               downloadComponent={
-                <DownloadButton exists={false} doc={null} fileName="" />
+                patient.encaminhamento?.arquivoUrl ? (
+                  <a
+                    // Monta a URL pública direta. Ajuste o localhost se necessário.
+                    href={`http://localhost:3001/arquivos/${patient.encaminhamento.arquivoUrl}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()} // Impede que abra o "onView" ao clicar no download
+                    className="p-1.5 text-gray-400 hover:text-brand-purple hover:bg-brand-purple/10 rounded-full transition-colors flex items-center justify-center"
+                    title="Baixar/Visualizar Arquivo"
+                  >
+                    <FileDown size={16} />
+                  </a>
+                ) : (
+                  // Botão desabilitado se não tiver arquivo
+                  <button 
+                    className="p-1.5 text-gray-200 cursor-not-allowed"
+                    title="Sem arquivo anexado"
+                  >
+                     <FileDown size={16} />
+                  </button>
+                )
               }
             />
           ) : (
